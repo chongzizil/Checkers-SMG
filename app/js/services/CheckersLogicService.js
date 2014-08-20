@@ -2,6 +2,21 @@
 
 /**
  * This is the logic for the game "Checkers".
+ *
+ * TO be clear, the state has two different format:
+ * 1. CheckersState is represented as an array. Each element's index is the
+ * piece's square index. e.g. ["EMPTY", "WMAN"]
+ * 2. GameApiState is represented as an object. Each piece is a key and value
+ * pair. e.g. {"S0": "EMPTY, "S1": "WMAN"}
+ *
+ * Also the move has two different format:
+ * 1. checkersMove is represented as an array of Numbers. If it's a simple move,
+ * it will only contains the destination square index. If it's a jump move, it
+ * will contains the opponent (jumped) piece's index and the destination square
+ * index. e.g. [13]
+ * 2. gameApiMove is represented as an array of Objects, which includes all
+ * operations such as set, setTurn, endMatchScore.
+ * e.g. [{setTurn: 1}, {set: {S0: "EMPTY"}}]
  */
 
 // Constant. Do not touch!!!
@@ -498,7 +513,8 @@ var retrieveGameApiMoveDetail = function (gameApiMove) {
       checkersMove: [],
       pieceIndex: -1,
       setTurnIndex: -1,
-      winner: ' '
+      winner: ' ',
+      checkInitialMove: false
     },
     setOperations = [],
     index,
@@ -508,8 +524,10 @@ var retrieveGameApiMoveDetail = function (gameApiMove) {
   for (index in gameApiMove) {
     if (gameApiMove.hasOwnProperty(index)) {
       if (gameApiMove[index].hasOwnProperty('setTurn')) {
+        // Get the setTurn value
         gameApiMoveDetail.setTurnIndex = gameApiMove[index].setTurn;
       } else if (gameApiMove[index].hasOwnProperty('set')) {
+        // Store all set operations
         set = gameApiMove[index];
         for (key in set) {
           if (set.hasOwnProperty(key)) {
@@ -517,6 +535,7 @@ var retrieveGameApiMoveDetail = function (gameApiMove) {
           }
         }
       } else if (gameApiMove[index].hasOwnProperty('endMatch')) {
+        // Get the endMatch if it exist and calculate the winner
         if (gameApiMove[index].endMatch.endMatchScores[0] === 0) {
           gameApiMoveDetail.winner = 'B';
         } else {
@@ -526,6 +545,8 @@ var retrieveGameApiMoveDetail = function (gameApiMove) {
     }
   }
 
+  // Note the order of operation are important, the first one is the piece the
+  // player operates, which is assign to pieceIndex.
   for (key in setOperations[0][1]) {
     if (setOperations[0][1].hasOwnProperty(key)) {
       gameApiMoveDetail.pieceIndex = parseInt(key.substr(1), 10);
@@ -533,12 +554,17 @@ var retrieveGameApiMoveDetail = function (gameApiMove) {
   }
 
   if (setOperations.length === 2) {
+    // If there's 2 set operations, then it's a simple move and the second set
+    // operation is for the destination square.
     for (key in setOperations[1][1]) {
       if (setOperations[1][1].hasOwnProperty(key)) {
         gameApiMoveDetail.checkersMove.push(parseInt(key.substr(1), 10));
       }
     }
-  } else {
+  } else if (setOperations.length === 3) {
+    // If there's 3 set operations, then it's a jump move and the second set
+    // operation is for the opponent (jumped) piece and the third set operation
+    // is for the destination square.
     for (key in setOperations[1][1]) {
       if (setOperations[1][1].hasOwnProperty(key)) {
         gameApiMoveDetail.checkersMove.push(parseInt(key.substr(1), 10));
@@ -550,6 +576,10 @@ var retrieveGameApiMoveDetail = function (gameApiMove) {
         gameApiMoveDetail.checkersMove.push(parseInt(key.substr(1), 10));
       }
     }
+  } else {
+    // If the set operations are more than 3, than it may be a initial move,
+    // mark it here and check it later in isMoveOk.
+    gameApiMoveDetail.checkInitialMove = true;
   }
 
   return gameApiMoveDetail;
@@ -585,6 +615,65 @@ var isLegalIndex = function (index) {
 };
 
 /**
+ * Check if the object is empty
+ *
+ * @param obj the object to be checked
+ * @returns {boolean}
+ */
+var isEmptyObj = function (obj) {
+  for(var prop in obj) {
+    if(obj.hasOwnProperty(prop))
+      return false;
+  }
+
+  return true;
+};
+
+/**
+ * Check if two moves are equal
+ * @param initialMove the game API initialMove
+ * @param move2 the game API move to be checked
+ * @returns {boolean}
+ */
+var isInitialMove = function (initialMove, move) {
+  var i,
+    setObject,
+    piece;
+
+  if (move === null || move === undefined) return false;
+  if (move.length !== move.length) return false;
+
+  // Check setTurn operation
+  if (!move[0].hasOwnProperty('setTurn') || move[0].setTurn !== 0) {
+    return false;
+  }
+
+  // Check set operations
+  for (i = 0; i < CONSTANT.get('ROW') * CONSTANT.get('COLUMN'); i += 1) {
+    // If the operation is no set, return false
+    if (move[i + 1].hasOwnProperty('set')) {
+      setObject = move[i + 1].set;
+      // If the set operation does not set the correct square, return false
+      if (setObject.hasOwnProperty('S' + i)) {
+        piece = setObject['S' + i];
+        // If the piece is not set correctly, return false
+        if ((i < 12 && piece !== "BMAN")
+            || (i >= 12 && i < 20 && piece !== "EMPTY")
+            || (i >= 20 && i < 32 && piece !== "WMAN")) {
+          return false;
+        }
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+/**
  * Check if the move is OK.
  *
  * @param match
@@ -596,6 +685,7 @@ var isMoveOk = function (match) {
     turnIndexBeforeMove = match.turnIndexBeforeMove,
     turnIndexAfterMove = match.turnIndexAfterMove,
     move = match.move,
+    initialMove,
     checkersStateBeforeMove =
       convertGameApiStateToCheckersState(gameApiStateBeforeMove),
     nextStateObj =
@@ -612,7 +702,31 @@ var isMoveOk = function (match) {
     index,
     i;
 
-  // Check if the moves are legal
+  // Check if the move is an initial move first, only if the moves are different
+  // from the simple move or jump move.
+  if (gameApiMoveDetail.checkInitialMove) {
+
+    if (turnIndexBeforeMove !== 0) {
+      return {email: 'x@x.x', emailSubject: 'hacker!',
+        emailBody: 'Illegal move!!!'};
+    }
+
+    // First check if the game state is empty
+    if (!isEmptyObj(gameApiStateBeforeMove)) {
+      return {email: 'x@x.x', emailSubject: 'hacker!',
+        emailBody: 'Illegal move!!!'};
+    }
+
+    initialMove = getInitialMove();
+    if (isInitialMove(initialMove, move)) {
+      return true;
+    } else {
+      return {email: 'x@x.x', emailSubject: 'hacker!',
+        emailBody: 'Illegal move!!!'};
+    }
+  }
+
+  // Check if the all piece's index is legal
   if (!isLegalIndex(pieceIndex)) {
     return {email: 'x@x.x', emailSubject: 'hacker!',
       emailBody: 'Illegal index'};
@@ -627,9 +741,8 @@ var isMoveOk = function (match) {
   // Check if the move is legal
   if (checkersMove.length === 1) {
     // Simple move
-    possibleMoves = [];
 
-    // Check if there any mandatory jumps
+    // Check all pieces if there are any mandatory jumps
     for (index in checkersStateBeforeMove) {
       if ((checkersStateBeforeMove[index].substr(0, 1) === 'W'
           && turnIndexBeforeMove === 0)
@@ -637,24 +750,30 @@ var isMoveOk = function (match) {
               && turnIndexBeforeMove === 1)) {
         if (getJumpMoves(checkersStateBeforeMove, parseInt(index, 10),
             turnIndexBeforeMove).length !== 0) {
+          // Mandatory jump is ignored, hacker!!!
           return {email: 'x@x.x', emailSubject: 'hacker!',
             emailBody: 'Illegal ignore mandatory jump!!!'};
         }
       }
     }
 
+    // No mandatory jump
     possibleMoves = getSimpleMoves(checkersStateBeforeMove, pieceIndex,
         turnIndexBeforeMove);
 
+    // If the move is among the possible moves, then it's valid
     if (possibleMoves.indexOf(checkersMove[0]) === -1) {
       return {email: 'x@x.x', emailSubject: 'hacker!',
         emailBody: 'Illegal simple moves!!!'};
     }
+
   } else if (checkersMove.length === 2) {
     // Jump move
 
     possibleMoves =
         getJumpMoves(checkersStateBeforeMove, pieceIndex, turnIndexBeforeMove);
+
+    // If the move is among the possible moves, then it's valid
     if (!containJumpMove(possibleMoves, checkersMove, turnIndexBeforeMove)) {
       return {email: 'x@x.x', emailSubject: 'hacker!',
         emailBody: 'Illegal jumps!!!'};
@@ -749,6 +868,7 @@ checkers.factory('checkersLogicService', function () {
   return {
     isMoveOk: isMoveOk,
     getNextState: getNextState,
+    getInitialMove: getInitialMove,
     CONSTANT: CONSTANT
   };
 });

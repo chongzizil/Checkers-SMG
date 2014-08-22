@@ -1,0 +1,31 @@
+.board {
+  width: 100%;
+}
+
+.square {
+  position: relative;
+  width: 12.5%;
+  padding-bottom: 12.5%;
+  float: left;
+  height: 0;
+}
+
+.isDarkSquare {
+  background-image: url("../img/dark_square.png");
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  left: 0;
+}
+
+.isLightSquare {
+  background-image: url("../img/light_square.png");
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  left: 0;
+}
+
+.isBlackMan:hover, .isBlackCro:hover, .isWhiteMan:hover, .isWhiteCro:hover {
+  opacity: 0.5;
+}

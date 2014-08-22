@@ -402,7 +402,7 @@ var getJumpMoves = function (checkersState, pieceIndex, turnIndex) {
  * @param obj
  * @returns {*}
  */
-var clone = function (obj) {
+var cloneObj = function (obj) {
   var str = JSON.stringify(obj),
     copy = JSON.parse(str);
   return copy;
@@ -453,7 +453,7 @@ var convertCheckersStateToGameApiState = function (checkersState) {
  * @param turnIndex the current player's index.
  */
 var getNextState = function (gameApiState, move, turnIndex) {
-  var nextState = clone(gameApiState),
+  var nextState = cloneObj(gameApiState),
     hasWhite = false,
     hasBlack = false,
     index,
@@ -869,6 +869,8 @@ checkers.factory('checkersLogicService', function () {
     isMoveOk: isMoveOk,
     getNextState: getNextState,
     getInitialMove: getInitialMove,
+    cloneObj: cloneObj,
+    isEmptyObj: isEmptyObj,
     CONSTANT: CONSTANT
   };
 });

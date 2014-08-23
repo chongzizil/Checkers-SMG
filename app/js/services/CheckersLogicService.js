@@ -7,7 +7,7 @@
  * 1. CheckersState is represented as an array. Each element's index is the
  * piece's square index. e.g. ["EMPTY", "WMAN"]
  * 2. GameApiState is represented as an object. Each piece is a key and value
- * pair. e.g. {"S0": "EMPTY, "S1": "WMAN"}
+ * pair. e.g. {"0": "EMPTY, "1": "WMAN"}
  *
  * Also the move has two different format:
  * 1. checkersMove is represented as an array of Numbers. If it's a simple move,
@@ -16,7 +16,7 @@
  * index. e.g. [13]
  * 2. gameApiMove is represented as an array of Objects, which includes all
  * operations such as set, setTurn, endMatchScore.
- * e.g. [{setTurn: 1}, {set: {S0: "EMPTY"}}]
+ * e.g. [{setTurn: {turnIndex: 1}}, {set: {key: 0, value: "EMPTY"}}]
  */
 
 // Constant. Do not touch!!!
@@ -337,7 +337,7 @@ var getSimpleMoves = function (checkersState, pieceIndex, turnIndex) {
     tmpMoves = [],
     piece = checkersState[pieceIndex],
     color = piece.substr(0, 1),
-    kind = piece.substr(1, 3);
+    kind = piece.substr(1);
 
   if (color === "B" && turnIndex === 1) {
     if (kind === 'CRO') {
@@ -366,6 +366,7 @@ var getSimpleMoves = function (checkersState, pieceIndex, turnIndex) {
  *
  * @param checkersState the game state.
  * @param pieceIndex the piece pieceIndex.
+ * @param turnIndex the turn index.
  * @return an array of all possible move paths. Including the jumped piece index
  *  and target cell index.
  */
@@ -374,7 +375,7 @@ var getJumpMoves = function (checkersState, pieceIndex, turnIndex) {
     tmpMoves = [],
     piece = checkersState[pieceIndex],
     color = piece.substr(0, 1),
-    kind = piece.substr(1, 3);
+    kind = piece.substr(1);
 
   if (color === "B" && turnIndex === 1) {
     if (kind === 'CRO') {
@@ -394,6 +395,26 @@ var getJumpMoves = function (checkersState, pieceIndex, turnIndex) {
   }
 
   return moves;
+};
+
+/**
+ * Get all possible moves for a specific piece.
+ * @param checkersState the game API state.
+ * @param pieceIndex the piece pieceIndex.
+ * @param turnIndex the turnIndex.
+ * @return an array of all possible move paths.
+ */
+var getAllPossibleMoves = function(gameApiState, pieceIndex, turnIndex) {
+  var checkersState = convertGameApiStateToCheckersState(gameApiState),
+    possibleMoves = [];
+
+  possibleMoves = possibleMoves.concat(getJumpMoves(checkersState, pieceIndex, turnIndex));
+
+  if (possibleMoves.length === 0) {
+    possibleMoves = possibleMoves.concat(getSimpleMoves(checkersState, pieceIndex, turnIndex));
+  }
+
+  return possibleMoves;
 };
 
 /**
@@ -419,7 +440,7 @@ var convertGameApiStateToCheckersState = function (gameApiState) {
     checkersState = [];
   for (key in gameApiState) {
     if (gameApiState.hasOwnProperty(key)) {
-      index = key.substr(1);
+      index = key;
       checkersState[index] = gameApiState[key];
     }
   }
@@ -437,7 +458,7 @@ var convertCheckersStateToGameApiState = function (checkersState) {
   var i,
     gameApiState = {};
   for (i = 0; i < checkersState.length; i += 1) {
-    gameApiState['S' + i] = checkersState[i];
+    gameApiState[i] = checkersState[i];
   }
 
   return gameApiState;
@@ -457,16 +478,11 @@ var getNextState = function (gameApiState, move, turnIndex) {
     hasWhite = false,
     hasBlack = false,
     index,
-    set,
-    key;
+    set;
   for (index in move) {
     if (move.hasOwnProperty(index) && move[index].hasOwnProperty('set')) {
       set = move[index].set;
-      for (key in set) {
-        if (set.hasOwnProperty(key)) {
-          nextState['S' + key.substr(1)] = set[key];
-        }
-      }
+      nextState[set.key] = set.value;
     }
   }
 
@@ -520,20 +536,15 @@ var retrieveGameApiMoveDetail = function (gameApiMove) {
     index,
     set,
     key;
-
   for (index in gameApiMove) {
     if (gameApiMove.hasOwnProperty(index)) {
       if (gameApiMove[index].hasOwnProperty('setTurn')) {
         // Get the setTurn value
-        gameApiMoveDetail.setTurnIndex = gameApiMove[index].setTurn;
+        gameApiMoveDetail.setTurnIndex = gameApiMove[index].setTurn['turnIndex'];
       } else if (gameApiMove[index].hasOwnProperty('set')) {
         // Store all set operations
-        set = gameApiMove[index];
-        for (key in set) {
-          if (set.hasOwnProperty(key)) {
-            setOperations.push([key, set[key]]);
-          }
-        }
+        set = gameApiMove[index].set;
+        setOperations.push([set.key, set.value]);
       } else if (gameApiMove[index].hasOwnProperty('endMatch')) {
         // Get the endMatch if it exist and calculate the winner
         if (gameApiMove[index].endMatch.endMatchScores[0] === 0) {
@@ -547,35 +558,18 @@ var retrieveGameApiMoveDetail = function (gameApiMove) {
 
   // Note the order of operation are important, the first one is the piece the
   // player operates, which is assign to pieceIndex.
-  for (key in setOperations[0][1]) {
-    if (setOperations[0][1].hasOwnProperty(key)) {
-      gameApiMoveDetail.pieceIndex = parseInt(key.substr(1), 10);
-    }
-  }
+  gameApiMoveDetail.pieceIndex = parseInt(setOperations[0][0], 10);
 
   if (setOperations.length === 2) {
     // If there's 2 set operations, then it's a simple move and the second set
     // operation is for the destination square.
-    for (key in setOperations[1][1]) {
-      if (setOperations[1][1].hasOwnProperty(key)) {
-        gameApiMoveDetail.checkersMove.push(parseInt(key.substr(1), 10));
-      }
-    }
+    gameApiMoveDetail.checkersMove.push(parseInt(setOperations[1][0], 10));
   } else if (setOperations.length === 3) {
     // If there's 3 set operations, then it's a jump move and the second set
     // operation is for the opponent (jumped) piece and the third set operation
     // is for the destination square.
-    for (key in setOperations[1][1]) {
-      if (setOperations[1][1].hasOwnProperty(key)) {
-        gameApiMoveDetail.checkersMove.push(parseInt(key.substr(1), 10));
-      }
-    }
-
-    for (key in setOperations[2][1]) {
-      if (setOperations[2][1].hasOwnProperty(key)) {
-        gameApiMoveDetail.checkersMove.push(parseInt(key.substr(1), 10));
-      }
-    }
+    gameApiMoveDetail.checkersMove.push(parseInt(setOperations[1][0], 10));
+    gameApiMoveDetail.checkersMove.push(parseInt(setOperations[2][0], 10));
   } else {
     // If the set operations are more than 3, than it may be a initial move,
     // mark it here and check it later in isMoveOk.
@@ -635,16 +629,16 @@ var isEmptyObj = function (obj) {
  * @param move2 the game API move to be checked
  * @returns {boolean}
  */
-var isInitialMove = function (initialMove, move) {
+var isInitialMove = function (move) {
   var i,
-    setObject,
+    set,
     piece;
 
   if (move === null || move === undefined) return false;
   if (move.length !== move.length) return false;
 
   // Check setTurn operation
-  if (!move[0].hasOwnProperty('setTurn') || move[0].setTurn !== 0) {
+  if (!move[0].hasOwnProperty('setTurn') || move[0].setTurn['turnIndex'] !== 0) {
     return false;
   }
 
@@ -652,17 +646,11 @@ var isInitialMove = function (initialMove, move) {
   for (i = 0; i < CONSTANT.get('ROW') * CONSTANT.get('COLUMN'); i += 1) {
     // If the operation is no set, return false
     if (move[i + 1].hasOwnProperty('set')) {
-      setObject = move[i + 1].set;
+      set = move[i + 1].set;
       // If the set operation does not set the correct square, return false
-      if (setObject.hasOwnProperty('S' + i)) {
-        piece = setObject['S' + i];
-        // If the piece is not set correctly, return false
-        if ((i < 12 && piece !== "BMAN")
-            || (i >= 12 && i < 20 && piece !== "EMPTY")
-            || (i >= 20 && i < 32 && piece !== "WMAN")) {
-          return false;
-        }
-      } else {
+      if ((i < 12 && (set.key !== i || set.value !== 'BMAN'))
+          || (i >= 12 && i < 20) && (set.key !== i || set.value !== 'EMPTY')
+          || (i >= 20 && i < 32) && (set.key !== i || set.value !== 'WMAN')) {
         return false;
       }
     } else {
@@ -692,20 +680,28 @@ var isMoveOk = function (match) {
         getNextState(gameApiStateBeforeMove, move, turnIndexBeforeMove),
     nextGameApiState = nextStateObj.nextState,
     nextCheckersState = convertGameApiStateToCheckersState(nextGameApiState),
-    gameApiMoveDetail = retrieveGameApiMoveDetail(move),
-    checkersMove = gameApiMoveDetail.checkersMove,
-    pieceIndex = gameApiMoveDetail.pieceIndex,
-//    setTurnIndex = gameApiMoveDetail.setTurnIndex,
-    winner = gameApiMoveDetail.winner,
+    gameApiMoveDetail,
+    checkersMove,
+    pieceIndex,
+//    setTurnIndex,
+    winner,
     isSimpleMove = true,
     possibleMoves = [],
     index,
     i;
+  
+  if (isEmptyObj(gameApiStateBeforeMove) && move.length === 0) {
+    return true;
+  } else {
+    gameApiMoveDetail = retrieveGameApiMoveDetail(move);
+    checkersMove = gameApiMoveDetail.checkersMove;
+    pieceIndex = gameApiMoveDetail.pieceIndex;
+    winner = gameApiMoveDetail.winner;
+  }
 
   // Check if the move is an initial move first, only if the moves are different
   // from the simple move or jump move.
   if (gameApiMoveDetail.checkInitialMove) {
-
     if (turnIndexBeforeMove !== 0) {
       return {email: 'x@x.x', emailSubject: 'hacker!',
         emailBody: 'Illegal move!!!'};
@@ -831,31 +827,24 @@ var isMoveOk = function (match) {
  */
 var getInitialMove = function () {
   var operations = [],
-    i,
-    set;
+    i;
 
-  operations.push({setTurn: 0});
+  operations.push({setTurn: {turnIndex: 0}});
 
   for (i = 0; i < (CONSTANT.get('ROW') - 2)
       / 2 * CONSTANT.get('COLUMN');
       i += 1) {
-    set = {};
-    set['S' + i] = 'BMAN';
-    operations.push({set: set});
+    operations.push({set: {key: i, value: 'BMAN'}});
   }
 
   for (i = (CONSTANT.get('ROW') / 2 - 1) * CONSTANT.get('COLUMN');
        i < (CONSTANT.get('ROW') / 2 + 1) * CONSTANT.get('COLUMN'); i += 1) {
-    set = {};
-    set['S' + i] = 'EMPTY';
-    operations.push({set: set});
+    operations.push({set: {key: i, value: 'EMPTY'}});
   }
 
   for (i = (CONSTANT.get('ROW') / 2 + 1) * CONSTANT.get('COLUMN');
        i < CONSTANT.get('ROW') * CONSTANT.get('COLUMN'); i += 1) {
-    set = {};
-    set['S' + i] = 'WMAN';
-    operations.push({set: set});
+    operations.push({set: {key: i, value: 'WMAN'}});
   }
 
   return operations;
@@ -869,6 +858,9 @@ checkers.factory('checkersLogicService', function () {
     isMoveOk: isMoveOk,
     getNextState: getNextState,
     getInitialMove: getInitialMove,
+    getJumpMoves: getJumpMoves,
+    getSimpleMoves: getSimpleMoves,
+    getAllPossibleMoves: getAllPossibleMoves,
     cloneObj: cloneObj,
     isEmptyObj: isEmptyObj,
     CONSTANT: CONSTANT

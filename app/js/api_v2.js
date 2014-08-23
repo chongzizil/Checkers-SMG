@@ -242,6 +242,18 @@ var platform = (function () {
           stateBeforeMove : stateBeforeMove,
           stateAfterMove : stateAfterMove
         }) !== true) {
+      console.log(game.isMoveOk(
+          {
+            move : moveForIndex,
+            turnIndexBeforeMove : turnIndexBeforeMove,
+            turnIndexAfterMove : turnIndexAfterMove,
+            stateBeforeMove : stateBeforeMove,
+            stateAfterMove : stateAfterMove
+          }));
+      console.log(moveForIndex[0]);
+      console.log(moveForIndex[1]);
+      console.log(moveForIndex[2]);
+      console.log(moveForIndex[3]);
       throwError("You declated a hacker for a legal move! move=" + moveForIndex);
     }
     game.updateUI(

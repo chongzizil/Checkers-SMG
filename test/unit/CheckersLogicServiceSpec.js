@@ -30,7 +30,7 @@ describe('checkersLogicService unit tests: ', function () {
     emptyState = {};
     for (i = 0; i < Math.pow(checkersLogicService.CONSTANT.get('ROW'), 2);
          i += 1) {
-      emptyState['S' + i] = 'EMPTY';
+      emptyState[i] = 'EMPTY';
     }
   });
 
@@ -39,21 +39,21 @@ describe('checkersLogicService unit tests: ', function () {
 
     for (i = 0; i < (checkersLogicService.CONSTANT.get('ROW') - 2)
         / 2 * checkersLogicService.CONSTANT.get('COLUMN'); i += 1) {
-      initialState['S' + i] = 'BMAN';
+      initialState[i] = 'BMAN';
     }
 
     for (i = (checkersLogicService.CONSTANT.get('ROW') / 2 - 1)
         * checkersLogicService.CONSTANT.get('COLUMN');
          i < (checkersLogicService.CONSTANT.get('ROW') / 2 + 1)
              * checkersLogicService.CONSTANT.get('COLUMN'); i += 1) {
-      initialState['S' + i] = 'EMPTY';
+      initialState[i] = 'EMPTY';
     }
 
     for (i = (checkersLogicService.CONSTANT.get('ROW') / 2 + 1)
         * checkersLogicService.CONSTANT.get('COLUMN');
          i < checkersLogicService.CONSTANT.get('ROW')
              * checkersLogicService.CONSTANT.get('COLUMN'); i += 1) {
-      initialState['S' + i] = 'WMAN';
+      initialState[i] = 'WMAN';
     }
   });
 
@@ -128,11 +128,11 @@ describe('checkersLogicService unit tests: ', function () {
       match.stateAfterMove = copyState(initialState);
       match.move = [];
 
-      match.stateAfterMove.S20 = "EMPTY";
-      match.stateAfterMove.S16 = "WMAN";
-      match.move.push({setTurn: BLACK_TURN_INDEX});
-      match.move.push({set: {S20: "EMPTY"}});
-      match.move.push({set: {S16: "WMAN"}});
+      match.stateAfterMove['20'] = "EMPTY";
+      match.stateAfterMove['16'] = "WMAN";
+      match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+      match.move.push({set: {key: 20, value: "EMPTY"}});
+      match.move.push({set: {key: 16, value: "WMAN"}});
       expect(isMoveOk(match)).toBe(true);
     });
 
@@ -145,11 +145,11 @@ describe('checkersLogicService unit tests: ', function () {
         match.stateAfterMove = copyState(initialState);
         match.move = [];
 
-        match.stateAfterMove.S20 = "EMPTY";
-        match.stateAfterMove.S18 = "WMAN";
-        match.move.push({setTurn: BLACK_TURN_INDEX});
-        match.move.push({set: {S20: "EMPTY"}});
-        match.move.push({set: {S18: "WMAN"}});
+        match.stateAfterMove['20'] = "EMPTY";
+        match.stateAfterMove['18'] = "WMAN";
+        match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+        match.move.push({set: {key: 20, value: "EMPTY"}});
+        match.move.push({set: {key: 18, value: "WMAN"}});
         expect(isMoveOk(match)).toEqual({email: 'x@x.x',
           emailSubject: 'hacker!', emailBody: 'Illegal simple moves!!!'});
     });
@@ -163,11 +163,11 @@ describe('checkersLogicService unit tests: ', function () {
         match.stateAfterMove = copyState(initialState);
         match.move = [];
 
-        match.stateAfterMove.S20 = "EMPTY";
-        match.stateAfterMove.S12 = "WMAN";
-        match.move.push({setTurn: BLACK_TURN_INDEX});
-        match.move.push({set: {S20: "EMPTY"}});
-        match.move.push({set: {S12: "WMAN"}});
+        match.stateAfterMove['20'] = "EMPTY";
+        match.stateAfterMove['12'] = "WMAN";
+        match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+        match.move.push({set: {key: 20, value: "EMPTY"}});
+        match.move.push({set: {key: 12, value: "WMAN"}});
         expect(isMoveOk(match)).toEqual({email: 'x@x.x',
           emailSubject: 'hacker!', emailBody: 'Illegal simple moves!!!'});
     });
@@ -181,11 +181,11 @@ describe('checkersLogicService unit tests: ', function () {
           match.stateAfterMove = copyState(initialState);
           match.move = [];
 
-          match.stateAfterMove.S20 = "EMPTY";
-          match.stateAfterMove.S24 = "WMAN";
-          match.move.push({setTurn: BLACK_TURN_INDEX});
-          match.move.push({set: {S20: "EMPTY"}});
-          match.move.push({set: {S24: "WMAN"}});
+          match.stateAfterMove['20'] = "EMPTY";
+          match.stateAfterMove['24'] = "WMAN";
+          match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+          match.move.push({set: {key: 20, value: "EMPTY"}});
+          match.move.push({set: {key: 24, value: "WMAN"}});
           expect(isMoveOk(match)).toEqual({email: 'x@x.x',
             emailSubject: 'hacker!', emailBody: 'Illegal simple moves!!!'});
         });
@@ -200,11 +200,11 @@ describe('checkersLogicService unit tests: ', function () {
           match.stateAfterMove = copyState(initialState);
           match.move = [];
 
-          match.stateAfterMove.S9 = "EMPTY";
-          match.stateAfterMove.S12 = "BMAN";
-          match.move.push({setTurn: BLACK_TURN_INDEX});
-          match.move.push({set: {S9: "EMPTY"}});
-          match.move.push({set: {S12: "BMAN"}});
+          match.stateAfterMove['9'] = "EMPTY";
+          match.stateAfterMove['12'] = "BMAN";
+          match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+          match.move.push({set: {key: 9, value: "EMPTY"}});
+          match.move.push({set: {key: 12, value: "BMAN"}});
           expect(isMoveOk(match)).toEqual({email: 'x@x.x',
             emailSubject: 'hacker!', emailBody: 'Illegal simple moves!!!'});
      });
@@ -217,11 +217,11 @@ describe('checkersLogicService unit tests: ', function () {
       match.stateAfterMove = copyState(initialState);
       match.move = [];
 
-      match.stateAfterMove.S33 = "EMPTY";
-      match.stateAfterMove.S15 = "WMAN";
-      match.move.push({setTurn: BLACK_TURN_INDEX});
-      match.move.push({set: {S33: "EMPTY"}});
-      match.move.push({set: {S15: "WMAN"}});
+      match.stateAfterMove['33'] = "EMPTY";
+      match.stateAfterMove['15'] = "WMAN";
+      match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+      match.move.push({set: {key: 33, value: "EMPTY"}});
+      match.move.push({set: {key: 15, value: "WMAN"}});
       expect(isMoveOk(match)).toEqual({email: 'x@x.x', emailSubject: 'hacker!',
         emailBody: 'Illegal index'});
     });
@@ -234,11 +234,11 @@ describe('checkersLogicService unit tests: ', function () {
       match.stateAfterMove = copyState(initialState);
       match.move = [];
 
-      match.stateAfterMove.S20 = "EMPTY";
-      match.stateAfterMove.S33 = "WMAN";
-      match.move.push({setTurn: BLACK_TURN_INDEX});
-      match.move.push({set: {S20: "EMPTY"}});
-      match.move.push({set: {S33: "WMAN"}});
+      match.stateAfterMove['20'] = "EMPTY";
+      match.stateAfterMove['33'] = "WMAN";
+      match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+      match.move.push({set: {key: 20, value: "EMPTY"}});
+      match.move.push({set: {key: 33, value: "WMAN"}});
       expect(isMoveOk(match)).toEqual({email: 'x@x.x', emailSubject: 'hacker!',
         emailBody: 'Illegal index'});
     });
@@ -271,16 +271,16 @@ describe('checkersLogicService unit tests: ', function () {
       match.turnIndexBeforeMove = BLACK_TURN_INDEX;
       match.turnIndexAfterMove = WHITE_TURN_INDEX;
       match.stateBeforeMove = initialState;
-      match.stateBeforeMove.S20 = "EMPTY";
-      match.stateBeforeMove.S16 = "WMAN";
+      match.stateBeforeMove['20'] = "EMPTY";
+      match.stateBeforeMove['16'] = "WMAN";
       match.stateAfterMove = copyState(match.stateBeforeMove);
-      match.stateAfterMove.S8 = "EMPTY";
-      match.stateAfterMove.S12 = "BMAN";
+      match.stateAfterMove['8'] = "EMPTY";
+      match.stateAfterMove['12'] = "BMAN";
 
       match.move = [];
-      match.move.push({setTurn: WHITE_TURN_INDEX});
-      match.move.push({set: {S8: "EMPTY"}});
-      match.move.push({set: {S12: "BMAN"}});
+      match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
+      match.move.push({set: {key: 8, value: "EMPTY"}});
+      match.move.push({set: {key: 12, value: "BMAN"}});
       expect(isMoveOk(match)).toBe(true);
     });
 
@@ -290,16 +290,16 @@ describe('checkersLogicService unit tests: ', function () {
       match.turnIndexBeforeMove = BLACK_TURN_INDEX;
       match.turnIndexAfterMove = WHITE_TURN_INDEX;
       match.stateBeforeMove = initialState;
-      match.stateBeforeMove.S20 = "EMPTY";
-      match.stateBeforeMove.S16 = "WMAN";
+      match.stateBeforeMove['20'] = "EMPTY";
+      match.stateBeforeMove['16'] = "WMAN";
       match.stateAfterMove = copyState(match.stateBeforeMove);
-      match.stateAfterMove.S8 = "EMPTY";
-      match.stateAfterMove.S17 = "BMAN";
+      match.stateAfterMove['8'] = "EMPTY";
+      match.stateAfterMove['17'] = "BMAN";
 
       match.move = [];
-      match.move.push({setTurn: WHITE_TURN_INDEX});
-      match.move.push({set: {S8: "EMPTY"}});
-      match.move.push({set: {S17: "BMAN"}});
+      match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
+      match.move.push({set: {key: 8, value: "EMPTY"}});
+      match.move.push({set: {key: 17, value: "BMAN"}});
       expect(isMoveOk(match)).toEqual({ email : 'x@x.x',
         emailSubject : 'hacker!', emailBody : 'Illegal simple moves!!!' });
     });
@@ -310,16 +310,16 @@ describe('checkersLogicService unit tests: ', function () {
       match.turnIndexBeforeMove = BLACK_TURN_INDEX;
       match.turnIndexAfterMove = WHITE_TURN_INDEX;
       match.stateBeforeMove = initialState;
-      match.stateBeforeMove.S20 = "EMPTY";
-      match.stateBeforeMove.S16 = "WMAN";
+      match.stateBeforeMove['20'] = "EMPTY";
+      match.stateBeforeMove['16'] = "WMAN";
       match.stateAfterMove = copyState(match.stateBeforeMove);
-      match.stateAfterMove.S8 = "EMPTY";
-      match.stateAfterMove.S16 = "BMAN";
+      match.stateAfterMove['8'] = "EMPTY";
+      match.stateAfterMove['16'] = "BMAN";
 
       match.move = [];
-      match.move.push({setTurn: WHITE_TURN_INDEX});
-      match.move.push({set: {S8: "EMPTY"}});
-      match.move.push({set: {S16: "BMAN"}});
+      match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
+      match.move.push({set: {key: 8, value: "EMPTY"}});
+      match.move.push({set: {key: 16, value: "BMAN"}});
       expect(isMoveOk(match)).toEqual({ email : 'x@x.x',
         emailSubject : 'hacker!', emailBody : 'Illegal simple moves!!!' });
     });
@@ -330,16 +330,16 @@ describe('checkersLogicService unit tests: ', function () {
           match.turnIndexBeforeMove = BLACK_TURN_INDEX;
           match.turnIndexAfterMove = WHITE_TURN_INDEX;
           match.stateBeforeMove = initialState;
-          match.stateBeforeMove.S20 = "EMPTY";
-          match.stateBeforeMove.S16 = "WMAN";
+          match.stateBeforeMove['20'] = "EMPTY";
+          match.stateBeforeMove['16'] = "WMAN";
           match.stateAfterMove = copyState(match.stateBeforeMove);
-          match.stateAfterMove.S8 = "EMPTY";
-          match.stateAfterMove.S4 = "BMAN";
+          match.stateAfterMove['8'] = "EMPTY";
+          match.stateAfterMove['4'] = "BMAN";
 
           match.move = [];
-          match.move.push({setTurn: WHITE_TURN_INDEX});
-          match.move.push({set: {S8: "EMPTY"}});
-          match.move.push({set: {S4: "BMAN"}});
+          match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
+          match.move.push({set: {key: 8, value: "EMPTY"}});
+          match.move.push({set: {key: 4, value: "BMAN"}});
           expect(isMoveOk(match)).toEqual({ email : 'x@x.x',
             emailSubject : 'hacker!', emailBody : 'Illegal simple moves!!!' });
         });
@@ -351,16 +351,16 @@ describe('checkersLogicService unit tests: ', function () {
           match.turnIndexBeforeMove = BLACK_TURN_INDEX;
           match.turnIndexAfterMove = WHITE_TURN_INDEX;
           match.stateBeforeMove = initialState;
-          match.stateBeforeMove.S20 = "EMPTY";
-          match.stateBeforeMove.S16 = "WMAN";
+          match.stateBeforeMove['20'] = "EMPTY";
+          match.stateBeforeMove['16'] = "WMAN";
           match.stateAfterMove = copyState(match.stateBeforeMove);
-          match.stateAfterMove.S16 = "EMPTY";
-          match.stateAfterMove.S12 = "WMAN";
+          match.stateAfterMove['16'] = "EMPTY";
+          match.stateAfterMove['12'] = "WMAN";
 
           match.move = [];
-          match.move.push({setTurn: WHITE_TURN_INDEX});
-          match.move.push({set: {S16: "EMPTY"}});
-          match.move.push({set: {S12: "WMAN"}});
+          match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
+          match.move.push({set: {key: 16, value: "EMPTY"}});
+          match.move.push({set: {key: 12, value: "WMAN"}});
           expect(isMoveOk(match)).toEqual({ email : 'x@x.x',
             emailSubject : 'hacker!', emailBody : 'Illegal simple moves!!!' });
         });
@@ -397,19 +397,19 @@ describe('checkersLogicService unit tests: ', function () {
       match.stateAfterMove = copyState(emptyState);
       match.move = [];
 
-      match.stateBeforeMove.S12 = "WMAN";
-      match.stateBeforeMove.S13 = "BCRO";
-      match.stateBeforeMove.S17 = "WCRO";
-      match.stateBeforeMove.S21 = "BMAN";
-      match.stateAfterMove.S12 = "WMAN";
-      match.stateAfterMove.S17 = "EMPTY";
-      match.stateAfterMove.S13 = "EMPTY";
-      match.stateAfterMove.S10 = "WCRO";
-      match.stateAfterMove.S21 = "BMAN";
-      match.move.push({setTurn: BLACK_TURN_INDEX});
-      match.move.push({set: {S17: "EMPTY"}});
-      match.move.push({set: {S13: "EMPTY"}});
-      match.move.push({set: {S10: "WCRO"}});
+      match.stateBeforeMove['12'] = "WMAN";
+      match.stateBeforeMove['13'] = "BCRO";
+      match.stateBeforeMove['17'] = "WCRO";
+      match.stateBeforeMove['21'] = "BMAN";
+      match.stateAfterMove['12'] = "WMAN";
+      match.stateAfterMove['17'] = "EMPTY";
+      match.stateAfterMove['13'] = "EMPTY";
+      match.stateAfterMove['10'] = "WCRO";
+      match.stateAfterMove['21'] = "BMAN";
+      match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+      match.move.push({set: {key: 17, value: "EMPTY"}});
+      match.move.push({set: {key: 13, value: "EMPTY"}});
+      match.move.push({set: {key: 10, value: "WCRO"}});
 
       expect(isMoveOk(match)).toEqual(true);
     });
@@ -422,19 +422,19 @@ describe('checkersLogicService unit tests: ', function () {
       match.stateAfterMove = copyState(emptyState);
       match.move = [];
 
-      match.stateBeforeMove.S12 = "WMAN";
-      match.stateBeforeMove.S13 = "BCRO";
-      match.stateBeforeMove.S17 = "WCRO";
-      match.stateBeforeMove.S21 = "BMAN";
-      match.stateAfterMove.S12 = "WMAN";
-      match.stateAfterMove.S17 = "EMPTY";
-      match.stateAfterMove.S21 = "EMPTY";
-      match.stateAfterMove.S31 = "BCRO";
-      match.stateAfterMove.S26 = "WCRO";
-      match.move.push({setTurn: BLACK_TURN_INDEX});
-      match.move.push({set: {S17: "EMPTY"}});
-      match.move.push({set: {S21: "EMPTY"}});
-      match.move.push({set: {S26: "WCRO"}});
+      match.stateBeforeMove['12'] = "WMAN";
+      match.stateBeforeMove['13'] = "BCRO";
+      match.stateBeforeMove['17'] = "WCRO";
+      match.stateBeforeMove['21'] = "BMAN";
+      match.stateAfterMove['12'] = "WMAN";
+      match.stateAfterMove['17'] = "EMPTY";
+      match.stateAfterMove['21'] = "EMPTY";
+      match.stateAfterMove['31'] = "BCRO";
+      match.stateAfterMove['26'] = "WCRO";
+      match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+      match.move.push({set: {key: 17, value: "EMPTY"}});
+      match.move.push({set: {key: 21, value: "EMPTY"}});
+      match.move.push({set: {key: 26, value: "WCRO"}});
 
       expect(isMoveOk(match)).toEqual(true);
     });
@@ -448,18 +448,18 @@ describe('checkersLogicService unit tests: ', function () {
       match.stateAfterMove = copyState(emptyState);
       match.move = [];
 
-      match.stateBeforeMove.S12 = "WMAN";
-      match.stateBeforeMove.S13 = "BCRO";
-      match.stateBeforeMove.S17 = "WCRO";
-      match.stateBeforeMove.S21 = "BMAN";
-      match.stateAfterMove.S12 = "WMAN";
-      match.stateAfterMove.S13 = "BCRO";
-      match.stateAfterMove.S17 = "EMPTY";
-      match.stateAfterMove.S20 = "WCRO";
-      match.stateAfterMove.S21 = "BMAN";
-      match.move.push({setTurn: BLACK_TURN_INDEX});
-      match.move.push({set: {S17: "EMPTY"}});
-      match.move.push({set: {S20: "WCRO"}});
+      match.stateBeforeMove['12'] = "WMAN";
+      match.stateBeforeMove['13'] = "BCRO";
+      match.stateBeforeMove['17'] = "WCRO";
+      match.stateBeforeMove['21'] = "BMAN";
+      match.stateAfterMove['12'] = "WMAN";
+      match.stateAfterMove['13'] = "BCRO";
+      match.stateAfterMove['17'] = "EMPTY";
+      match.stateAfterMove['20'] = "WCRO";
+      match.stateAfterMove['21'] = "BMAN";
+      match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+      match.move.push({set: {key: 17, value: "EMPTY"}});
+      match.move.push({set: {key: 20, value: "WCRO"}});
 
       expect(isMoveOk(match)).toEqual({ email: 'x@x.x',emailSubject: 'hacker!',
         emailBody: 'Illegal ignore mandatory jump!!!' });
@@ -474,18 +474,18 @@ describe('checkersLogicService unit tests: ', function () {
       match.stateAfterMove = copyState(emptyState);
       match.move = [];
 
-      match.stateBeforeMove.S12 = "WMAN";
-      match.stateBeforeMove.S13 = "BCRO";
-      match.stateBeforeMove.S17 = "WCRO";
-      match.stateBeforeMove.S21 = "BMAN";
-      match.stateAfterMove.S8 = "WMAN";
-      match.stateAfterMove.S12 = "WEMPTY";
-      match.stateAfterMove.S13 = "BCRO";
-      match.stateAfterMove.S17 = "WCRO";
-      match.stateAfterMove.S21 = "BMAN";
-      match.move.push({setTurn: BLACK_TURN_INDEX});
-      match.move.push({set: {S12: "EMPTY"}});
-      match.move.push({set: {S8: "WMAN"}});
+      match.stateBeforeMove['12'] = "WMAN";
+      match.stateBeforeMove['13'] = "BCRO";
+      match.stateBeforeMove['17'] = "WCRO";
+      match.stateBeforeMove['21'] = "BMAN";
+      match.stateAfterMove['8'] = "WMAN";
+      match.stateAfterMove['12'] = "WEMPTY";
+      match.stateAfterMove['13'] = "BCRO";
+      match.stateAfterMove['17'] = "WCRO";
+      match.stateAfterMove['21'] = "BMAN";
+      match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+      match.move.push({set: {key: 12, value: "EMPTY"}});
+      match.move.push({set: {key: 8, value: "WMAN"}});
 
       expect(isMoveOk(match)).toEqual({ email: 'x@x.x', emailSubject: 'hacker!',
         emailBody: 'Illegal ignore mandatory jump!!!' });
@@ -522,17 +522,17 @@ describe('checkersLogicService unit tests: ', function () {
       match.stateAfterMove = copyState(emptyState);
       match.move = [];
 
-      match.stateBeforeMove.S9 = "WCRO";
-      match.stateBeforeMove.S13 = "BMAN";
-      match.stateBeforeMove.S17 = "WMAN";
-      match.stateAfterMove.S9 = "EMPTY";
-      match.stateAfterMove.S13 = "EMPTY";
-      match.stateAfterMove.S18 = "WMAN";
-      match.stateAfterMove.S17 = "WMAN";
-      match.move.push({setTurn: BLACK_TURN_INDEX});
-      match.move.push({set: {S9: "EMPTY"}});
-      match.move.push({set: {S13: "EMPTY"}});
-      match.move.push({set: {S18: "WMAN"}});
+      match.stateBeforeMove['9'] = "WCRO";
+      match.stateBeforeMove['13'] = "BMAN";
+      match.stateBeforeMove['17'] = "WMAN";
+      match.stateAfterMove['9'] = "EMPTY";
+      match.stateAfterMove['13'] = "EMPTY";
+      match.stateAfterMove['18'] = "WMAN";
+      match.stateAfterMove['17'] = "WMAN";
+      match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+      match.move.push({set: {key: 9, value: "EMPTY"}});
+      match.move.push({set: {key: 13, value: "EMPTY"}});
+      match.move.push({set: {key: 18, value: "WMAN"}});
       match.move.push({endMatch: {endMatchScores: [1, 0]}});
       expect(isMoveOk(match)).toEqual(true);
     });
@@ -565,17 +565,17 @@ describe('checkersLogicService unit tests: ', function () {
       match.stateAfterMove = copyState(emptyState);
       match.move = [];
 
-      match.stateBeforeMove.S9 = "WCRO";
-      match.stateBeforeMove.S14 = "BMAN";
-      match.stateBeforeMove.S17 = "WMAN";
-      match.stateAfterMove.S9 = "EMPTY";
-      match.stateAfterMove.S5 = "WMAN";
-      match.stateAfterMove.S14 = "BMAN";
-      match.stateAfterMove.S17 = "WMAN";
-      match.move.push({setTurn: WHITE_TURN_INDEX});
-      match.move.push({set: {S9: "EMPTY"}});
-      match.move.push({set: {S5: "WMAN"}});
-      match.move.push({endMatch: {endMatchScores: [1, ]}});
+      match.stateBeforeMove['9'] = "WCRO";
+      match.stateBeforeMove['14'] = "BMAN";
+      match.stateBeforeMove['17'] = "WMAN";
+      match.stateAfterMove['9'] = "EMPTY";
+      match.stateAfterMove['5'] = "WMAN";
+      match.stateAfterMove['14'] = "BMAN";
+      match.stateAfterMove['17'] = "WMAN";
+      match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
+      match.move.push({set: {key: 9, value: "EMPTY"}});
+      match.move.push({set: {key: 5, value: "WMAN"}});
+      match.move.push({endMatch: {endMatchScores: [1, 0]}});
 
       expect(isMoveOk(match)).toEqual({email: 'x@x.x', emailSubject: 'hacker!',
         emailBody: 'Illegal winner'});
@@ -611,17 +611,17 @@ describe('checkersLogicService unit tests: ', function () {
       match.stateAfterMove = copyState(emptyState);
       match.move = [];
 
-      match.stateBeforeMove.S9 = "BCRO";
-      match.stateBeforeMove.S13 = "WMAN";
-      match.stateBeforeMove.S17 = "BMAN";
-      match.stateAfterMove.S9 = "EMPTY";
-      match.stateAfterMove.S13 = "EMPTY";
-      match.stateAfterMove.S18 = "BMAN";
-      match.stateAfterMove.S17 = "BMAN";
-      match.move.push({setTurn: WHITE_TURN_INDEX});
-      match.move.push({set: {S9: "EMPTY"}});
-      match.move.push({set: {S13: "EMPTY"}});
-      match.move.push({set: {S18: "BMAN"}});
+      match.stateBeforeMove['9'] = "BCRO";
+      match.stateBeforeMove['13'] = "WMAN";
+      match.stateBeforeMove['17'] = "BMAN";
+      match.stateAfterMove['9'] = "EMPTY";
+      match.stateAfterMove['13'] = "EMPTY";
+      match.stateAfterMove['18'] = "BMAN";
+      match.stateAfterMove['17'] = "BMAN";
+      match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
+      match.move.push({set: {key: 9, value: "EMPTY"}});
+      match.move.push({set: {key: 13, value: "EMPTY"}});
+      match.move.push({set: {key: 18, value: "BMAN"}});
       match.move.push({endMatch: {endMatchScores: [0, 1]}});
       expect(isMoveOk(match)).toEqual(true);
     });
@@ -654,16 +654,16 @@ describe('checkersLogicService unit tests: ', function () {
       match.stateAfterMove = copyState(emptyState);
       match.move = [];
 
-      match.stateBeforeMove.S9 = "BCRO";
-      match.stateBeforeMove.S14 = "WMAN";
-      match.stateBeforeMove.S17 = "BMAN";
-      match.stateAfterMove.S9 = "EMPTY";
-      match.stateAfterMove.S5 = "BMAN";
-      match.stateAfterMove.S14 = "WMAN";
-      match.stateAfterMove.S17 = "BMAN";
-      match.move.push({setTurn: WHITE_TURN_INDEX});
-      match.move.push({set: {S9: "EMPTY"}});
-      match.move.push({set: {S5: "BMAN"}});
+      match.stateBeforeMove['9'] = "BCRO";
+      match.stateBeforeMove['14'] = "WMAN";
+      match.stateBeforeMove['17'] = "BMAN";
+      match.stateAfterMove['9'] = "EMPTY";
+      match.stateAfterMove['5'] = "BMAN";
+      match.stateAfterMove['14'] = "WMAN";
+      match.stateAfterMove['17'] = "BMAN";
+      match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
+      match.move.push({set: {key: 9, value: "EMPTY"}});
+      match.move.push({set: {key: 5, value: "BMAN"}});
       match.move.push({endMatch: {endMatchScores: [1, 0]}});
 
       expect(isMoveOk(match)).toEqual({email: 'x@x.x', emailSubject: 'hacker!',

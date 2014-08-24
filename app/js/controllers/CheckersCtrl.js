@@ -12,7 +12,6 @@ checkers.controller('CheckersCtrl', ['$scope', 'checkersLogicService', function 
       state = {},
       selectedPiece = [];
 
-
   /**
    * Convert the game API state to the UI state. The ui state contains all 64
    * square objects as:
@@ -121,28 +120,13 @@ checkers.controller('CheckersCtrl', ['$scope', 'checkersLogicService', function 
   };
 
   /**
-   * Check if there's any mandatory jumps.
-   *
-   * @returns {boolean}
-   */
-  var checkMandatoryJump = function() {
-    var possibleMoves = [];
-    for (var i = 0; i < checkersLogicService.CONSTANT.get('ROW') *
-        checkersLogicService.CONSTANT.get('COLUMN'); i += 1) {
-      possibleMoves = possibleMoves.concat(checkersLogicService.getJumpMoves(state, i, yourPlayerIndex));
-    }
-
-    return possibleMoves.length > 0;
-  };
-
-  /**
    * For each piece, set its property 'canSelect' to true only if it is valid
    * to select.
    */
   var setInitialSelectableSquares = function () {
     var square,
       possibleMoves,
-      hasMandatoryJump = checkMandatoryJump();
+      hasMandatoryJump = checkersLogicService.checkMandatoryJump(state, yourPlayerIndex);
 
     for (var i = 0; i < checkersLogicService.CONSTANT.get('ROW') *
         checkersLogicService.CONSTANT.get('COLUMN'); i += 1) {
@@ -173,16 +157,6 @@ checkers.controller('CheckersCtrl', ['$scope', 'checkersLogicService', function 
   };
 
   /**
-   * Set all squares unselectable.
-   */
-  var setAllSquareUnselectable = function () {
-    for (var i = 0; i < checkersLogicService.CONSTANT.get('ROW') *
-        checkersLogicService.CONSTANT.get('COLUMN') * 2; i += 1) {
-      $scope.uiState[i].canSelect = false;
-    }
-  };
-
-  /**
    * After one piece is selected, set 'canSelect' of all possible moves squares
    * and itself to true.
    *
@@ -197,8 +171,6 @@ checkers.controller('CheckersCtrl', ['$scope', 'checkersLogicService', function 
           possibleMoves[i] = possibleMoves[i][1];
         }
       }
-
-      setAllSquareUnselectable();
 
       $scope.uiState[pieceIndex].canSelect = true;
 
@@ -225,58 +197,31 @@ checkers.controller('CheckersCtrl', ['$scope', 'checkersLogicService', function 
     var operations = [],
       square = $scope.uiState[index];
 
+    // Proceed only if it's dark square and it's selectable.
     if (square.isDark && square.canSelect) {
-      if (selectedPiece.indexOf(index) === -1) {
+      if (selectedPiece.length === 0) {
         square.isSelected = true;
-        selectedPiece.push(index);
+        selectedPiece[0] = index;
         setSelectableSquares(index);
-      } else {
-        square.isSelected = false;
-        selectedPiece = [];
-        setInitialSelectableSquares();
+      } else if (selectedPiece.length === 1) {
+        if (state[Math.floor(index / 2)].substr(0, 1) === state[Math.floor(selectedPiece[0] / 2)].substr(0, 1)) {
+          $scope.uiState[selectedPiece[0]].isSelected = false;
+          square.isSelected = true;
+          selectedPiece[0] = index;
+          setSelectableSquares(index);
+        } else {
+          selectedPiece[1] = index;
+        }
       }
 
       if (selectedPiece.length === 2) {
-        var fromUiIndex = selectedPiece[0];
-        var fromIndex = Math.floor(fromUiIndex / 2);
-        var toUiIndex = selectedPiece[1];
-        var toIndex = Math.floor(toUiIndex / 2);
-        var fromPiece = state[fromIndex];
+        selectedPiece[0] = Math.floor(selectedPiece[0] / 2);
+        selectedPiece[1] = Math.floor(selectedPiece[1] / 2);
+        operations = checkersLogicService.getExpectedOperations(state, selectedPiece, yourPlayerIndex);
+
+        $scope.uiState[selectedPiece[0]].isSelected = false;
 
         selectedPiece = [];
-
-        $scope.uiState[fromUiIndex].isSelected = false;
-
-        if (Math.abs(Math.abs(fromUiIndex - toUiIndex) - checkersLogicService.CONSTANT.get('COLUMN') * 2) === 1) {
-          // Simple move
-
-          operations.push({setTurn: {turnIndex: 1 - yourPlayerIndex}});
-          operations.push({set: {key: fromIndex, value: "EMPTY"}});
-          operations.push({set: {key: toIndex, value: fromPiece}});
-        } else if (Math.abs(Math.abs(fromUiIndex - toUiIndex) -  checkersLogicService.CONSTANT.get('COLUMN') * 4) === 2) {
-          // Jump move
-
-          var jumpedUiIndex;
-          switch(toUiIndex - fromUiIndex) {
-            case 18: jumpedUiIndex = fromUiIndex + 9; break;
-            case 14: jumpedUiIndex = fromUiIndex + 7; break;
-            case -18: jumpedUiIndex = fromUiIndex - 9; break;
-            case -14: jumpedUiIndex = fromUiIndex - 7; break;
-          }
-
-          var jumpedIndex = Math.floor(jumpedUiIndex / 2);
-
-          operations.push({set: {key: fromIndex, value: "EMPTY"}});
-          operations.push({set: {key: jumpedIndex, value: "EMPTY"}});
-          operations.push({set: {key: toIndex, value: fromPiece}});
-
-          if (checkersLogicService.getJumpMoves(
-              checkersLogicService.getNextState(checkersLogicService.cloneObj(state), operations, yourPlayerIndex).nextState, toIndex, yourPlayerIndex).length > 0) {
-            operations.push({setTurn: {turnIndex: yourPlayerIndex}});
-          } else {
-            operations.push({setTurn: {turnIndex: 1 - yourPlayerIndex}});
-          }
-        }
         makeMoveCallback(operations);
       }
     }

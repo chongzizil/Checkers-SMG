@@ -55,11 +55,11 @@ var CONSTANT = (function () {
  */
 var getMoveUpMoves = function (checkersState, pieceIndex) {
   var moves = [],
-    leftUpIndex,
-    rightUpIndex;
+      leftUpIndex,
+      rightUpIndex;
 
   // If the piece is in the first row, then there's no way to move up.
-  if (pieceIndex / CONSTANT.get('COLUMN') === 0) {
+  if (Math.floor(pieceIndex / CONSTANT.get('COLUMN')) === 0) {
     return moves;
   }
 
@@ -91,12 +91,11 @@ var getMoveUpMoves = function (checkersState, pieceIndex) {
 
     // Check right, for the rightmost one, it can only move to the left up side.
     rightUpIndex = pieceIndex - CONSTANT.get('COLUMN') + 1;
-    if (rightUpIndex % CONSTANT.get('COLUMN') !== CONSTANT.get('COLUMN') - 1
+    if (pieceIndex % CONSTANT.get('COLUMN') !== CONSTANT.get('COLUMN') - 1
         && checkersState[rightUpIndex] === 'EMPTY') {
       moves.push(rightUpIndex);
     }
   }
-
   return moves;
 };
 
@@ -109,11 +108,11 @@ var getMoveUpMoves = function (checkersState, pieceIndex) {
  */
 var getMoveDownMoves = function (checkersState, pieceIndex) {
   var moves = [],
-    leftUpIndex,
-    rightUpIndex;
+      leftUpIndex,
+      rightUpIndex;
 
   // If the piece is in the last row, then there's no way to move down.
-  if (pieceIndex > (CONSTANT.get('ROW') - 1) * CONSTANT.get('COLUMN') - 1) {
+  if (Math.floor(pieceIndex / CONSTANT.get('COLUMN')) === (CONSTANT.get('ROW') - 1)) {
     return moves;
   }
 
@@ -123,7 +122,7 @@ var getMoveDownMoves = function (checkersState, pieceIndex) {
     // Check left first, for the leftmost one,
     // it can only move to the right up side
     leftUpIndex = pieceIndex + CONSTANT.get('COLUMN') - 1;
-    if (leftUpIndex % CONSTANT.get('COLUMN') !== 3
+    if (pieceIndex % CONSTANT.get('COLUMN') !== 0
         && checkersState[leftUpIndex] === 'EMPTY') {
       moves.push(leftUpIndex);
     }
@@ -145,7 +144,7 @@ var getMoveDownMoves = function (checkersState, pieceIndex) {
 
     // Check right, for the rightmost one, it can only move to the left up side.
     rightUpIndex = pieceIndex + CONSTANT.get('COLUMN') + 1;
-    if (rightUpIndex % CONSTANT.get('COLUMN') !== 0
+    if (pieceIndex % CONSTANT.get('COLUMN') !== CONSTANT.get('COLUMN') - 1
         && checkersState[rightUpIndex] === 'EMPTY') {
       moves.push(rightUpIndex);
     }
@@ -180,13 +179,13 @@ var validateJump = function (ownPiece, opponentPiece, targetCell) {
  */
 var getJumpUpMoves = function (checkersState, pieceIndex) {
   var ownPiece = checkersState[pieceIndex],
-    opponentPieceIndex,
-    opponentPiece,
-    targetCellIndex,
-    targetCell,
-    moves = [];
+      opponentPieceIndex,
+      opponentPiece,
+      targetCellIndex,
+      targetCell,
+      moves = [];
 
-  if ((pieceIndex / CONSTANT.get('COLUMN')) < 2) {
+  if (Math.floor(pieceIndex / CONSTANT.get('COLUMN')) < 2) {
     return moves;
   }
 
@@ -233,7 +232,7 @@ var getJumpUpMoves = function (checkersState, pieceIndex) {
 
     // Check right
     if (pieceIndex % CONSTANT.get('COLUMN') !== CONSTANT.get('COLUMN') - 1) {
-      opponentPieceIndex = pieceIndex - CONSTANT.get('COLUMN') - 1;
+      opponentPieceIndex = pieceIndex - CONSTANT.get('COLUMN') + 1;
       targetCellIndex = pieceIndex - 2 * CONSTANT.get('COLUMN') + 1;
       opponentPiece = checkersState[opponentPieceIndex];
       targetCell = checkersState[targetCellIndex];
@@ -257,13 +256,13 @@ var getJumpUpMoves = function (checkersState, pieceIndex) {
  */
 var getJumpDownMoves = function (checkersState, pieceIndex) {
   var ownPiece = checkersState[pieceIndex],
-    opponentPieceIndex,
-    opponentPiece,
-    targetCellIndex,
-    targetCell,
-    moves = [];
+      opponentPieceIndex,
+      opponentPiece,
+      targetCellIndex,
+      targetCell,
+      moves = [];
 
-  if ((pieceIndex / CONSTANT.get('COLUMN')) === CONSTANT.get('ROW') - 1) {
+  if (Math.floor(pieceIndex / CONSTANT.get('COLUMN')) >= CONSTANT.get('ROW') - 2) {
     return moves;
   }
 
@@ -334,10 +333,10 @@ var getJumpDownMoves = function (checkersState, pieceIndex) {
  */
 var getSimpleMoves = function (checkersState, pieceIndex, turnIndex) {
   var moves = [],
-    tmpMoves = [],
-    piece = checkersState[pieceIndex],
-    color = piece.substr(0, 1),
-    kind = piece.substr(1);
+      tmpMoves = [],
+      piece = checkersState[pieceIndex],
+      color = piece.substr(0, 1),
+      kind = piece.substr(1);
 
   if (color === "B" && turnIndex === 1) {
     if (kind === 'CRO') {
@@ -372,10 +371,10 @@ var getSimpleMoves = function (checkersState, pieceIndex, turnIndex) {
  */
 var getJumpMoves = function (checkersState, pieceIndex, turnIndex) {
   var moves = [],
-    tmpMoves = [],
-    piece = checkersState[pieceIndex],
-    color = piece.substr(0, 1),
-    kind = piece.substr(1);
+      tmpMoves = [],
+      piece = checkersState[pieceIndex],
+      color = piece.substr(0, 1),
+      kind = piece.substr(1);
 
   if (color === "B" && turnIndex === 1) {
     if (kind === 'CRO') {
@@ -404,9 +403,9 @@ var getJumpMoves = function (checkersState, pieceIndex, turnIndex) {
  * @param turnIndex the turnIndex.
  * @return an array of all possible move paths.
  */
-var getAllPossibleMoves = function(gameApiState, pieceIndex, turnIndex) {
+var getAllPossibleMoves = function (gameApiState, pieceIndex, turnIndex) {
   var checkersState = convertGameApiStateToCheckersState(gameApiState),
-    possibleMoves = [];
+      possibleMoves = [];
 
   possibleMoves = possibleMoves.concat(getJumpMoves(checkersState, pieceIndex, turnIndex));
 
@@ -425,7 +424,7 @@ var getAllPossibleMoves = function(gameApiState, pieceIndex, turnIndex) {
  */
 var cloneObj = function (obj) {
   var str = JSON.stringify(obj),
-    copy = JSON.parse(str);
+      copy = JSON.parse(str);
   return copy;
 };
 
@@ -436,8 +435,8 @@ var cloneObj = function (obj) {
  */
 var convertGameApiStateToCheckersState = function (gameApiState) {
   var key,
-    index,
-    checkersState = [];
+      index,
+      checkersState = [];
   for (key in gameApiState) {
     if (gameApiState.hasOwnProperty(key)) {
       index = key;
@@ -446,22 +445,6 @@ var convertGameApiStateToCheckersState = function (gameApiState) {
   }
 
   return checkersState;
-};
-
-/**
- * A function that takes a checkers state as in array format and convert it in
- * to a game API format.
- * @param checkersState the game state in array format.
- * @returns gameApiState the game state in game API format.
- */
-var convertCheckersStateToGameApiState = function (checkersState) {
-  var i,
-    gameApiState = {};
-  for (i = 0; i < checkersState.length; i += 1) {
-    gameApiState[i] = checkersState[i];
-  }
-
-  return gameApiState;
 };
 
 /**
@@ -475,10 +458,10 @@ var convertCheckersStateToGameApiState = function (checkersState) {
  */
 var getNextState = function (gameApiState, move, turnIndex) {
   var nextState = cloneObj(gameApiState),
-    hasWhite = false,
-    hasBlack = false,
-    index,
-    set;
+      hasWhite = false,
+      hasBlack = false,
+      index,
+      set;
   for (index in move) {
     if (move.hasOwnProperty(index) && move[index].hasOwnProperty('set')) {
       set = move[index].set;
@@ -526,16 +509,16 @@ var getNextState = function (gameApiState, move, turnIndex) {
  */
 var retrieveGameApiMoveDetail = function (gameApiMove) {
   var gameApiMoveDetail = {
-      checkersMove: [],
-      pieceIndex: -1,
-      setTurnIndex: -1,
-      winner: ' ',
-      checkInitialMove: false
-    },
-    setOperations = [],
-    index,
-    set,
-    key;
+        checkersMove: [],
+        pieceIndex: -1,
+        setTurnIndex: -1,
+        winner: ' ',
+        checkInitialMove: false,
+        checkIsCrownedLegal: false
+      },
+      setOperations = [],
+      index,
+      set;
   for (index in gameApiMove) {
     if (gameApiMove.hasOwnProperty(index)) {
       if (gameApiMove[index].hasOwnProperty('setTurn')) {
@@ -545,6 +528,10 @@ var retrieveGameApiMoveDetail = function (gameApiMove) {
         // Store all set operations
         set = gameApiMove[index].set;
         setOperations.push([set.key, set.value]);
+        // It could be crowned.
+        if (set.value.substr(1) === 'CRO') {
+          gameApiMoveDetail.checkIsCrownedLegal = true;
+        }
       } else if (gameApiMove[index].hasOwnProperty('endMatch')) {
         // Get the endMatch if it exist and calculate the winner
         if (gameApiMove[index].endMatch.endMatchScores[0] === 0) {
@@ -615,8 +602,8 @@ var isLegalIndex = function (index) {
  * @returns {boolean}
  */
 var isEmptyObj = function (obj) {
-  for(var prop in obj) {
-    if(obj.hasOwnProperty(prop))
+  for (var prop in obj) {
+    if (obj.hasOwnProperty(prop))
       return false;
   }
 
@@ -631,8 +618,8 @@ var isEmptyObj = function (obj) {
  */
 var isInitialMove = function (move) {
   var i,
-    set,
-    piece;
+      set,
+      piece;
 
   if (move === null || move === undefined) return false;
   if (move.length !== move.length) return false;
@@ -662,6 +649,33 @@ var isInitialMove = function (move) {
 };
 
 /**
+ * Check if the crown is ok and legal
+ * @param piece the piece to be crowned
+ * @param toIndex the piece moving to or jumping to
+ * @param playerTurnIndex the player's turn index
+ * @returns {boolean}
+ */
+var isCrownOk = function (piece, toIndex, playerTurnIndex) {
+  // Check if the piece can be crowned
+  if ((playerTurnIndex === 0 &&
+      toIndex >= 0 && toIndex < CONSTANT.get('COLUMN')
+      ) ||
+      (playerTurnIndex === 1 &&
+          toIndex >= (CONSTANT.get('ROW') - 1) * CONSTANT.get('COLUMN') &&
+          toIndex < CONSTANT.get('ROW') * CONSTANT.get('COLUMN'))
+      ) {
+    // For white piece, it's moving or jumping to the first row
+    // For black piece, it's moving or jumping to the last row
+    if (piece.substr(1) === 'MAN') {
+      // If the piece is still MAN, then it shall be crowned!
+      return true;
+    }
+  }
+
+  return false;
+};
+
+/**
  * Check if the move is OK.
  *
  * @param match
@@ -669,38 +683,46 @@ var isInitialMove = function (move) {
  */
 var isMoveOk = function (match) {
   var gameApiStateBeforeMove = match.stateBeforeMove,
-//    gameApiStateAfterMove = match.stateAfterMove,
-    turnIndexBeforeMove = match.turnIndexBeforeMove,
-    turnIndexAfterMove = match.turnIndexAfterMove,
-    move = match.move,
-    initialMove,
-    checkersStateBeforeMove =
-      convertGameApiStateToCheckersState(gameApiStateBeforeMove),
-    nextStateObj =
-        getNextState(gameApiStateBeforeMove, move, turnIndexBeforeMove),
-    nextGameApiState = nextStateObj.nextState,
-    nextCheckersState = convertGameApiStateToCheckersState(nextGameApiState),
-    gameApiMoveDetail,
-    checkersMove,
-    pieceIndex,
-//    setTurnIndex,
-    winner,
-    isSimpleMove = true,
-    possibleMoves = [],
-    index,
-    i;
-  
+      gameApiStateAfterMove = match.stateAfterMove,
+      turnIndexBeforeMove = match.turnIndexBeforeMove,
+      turnIndexAfterMove = match.turnIndexAfterMove,
+      move = match.move,
+      initialMove,
+      checkersStateBeforeMove =
+          convertGameApiStateToCheckersState(gameApiStateBeforeMove),
+      nextStateObj =
+          getNextState(gameApiStateBeforeMove, move, turnIndexBeforeMove),
+      nextGameApiState = nextStateObj.nextState,
+      nextCheckersState = convertGameApiStateToCheckersState(nextGameApiState),
+      gameApiMoveDetail,
+      checkersMove,
+      pieceIndex,
+      setTurnIndex,
+      winner,
+      isSimpleMove = true,
+      possibleMoves = [],
+      index,
+      i;
+
+  //////////////////////////////////////////////////////////////////////////////
+  // 1. Check if the state is empty (need initialize move)
+  //////////////////////////////////////////////////////////////////////////////
   if (isEmptyObj(gameApiStateBeforeMove) && move.length === 0) {
+    // If the state is empty and no move is made, then it's the initial state
     return true;
   } else {
+    // Otherwise retrieve the move details
     gameApiMoveDetail = retrieveGameApiMoveDetail(move);
     checkersMove = gameApiMoveDetail.checkersMove;
     pieceIndex = gameApiMoveDetail.pieceIndex;
+    setTurnIndex = gameApiMoveDetail.setTurnIndex;
     winner = gameApiMoveDetail.winner;
   }
 
-  // Check if the move is an initial move first, only if the moves are different
-  // from the simple move or jump move.
+  //////////////////////////////////////////////////////////////////////////////
+  // 2. Check if the move is an initial move first, only if the moves are
+  // different from the simple move or jump move.
+  //////////////////////////////////////////////////////////////////////////////
   if (gameApiMoveDetail.checkInitialMove) {
     if (turnIndexBeforeMove !== 0) {
       return {email: 'x@x.x', emailSubject: 'hacker!',
@@ -722,7 +744,9 @@ var isMoveOk = function (match) {
     }
   }
 
-  // Check if the all piece's index is legal
+  //////////////////////////////////////////////////////////////////////////////
+  // 3. Check if the all piece's index is legal
+  //////////////////////////////////////////////////////////////////////////////
   if (!isLegalIndex(pieceIndex)) {
     return {email: 'x@x.x', emailSubject: 'hacker!',
       emailBody: 'Illegal index'};
@@ -734,7 +758,40 @@ var isMoveOk = function (match) {
     }
   }
 
-  // Check if the move is legal
+  //////////////////////////////////////////////////////////////////////////////
+  // 4. Check if the piece remains the same or be legally crowned.
+  //////////////////////////////////////////////////////////////////////////////
+  var pieceBeforeMove = gameApiStateBeforeMove[pieceIndex];
+  var pieceIndexAfterMove = checkersMove[checkersMove.length - 1];
+  var pieceAfterMove = gameApiStateAfterMove[pieceIndexAfterMove];
+
+  // Check if the piece's color is changed which is illegal all time
+  if (pieceBeforeMove.substr(0, 1) !== pieceAfterMove.substr(0, 1)) {
+    return {email: 'x@x.x', emailSubject: 'hacker!',
+      emailBody: 'Illegal change color!!!'};
+  }
+
+  // Check if the piece is uncrowned which is illegal all time
+  if (pieceBeforeMove.substr(1) === 'CRO' && pieceBeforeMove.substr(1) !== pieceAfterMove.substr(1)) {
+
+    return {email: 'x@x.x', emailSubject: 'hacker!',
+      emailBody: 'Illegal uncrowned!!!'};
+  }
+
+  // The piece is crowned, check if it is legal
+  if (pieceBeforeMove.substr(1) === 'MAN' && pieceBeforeMove.substr(1) !== pieceAfterMove.substr(1)) {
+    // Check if the crowned move is legal
+    if (pieceBeforeMove.substr(1) === 'MAN' && !isCrownOk(pieceBeforeMove, pieceIndexAfterMove, turnIndexBeforeMove)) {
+      // Only if the piece is original a MAN that we should check whether it
+      // is legally crowned.
+      return {email: 'x@x.x', emailSubject: 'hacker!',
+        emailBody: 'Illegal crowned!!!'};
+    }
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+  // 5. Check if the move is legal
+  //////////////////////////////////////////////////////////////////////////////
   if (checkersMove.length === 1) {
     // Simple move
 
@@ -768,7 +825,6 @@ var isMoveOk = function (match) {
 
     possibleMoves =
         getJumpMoves(checkersStateBeforeMove, pieceIndex, turnIndexBeforeMove);
-
     // If the move is among the possible moves, then it's valid
     if (!containJumpMove(possibleMoves, checkersMove, turnIndexBeforeMove)) {
       return {email: 'x@x.x', emailSubject: 'hacker!',
@@ -781,26 +837,38 @@ var isMoveOk = function (match) {
       emailBody: 'Illegal moves!!!'};
   }
 
+  //////////////////////////////////////////////////////////////////////////////
+  // 6. Check the set turn, it's only legal to perform another move if there
+  // more jump moves available for the operated piece.
+  //////////////////////////////////////////////////////////////////////////////
   if (!isSimpleMove) {
     // Check if the set turn index is legal
     // For the same piece, check if it can do more jump moves
     if (getJumpMoves(nextCheckersState, checkersMove[1],
         turnIndexBeforeMove).length > 0) {
       // If the same piece can do more jumps, then the turnIndex remains.
-      if (turnIndexAfterMove !== turnIndexBeforeMove) {
+      if (setTurnIndex !== turnIndexBeforeMove) {
         return {email: 'x@x.x', emailSubject: 'hacker!',
           emailBody: 'Illegal setTurn'};
       }
     } else {
       // It the same piece can't do more jumps, then the turnIndex will change.
-      if (turnIndexAfterMove === turnIndexBeforeMove) {
+      if (setTurnIndex === turnIndexBeforeMove) {
         return {email: 'x@x.x', emailSubject: 'hacker!',
           emailBody: 'Illegal setTurn!'};
       }
     }
+  } else {
+    // The turnIndex must change if the move is just a simple move.
+    if (setTurnIndex === turnIndexBeforeMove) {
+      return {email: 'x@x.x', emailSubject: 'hacker!',
+        emailBody: 'Illegal setTurn!'};
+    }
   }
 
-  // Check if the game ends
+  //////////////////////////////////////////////////////////////////////////////
+  // 6. Check if the game ends properly
+  //////////////////////////////////////////////////////////////////////////////
   if (winner === 'B') {
     if (!(nextStateObj.hasOwnProperty('endMatchScore')
         && nextStateObj.endMatchScore[0] === 0)) {
@@ -821,19 +889,68 @@ var isMoveOk = function (match) {
 };
 
 /**
+ * Each time the player makes a move, check whether the opponent player can make
+ * any move in the new state, if he can than the game is not over yet, otherwise
+ * the game is ended.
+ * @param gameApiState the current game API state
+ * @param operations the operations the player made
+ * @param yourPlayerIndex the player's turn index
+ * @returns {boolean}
+ */
+var hasWon = function (gameApiState, operations, yourPlayerIndex) {
+
+  var nextGameApiState = getNextState(cloneObj(gameApiState), operations, yourPlayerIndex).nextState,
+      nextCheckersState = convertGameApiStateToCheckersState(nextGameApiState),
+      opponentTurnIndex = 1 - yourPlayerIndex,
+      moves = [];
+
+  for (var i = 0; i < nextCheckersState.length; i += 1) {
+    moves = moves.concat(getJumpMoves(nextCheckersState, i, opponentTurnIndex));
+    if (moves.length > 0) {
+      return false;
+    }
+  }
+
+  for (var i = 0; i < nextCheckersState.length; i += 1) {
+    moves = moves.concat(getSimpleMoves(nextCheckersState, i, opponentTurnIndex));
+    if (moves.length > 0) {
+      return false;
+    }
+  }
+
+  // The opponent has no move to made, whether he/she has or has not any pieces
+  // left on the board.
+  return true;
+};
+
+/**
+ * Check if there's any mandatory jumps.
+ *
+ * @returns {boolean}
+ */
+var checkMandatoryJump = function(state, yourPlayerIndex) {
+  var possibleMoves = [];
+  for (var i = 0; i < CONSTANT.get('ROW') * CONSTANT.get('COLUMN'); i += 1) {
+    possibleMoves = possibleMoves.concat(getJumpMoves(state, i, yourPlayerIndex));
+  }
+
+  return possibleMoves.length > 0;
+};
+
+/**
  * Get the initial moves (operations).
  *
  * @returns {Array}
  */
 var getInitialMove = function () {
   var operations = [],
-    i;
+      i;
 
   operations.push({setTurn: {turnIndex: 0}});
 
   for (i = 0; i < (CONSTANT.get('ROW') - 2)
       / 2 * CONSTANT.get('COLUMN');
-      i += 1) {
+       i += 1) {
     operations.push({set: {key: i, value: 'BMAN'}});
   }
 
@@ -851,6 +968,107 @@ var getInitialMove = function () {
 };
 
 /**
+ * Get the expected operations for the selectedPieces.
+ *
+ * @param gameApiState the game API state
+ * @param selectedPieces the selected piece indexes in game API format [0 - 31]
+ * @param turnIndex the player's turn index
+ * @returns {Array} operations
+ */
+var getExpectedOperations = function (gameApiState, selectedPieces, turnIndex) {
+  var operations = [],
+      nextState,
+      fromIndex = selectedPieces[0],
+      fromPiece = gameApiState[fromIndex],
+      toIndex = selectedPieces[1],
+      jumpedIndex,
+      column = CONSTANT.get('COLUMN'),
+      isSimpleMove = [column - 1, column, column + 1].indexOf(Math.abs(toIndex - fromIndex)) !== -1,
+      isJumpMove = [2 * column + 1, 2 * column - 1].indexOf(Math.abs(toIndex - fromIndex)) !== -1;
+
+  if (isSimpleMove) {
+    // Simple move
+
+    operations.push({set: {key: fromIndex, value: "EMPTY"}});
+    operations.push({set: {key: toIndex, value: fromPiece}});
+//    operations.push({setTurn: {turnIndex: 1 - turnIndex}});
+  } else if (isJumpMove) {
+    // Jump move
+
+    if (Math.floor(fromIndex / CONSTANT.get('COLUMN')) % 2 === 0) {
+      // EVEN
+      switch (toIndex - fromIndex) {
+        case 2 * column + 1:
+          jumpedIndex = fromIndex + column;
+          break;
+        case 2 * column - 1:
+          jumpedIndex = fromIndex + column - 1;
+          break;
+        case -(2 * column + 1):
+          jumpedIndex = fromIndex - column - 1;
+          break;
+        case -(2 * column - 1):
+          jumpedIndex = fromIndex - column;
+          break;
+      }
+    } else {
+      // ODD
+      switch (toIndex - fromIndex) {
+        case 2 * column + 1:
+          jumpedIndex = fromIndex + column + 1;
+          break;
+        case 2 * column - 1:
+          jumpedIndex = fromIndex + column;
+          break;
+        case -(2 * column + 1):
+          jumpedIndex = fromIndex - column;
+          break;
+        case -(2 * column - 1):
+          jumpedIndex = fromIndex - column + 1;
+          break;
+      }
+    }
+
+    operations.push({set: {key: fromIndex, value: "EMPTY"}});
+    operations.push({set: {key: jumpedIndex, value: "EMPTY"}});
+    operations.push({set: {key: toIndex, value: fromPiece}});
+  }
+
+
+
+  // Check if the piece can be crowned
+  if (isCrownOk(fromPiece, toIndex, turnIndex)) {
+    // Note that the order for the operations are critical, don't change it!
+    // It'll break this code below...
+    operations[operations.length - 1] = {set: {key: toIndex, value: fromPiece.substr(0, 1) + 'CRO'}};
+  }
+
+  if (isJumpMove) {
+    nextState = getNextState(cloneObj(gameApiState), operations, turnIndex).nextState;
+
+    // Check whether the player can make another jump for the same piece
+    if (getJumpMoves(nextState, toIndex, turnIndex).length > 0) {
+      operations.push({setTurn: {turnIndex: turnIndex}});
+    } else {
+      operations.push({setTurn: {turnIndex: 1 - turnIndex}});
+    }
+  } else if (isSimpleMove) {
+    operations.push({setTurn: {turnIndex: 1 - turnIndex}});
+  }
+
+  // Check the player has won or not after the move
+  if (hasWon(gameApiState, operations, turnIndex)) {
+    if (turnIndex === 0) {
+      operations.push(({endMatch: {endMatchScores: [1, 0]}}));
+    } else {
+      operations.push(({endMatch: {endMatchScores: [0, 1]}}));
+    }
+  }
+
+  return operations;
+};
+
+/**
  * Checkers logic service.
  */
 checkers.factory('checkersLogicService', function () {
@@ -858,9 +1076,11 @@ checkers.factory('checkersLogicService', function () {
     isMoveOk: isMoveOk,
     getNextState: getNextState,
     getInitialMove: getInitialMove,
+    getExpectedOperations: getExpectedOperations,
     getJumpMoves: getJumpMoves,
     getSimpleMoves: getSimpleMoves,
     getAllPossibleMoves: getAllPossibleMoves,
+    checkMandatoryJump: checkMandatoryJump,
     cloneObj: cloneObj,
     isEmptyObj: isEmptyObj,
     CONSTANT: CONSTANT

@@ -29,6 +29,7 @@
   <section id="game" ng-controller="CheckersCtrl">
     <div id="board">
       <div ng-repeat="square in uiState" class="square">
+        {{$index / 2}}
         <img src="img/empty.png" alt="" ng-show="square.isEmpty" class="isEmpty"
              ng-click="pieceSelected($index)"
              ng-class="{isDarkSquare: uiState[$index].isDark,

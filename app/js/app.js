@@ -1,6 +1,6 @@
 'use strict';
 
-var checkers = angular.module('checkers', ['ngRoute']);
+var checkers = angular.module('checkers', ['ngRoute', 'ngAnimate']);
 
 checkers.config(['$routeProvider',
   function($routeProvider) {

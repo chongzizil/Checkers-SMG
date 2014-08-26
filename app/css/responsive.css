@@ -1,0 +1,61 @@
+/* Smart phones (landscape) ----------- */
+@media only screen
+and (min-width : 321px)
+and (orientation : landscape) {
+  /* Styles */
+}
+
+/* Smart phone (landscape) */
+@media only screen and (max-width: 568px) and (orientation : landscape) {
+  #title {
+    font-size: 1.5em;
+  }
+
+  #info {
+    display: inline-block;
+    margin-top: 30vh;
+    margin-left: 10vw;
+  }
+
+  #board {
+    display: inline-block;
+    float: right;
+    width: 100vh;
+  }
+}
+
+/* iPads (landscape) ----------- */
+@media only screen
+and (min-width : 768px)
+and (max-width : 1024px)
+and (orientation : landscape) {
+  #info {
+    height: 15vh;
+  }
+
+  #board {
+    width: 80vh;
+    margin: 0 auto 0;
+    /*margin: 0% 20% 0%;*/
+  }
+}
+
+/* iPads (portrait) ----------- */
+@media only screen
+and (min-width : 768px)
+and (max-width : 1024px)
+and (orientation : portrait) {
+  #board {
+    width: 60%;
+    margin: 0% 20% 0%;
+  }
+}
+
+/* Desktops and laptops ----------- */
+@media screen and (min-width: 1025px) {
+
+  #board {
+    width: 36%;
+    margin: 0% 32% 0%;
+  }
+}

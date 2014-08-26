@@ -934,7 +934,5 @@ describe('checkersLogicService unit tests:', function () {
   });
 
   describe('isMoveOk:', function () {
-
   })
-
 });

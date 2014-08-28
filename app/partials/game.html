@@ -1,0 +1,30 @@
+<section>
+  <section id="button_panel" class="text-center">
+    <a class="btn btn-default" href="#/PassAndPlay">Player & Player</a>
+    <button class="btn btn-default" ng-click="newGame()">New game</button>
+    <a class="btn btn-default" href="#/PlayAgainstTheComputer">Player VS AI</a>
+  </section>
+
+  <section id="board">
+    <section id="info">
+      <h4 id="current_player_id" class="text-center">Current Player: {{playersInfo[yourPlayerIndex].playerId}}</h4>
+    </section>
+    <div ng-repeat="square in uiState" class="square">
+      <div ng-class="{isDarkSquare: uiState[$index].isDark,
+             isLightSquare: uiState[$index].isLight}">
+        <img ng-src="{{square.bgSrc}}" class="background_image">
+        <img ng-src="{{square.src + (!square.isSelected ? '':'_selected') + '.png'}}" alt=""
+             dd-draggable="true" dd-drop-target="true" id="{{$index}}"
+             class="isBlackMan"
+             ng-click="pieceSelected($index)"
+             ng-class="{
+             isBlackMan: uiState[$index].isBlackMan,
+             isBlackCro: uiState[$index].isBlackCro,
+             isWhiteMan: uiState[$index].isWhiteMan,
+             isWhiteCro: uiState[$index].isWhiteCro,
+             isEmpty: uiState[$index].isEmpty}">
+      </div>
+      <!--<div style="height: 100px; width: 100px; background: steelblue" class="disappear"></div>-->
+    </div>
+  </section>
+</section>

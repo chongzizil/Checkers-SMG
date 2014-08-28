@@ -26,7 +26,31 @@ describe('checkersCtrl unit tests:', function () {
     checkersLogicService = _checkersLogicService_;
   }));
 
+  // Set up an initial set up state
+  beforeEach(function setInitialState() {
+    initialState = {};
+
+    for (i = 0; i < (checkersLogicService.CONSTANT.get('ROW') - 2)
+        / 2 * checkersLogicService.CONSTANT.get('COLUMN'); i += 1) {
+      initialState[i] = 'BMAN';
+    }
+
+    for (i = (checkersLogicService.CONSTANT.get('ROW') / 2 - 1)
+        * checkersLogicService.CONSTANT.get('COLUMN');
+         i < (checkersLogicService.CONSTANT.get('ROW') / 2 + 1)
+             * checkersLogicService.CONSTANT.get('COLUMN'); i += 1) {
+      initialState[i] = 'EMPTY';
+    }
+
+    for (i = (checkersLogicService.CONSTANT.get('ROW') / 2 + 1)
+        * checkersLogicService.CONSTANT.get('COLUMN');
+         i < checkersLogicService.CONSTANT.get('ROW')
+             * checkersLogicService.CONSTANT.get('COLUMN'); i += 1) {
+      initialState[i] = 'WMAN';
+    }
+  });
+
   it('Should have those functions.', function () {
-//    console.log($scope);
+
   });
 });

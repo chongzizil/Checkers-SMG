@@ -979,9 +979,8 @@ var getJumpMoves = function (checkersState, squareIndex, turnIndex) {
  *        represents the black player.
  * @return an array of all possible move.
  */
-var getAllPossibleMoves = function (gameApiState, squareIndex, turnIndex) {
-  var checkersState = convertGameApiStateToCheckersState(gameApiState),
-    possibleMoves = [];
+var getAllPossibleMoves = function (checkersState, squareIndex, turnIndex) {
+  var possibleMoves = [];
 
   // First get all possible jump moves.
   possibleMoves = possibleMoves.concat(getJumpMoves(checkersState, squareIndex, turnIndex));
@@ -1089,15 +1088,18 @@ var getExpectedOperations = function (gameApiState, fromIndex, toIndex, turnInde
     isSimpleMove = [column - 1, column, column + 1].indexOf(Math.abs(toIndex - fromIndex)) !== -1,
     isJumpMove = [2 * column + 1, 2 * column - 1].indexOf(Math.abs(toIndex - fromIndex)) !== -1;
 
+  // First check if the player moves own color piece
+  if ((fromPiece.substr(0, 1) === 'W' && turnIndex === 1) ||
+      (fromPiece.substr(0, 1) === 'B' && turnIndex === 0)) {
+    throw new Error("You can not operator opponent's pieces.");
+  }
+
   if (isSimpleMove) {
     // Simple move
-
     operations.push({set: {key: fromIndex, value: "EMPTY"}});
     operations.push({set: {key: toIndex, value: fromPiece}});
-//    operations.push({setTurn: {turnIndex: 1 - turnIndex}});
   } else if (isJumpMove) {
     // Jump move
-
     jumpedIndex = calculateJumpedIndex(fromIndex, toIndex);
 
     operations.push({set: {key: fromIndex, value: "EMPTY"}});

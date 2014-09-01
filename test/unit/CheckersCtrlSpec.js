@@ -50,7 +50,7 @@ describe('checkersCtrl unit tests:', function () {
     }
   });
 
-  it('Should have those functions.', function () {
+  it('Test', function () {
 
   });
 });

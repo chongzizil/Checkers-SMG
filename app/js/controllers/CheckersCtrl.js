@@ -213,8 +213,10 @@ checkers.controller('CheckersCtrl',
        * @param isDnd true if the select is done by drag and drop.
        */
       var setSelectableSquares = function (squareIndex, isDnd) {
-        var possibleMoves = checkersLogicService.getAllPossibleMoves(state,
-            Math.floor(squareIndex / 2), yourPlayerIndex);
+        var checkersState =
+            checkersLogicService.convertGameApiStateToCheckersState(state);
+        var possibleMoves = checkersLogicService.getAllPossibleMoves(
+            checkersState, Math.floor(squareIndex / 2), yourPlayerIndex);
 
         if (possibleMoves.length > 0) {
           // If the possible moves are jump moves, then only keep the
@@ -350,6 +352,7 @@ checkers.controller('CheckersCtrl',
        * @param index the piece selected.
        */
       $scope.pieceSelected = function (index) {
+        console.log(index);
         var operations = [],
             square = $scope.uiState[index],
             isDnd = false;

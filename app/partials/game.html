@@ -15,7 +15,6 @@
         <img ng-src="{{square.bgSrc}}" class="background_image">
         <img ng-src="{{square.src + (!square.isSelected ? '':'_selected') + '.png'}}" alt=""
              dd-draggable="true" dd-drop-target="true" id="{{$index}}"
-             class="isBlackMan"
              ng-click="pieceSelected($index)"
              ng-class="{
              isBlackMan: uiState[$index].isBlackMan,

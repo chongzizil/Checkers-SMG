@@ -21,7 +21,7 @@ body {
   left: 0;
 }
 
-#board .empty, .isBlackMan, .isBlackCro, .isWhiteMan, .isWhiteCro {
+#board .isEmpty, .isBlackMan, .isBlackCro, .isWhiteMan, .isWhiteCro {
   max-width: 100%;
   z-index: 20;
   position: absolute;

@@ -302,13 +302,11 @@ checkers.controller('CheckersCtrl',
             break;
           case (2 * column) - 2:
             // Jump move down left
-            console.log("---" + jumpedUiIndex);
             $animate.addClass($('#' + jumpedUiIndex), 'disappear');
             $animate.addClass($('#' + fromUiIndex), 'jump_down_left');
             break;
           case (2 * column) + 2:
             // Jump move down right
-            console.log("+++" + jumpedUiIndex);
             $animate.addClass($('#' + jumpedUiIndex), 'disappear');
             $animate.addClass($('#' + fromUiIndex), 'jump_down_right');
             break;
@@ -352,7 +350,7 @@ checkers.controller('CheckersCtrl',
        * @param index the piece selected.
        */
       $scope.pieceSelected = function (index) {
-        console.log(index);
+        console.log(index + ' isSelected.');
         var operations = [],
             square = $scope.uiState[index],
             isDnd = false;

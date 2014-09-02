@@ -39,6 +39,28 @@ var CONSTANT = (function () {
   };
 }());
 
+// Constant. Do not touch!!!
+var ILLEGAL_CODE = (function () {
+  var constant = {
+    ILLEGAL_MOVE: 0,
+    ILLEGAL_SIMPLE_MOVE: 1,
+    ILLEGAL_JUMP_MOVE: 2,
+    ILLEGAL_INDEX: 3,
+    ILLEGAL_COLOR_CHANGED: 4,
+    ILLEGAL_CROWNED: 5,
+    ILLEGAL_UNCROWNED: 6,
+    ILLEGAL_IGNORE_MANDATORY_JUMP: 7,
+    ILLEGAL_SET_TURN: 8,
+    ILLEGAL_END_MATCH_SCORE: 9
+  };
+
+  return {
+    get: function (key) {
+      return constant[key];
+    }
+  };
+}());
+
 /**
  * 8x8 game board for reference.
  *
@@ -51,6 +73,14 @@ var CONSTANT = (function () {
  * EVEN | 24 | ** | 25 | ** | 26 | ** | 27 | ** |
  * ODD  | ** | 28 | ** | 29 | ** | 30 | ** | 31 |
  */
+
+var checkTurnIndexMatchesPieceColor = function (turnIndex, color) {
+  if ((turnIndex === 0 && color === 'B') ||
+      (turnIndex === 1 && color === 'W')) {
+    return true;
+  }
+  return false;
+};
 
 /**
  * Clone a object.
@@ -122,12 +152,42 @@ var getNextState = function (gameApiState, move, turnIndex) {
 
   // White won
   if (hasWhite && !hasBlack) {
-    return {nextState: nextState, endMatchScore: [1, 0]};
+    return {nextState: nextState, endMatchScore: [0, 1]};
   }
 
   // Black won
   if (!hasWhite && hasBlack) {
-    return {nextState: nextState, endMatchScore: [0, 1]};
+    return {nextState: nextState, endMatchScore: [1, 0]};
+  }
+
+  var allPossibleMoves = [];
+  var checkersNextState = convertGameApiStateToCheckersState(nextState);
+  for (index in nextState) {
+    if (nextState.hasOwnProperty(index)) {
+      if (turnIndex === 0) {
+        // Check white's moves
+        if (nextState[index].substr(0, 1) === 'W') {
+          allPossibleMoves = allPossibleMoves.concat(
+              getAllPossibleMoves(checkersNextState, index, 1 - turnIndex));
+        }
+      } else {
+        // Check black's moves
+        if (nextState[index].substr(0, 1) === 'B') {
+          allPossibleMoves = allPossibleMoves.concat(
+              getAllPossibleMoves(checkersNextState, index, 1 - turnIndex));
+        }
+      }
+    }
+  }
+
+  if (allPossibleMoves.length === 0) {
+    if (turnIndex === 0) {
+      // White has no moves, so black wins!
+      return {nextState: nextState, endMatchScore: [1, 0]};
+    } else {
+      // Black has no moves, so white wins!
+      return {nextState: nextState, endMatchScore: [0, 1]};
+    }
   }
 
   // No winner
@@ -173,9 +233,9 @@ var retrieveGameApiMoveDetail = function (gameApiMove) {
       } else if (gameApiMove[index].hasOwnProperty('endMatch')) {
         // Get the endMatch if it exist and calculate the winner
         if (gameApiMove[index].endMatch.endMatchScores[0] === 0) {
-          gameApiMoveDetail.winner = 'B';
-        } else {
           gameApiMoveDetail.winner = 'W';
+        } else {
+          gameApiMoveDetail.winner = 'B';
         }
       }
     }
@@ -300,22 +360,58 @@ var isInitialMove = function (move) {
 var isCrownOk = function (square, toIndex, playerTurnIndex) {
   // Check if the square can be crowned
   if (// For white square, it's moving or jumping to the first row
-      (playerTurnIndex === 0 &&
+      (playerTurnIndex === 1 &&
           toIndex >= 0 && toIndex < CONSTANT.get('COLUMN')
           ) ||
     // For black square, it's moving or jumping to the last row
-      (playerTurnIndex === 1 &&
+      (playerTurnIndex === 0 &&
           toIndex >= (CONSTANT.get('ROW') - 1) * CONSTANT.get('COLUMN') &&
           toIndex < CONSTANT.get('ROW') * CONSTANT.get('COLUMN'))
       ) {
 
-    if (square.substr(1) === 'MAN') {
-      // If the square is still MAN, then it shall be crowned!
-      return true;
-    }
+    return true;
   }
 
   return false;
+};
+
+var getIllegalEmailBody = function (illegalCode) {
+  var emailBody = '';
+
+  switch (illegalCode) {
+    case ILLEGAL_CODE.get('ILLEGAL_MOVE'):
+      emailBody = 'ILLEGAL_MOVE'; break;
+    case ILLEGAL_CODE.get('ILLEGAL_SIMPLE_MOVE'):
+      emailBody = 'ILLEGAL_SIMPLE_MOVE'; break;
+    case ILLEGAL_CODE.get('ILLEGAL_JUMP_MOVE'):
+      emailBody = 'ILLEGAL_JUMP_MOVE'; break;
+    case ILLEGAL_CODE.get('ILLEGAL_INDEX'):
+      emailBody = 'ILLEGAL_INDEX'; break;
+    case ILLEGAL_CODE.get('ILLEGAL_COLOR_CHANGED'):
+      emailBody = 'ILLEGAL_COLOR_CHANGED'; break;
+    case ILLEGAL_CODE.get('ILLEGAL_CROWNED'):
+      emailBody = 'ILLEGAL_CROWNED'; break;
+    case ILLEGAL_CODE.get('ILLEGAL_UNCROWNED'):
+      emailBody = 'ILLEGAL_UNCROWNED'; break;
+    case ILLEGAL_CODE.get('ILLEGAL_IGNORE_MANDATORY_JUMP'):
+      emailBody = 'ILLEGAL_IGNORE_MANDATORY_JUMP'; break;
+    case ILLEGAL_CODE.get('ILLEGAL_SET_TURN'):
+      emailBody = 'ILLEGAL_SET_TURN'; break;
+    case ILLEGAL_CODE.get('ILLEGAL_END_MATCH_SCORE'):
+      emailBody = 'ILLEGAL_END_MATCH_SCORE'; break;
+    default:
+      throw new error('Illegal code!!!');
+  }
+
+  return emailBody;
+};
+
+var getIllegalEmailObj = function (illegalCode) {
+  return {
+    email: 'yl1949@nyu.edu',
+    emailSubject: 'hacker!',
+    emailBody: getIllegalEmailBody(illegalCode)
+  }
 };
 
 /**
@@ -369,22 +465,19 @@ var isMoveOk = function (match) {
   if (gameApiMoveDetail.checkIsInitialMove) {
     // The initial move must be send by the white player with turn index 0
     if (turnIndexBeforeMove !== 0) {
-      return {email: 'x@x.x', emailSubject: 'hacker!',
-        emailBody: 'Illegal move!!!'};
+      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_MOVE'));
     }
 
     // Check if the game state is empty
     if (!isEmptyObj(gameApiStateBeforeMove)) {
-      return {email: 'x@x.x', emailSubject: 'hacker!',
-        emailBody: 'Illegal move!!!'};
+      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_MOVE'));
     }
 
     // Check if the initial move is legal
     if (isInitialMove(getInitialMove(), move)) {
       return true;
     } else {
-      return {email: 'x@x.x', emailSubject: 'hacker!',
-        emailBody: 'Illegal move!!!'};
+      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_MOVE'));
     }
   }
 
@@ -392,13 +485,11 @@ var isMoveOk = function (match) {
   // 3. Check if the square index and the move's indexes is legal
   //////////////////////////////////////////////////////////////////////////////
   if (!isLegalIndex(squareIndex)) {
-    return {email: 'x@x.x', emailSubject: 'hacker!',
-      emailBody: 'Illegal index'};
+    return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_INDEX'));
   }
   for (i = 0; i < checkersMove.length; i += 1) {
     if (!isLegalIndex(checkersMove[i])) {
-      return {email: 'x@x.x', emailSubject: 'hacker!',
-        emailBody: 'Illegal index'};
+      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_INDEX'));
     }
   }
 
@@ -411,25 +502,21 @@ var isMoveOk = function (match) {
 
   // Check if the piece's color is changed which is illegal all time
   if (pieceBeforeMove.substr(0, 1) !== pieceAfterMove.substr(0, 1)) {
-    return {email: 'x@x.x', emailSubject: 'hacker!',
-      emailBody: 'Illegal change color!!!'};
+    return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_COLOR_CHANGED'));
   }
 
   // Check if the piece is uncrowned which is illegal all time
   if (pieceBeforeMove.substr(1) === 'CRO' && pieceBeforeMove.substr(1) !== pieceAfterMove.substr(1)) {
-
-    return {email: 'x@x.x', emailSubject: 'hacker!',
-      emailBody: 'Illegal uncrowned!!!'};
+    return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_UNCROWNED'));
   }
 
   // The piece is crowned, check if it is legal
   if (pieceBeforeMove.substr(1) === 'MAN' && pieceBeforeMove.substr(1) !== pieceAfterMove.substr(1)) {
     // Check if the crowned move is legal
-    if (pieceBeforeMove.substr(1) === 'MAN' && !isCrownOk(pieceBeforeMove, pieceIndexAfterMove, turnIndexBeforeMove)) {
+    if (!isCrownOk(pieceBeforeMove, pieceIndexAfterMove, turnIndexBeforeMove)) {
       // Only if the piece is original a MAN that we should check whether it
       // is legally crowned.
-      return {email: 'x@x.x', emailSubject: 'hacker!',
-        emailBody: 'Illegal crowned!!!'};
+      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_CROWNED'));
     }
   }
 
@@ -441,15 +528,13 @@ var isMoveOk = function (match) {
 
     // Check all pieces if there are any mandatory jumps
     for (index in checkersStateBeforeMove) {
-      if ((checkersStateBeforeMove[index].substr(0, 1) === 'W'
-          && turnIndexBeforeMove === 0)
-          || (checkersStateBeforeMove[index].substr(0, 1) === 'B'
-              && turnIndexBeforeMove === 1)) {
+      if (checkTurnIndexMatchesPieceColor(turnIndexBeforeMove,
+          checkersStateBeforeMove[index].substr(0, 1)))
+      {
         if (getJumpMoves(checkersStateBeforeMove, parseInt(index, 10),
             turnIndexBeforeMove).length !== 0) {
           // Mandatory jump is ignored, hacker!!!
-          return {email: 'x@x.x', emailSubject: 'hacker!',
-            emailBody: 'Illegal ignore mandatory jump!!!'};
+          return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_IGNORE_MANDATORY_JUMP'));
         }
       }
     }
@@ -460,8 +545,7 @@ var isMoveOk = function (match) {
 
     // If the move is among the possible moves, then it's valid
     if (possibleMoves.indexOf(checkersMove[0]) === -1) {
-      return {email: 'x@x.x', emailSubject: 'hacker!',
-        emailBody: 'Illegal simple moves!!!'};
+      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_SIMPLE_MOVE'));
     }
 
   } else if (checkersMove.length === 2) {
@@ -472,14 +556,12 @@ var isMoveOk = function (match) {
 
     // If the move is among the possible moves, then it's valid
     if (!containJumpMove(possibleMoves, checkersMove, turnIndexBeforeMove)) {
-      return {email: 'x@x.x', emailSubject: 'hacker!',
-        emailBody: 'Illegal jumps!!!'};
+      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_JUMP_MOVE'));
     }
 
     isSimpleMove = false;
   } else {
-    return {email: 'x@x.x', emailSubject: 'hacker!',
-      emailBody: 'Illegal moves!!!'};
+    return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_MOVE'));
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -493,21 +575,18 @@ var isMoveOk = function (match) {
         turnIndexBeforeMove).length > 0) {
       // If the same piece can do more jumps, then the turnIndex remains.
       if (setTurnIndex !== turnIndexBeforeMove) {
-        return {email: 'x@x.x', emailSubject: 'hacker!',
-          emailBody: 'Illegal setTurn'};
+        return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_SET_TURN'));
       }
     } else {
       // It the same piece can't do more jumps, then the turnIndex will change.
       if (setTurnIndex === turnIndexBeforeMove) {
-        return {email: 'x@x.x', emailSubject: 'hacker!',
-          emailBody: 'Illegal setTurn!'};
+        return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_SET_TURN'));
       }
     }
   } else {
     // The turnIndex must change if the move is just a simple move.
     if (setTurnIndex === turnIndexBeforeMove) {
-      return {email: 'x@x.x', emailSubject: 'hacker!',
-        emailBody: 'Illegal setTurn!'};
+      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_SET_TURN'));
     }
   }
 
@@ -516,17 +595,15 @@ var isMoveOk = function (match) {
   //////////////////////////////////////////////////////////////////////////////
   if (winner === 'B') {
     if (!(nextStateObj.hasOwnProperty('endMatchScore')
-        && nextStateObj.endMatchScore[0] === 0)) {
-      return {email: 'x@x.x', emailSubject: 'hacker!',
-        emailBody: 'Illegal winner'};
+        && nextStateObj.endMatchScore[0] === 1)) {
+      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_END_MATCH_SCORE'));
     }
   }
 
   if (winner === 'W') {
     if (!(nextStateObj.hasOwnProperty('endMatchScore')
-        && nextStateObj.endMatchScore[1] === 0)) {
-      return {email: 'x@x.x', emailSubject: 'hacker!',
-        emailBody: 'Illegal winner'};
+        && nextStateObj.endMatchScore[1] === 1)) {
+      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_END_MATCH_SCORE'));
     }
   }
 
@@ -611,22 +688,6 @@ var getSimpleMoveUpMoves = function (checkersState, squareIndex) {
     // EVEN ROW
 
     // Check left first
-    leftUpSquareIndex = squareIndex - CONSTANT.get('COLUMN') - 1;
-    // For the leftmost one, it can only move to the right up side.
-    if (squareIndex % CONSTANT.get('COLUMN') !== 0
-        && checkersState[leftUpSquareIndex] === 'EMPTY') {
-      moves.push(leftUpSquareIndex);
-    }
-
-    // Check right
-    rightUpSquareIndex = squareIndex - CONSTANT.get('COLUMN');
-    if (checkersState[rightUpSquareIndex] === 'EMPTY') {
-      moves.push(rightUpSquareIndex);
-    }
-  } else {
-    // ODD ROW
-
-    // Check left first
     leftUpSquareIndex = squareIndex - CONSTANT.get('COLUMN');
     if (checkersState[leftUpSquareIndex] === 'EMPTY') {
       moves.push(leftUpSquareIndex);
@@ -637,6 +698,22 @@ var getSimpleMoveUpMoves = function (checkersState, squareIndex) {
     // for the rightmost one, it can only move to the left up side.
     if (squareIndex % CONSTANT.get('COLUMN') !== CONSTANT.get('COLUMN') - 1
         && checkersState[rightUpSquareIndex] === 'EMPTY') {
+      moves.push(rightUpSquareIndex);
+    }
+  } else {
+    // ODD ROW
+
+    // Check left first
+    leftUpSquareIndex = squareIndex - CONSTANT.get('COLUMN') - 1;
+    // For the leftmost one, it can only move to the right up side.
+    if (squareIndex % CONSTANT.get('COLUMN') !== 0
+        && checkersState[leftUpSquareIndex] === 'EMPTY') {
+      moves.push(leftUpSquareIndex);
+    }
+
+    // Check right
+    rightUpSquareIndex = squareIndex - CONSTANT.get('COLUMN');
+    if (checkersState[rightUpSquareIndex] === 'EMPTY') {
       moves.push(rightUpSquareIndex);
     }
   }
@@ -670,22 +747,6 @@ var getSimpleMoveDownMoves = function (checkersState, squareIndex) {
     // EVEN ROW
 
     // Check left first
-    leftUpSquareIndex = squareIndex + CONSTANT.get('COLUMN') - 1;
-    // For the leftmost one, it can only move to the right down side.
-    if (squareIndex % CONSTANT.get('COLUMN') !== 0
-        && checkersState[leftUpSquareIndex] === 'EMPTY') {
-      moves.push(leftUpSquareIndex);
-    }
-
-    // Check right
-    rightUpSquareIndex = squareIndex + CONSTANT.get('COLUMN');
-    if (checkersState[rightUpSquareIndex] === 'EMPTY') {
-      moves.push(rightUpSquareIndex);
-    }
-  } else {
-    // ODD ROW
-
-    // Check left first
     leftUpSquareIndex = squareIndex + CONSTANT.get('COLUMN');
     if (checkersState[leftUpSquareIndex] === 'EMPTY') {
       moves.push(leftUpSquareIndex);
@@ -696,6 +757,22 @@ var getSimpleMoveDownMoves = function (checkersState, squareIndex) {
     // for the rightmost one, it can only move to the left down side.
     if (squareIndex % CONSTANT.get('COLUMN') !== CONSTANT.get('COLUMN') - 1
         && checkersState[rightUpSquareIndex] === 'EMPTY') {
+      moves.push(rightUpSquareIndex);
+    }
+  } else {
+    // ODD ROW
+
+    // Check left first
+    leftUpSquareIndex = squareIndex + CONSTANT.get('COLUMN') - 1;
+    // For the leftmost one, it can only move to the right down side.
+    if (squareIndex % CONSTANT.get('COLUMN') !== 0
+        && checkersState[leftUpSquareIndex] === 'EMPTY') {
+      moves.push(leftUpSquareIndex);
+    }
+
+    // Check right
+    rightUpSquareIndex = squareIndex + CONSTANT.get('COLUMN');
+    if (checkersState[rightUpSquareIndex] === 'EMPTY') {
       moves.push(rightUpSquareIndex);
     }
   }
@@ -749,33 +826,6 @@ var getJumpUpMoves = function (checkersState, squareIndex) {
 
     // Check left first, for the leftmost one, it can only jump right upwards.
     if (fromSquareIndex % CONSTANT.get('COLUMN') !== 0) {
-      jumpedSquareIndex = fromSquareIndex - CONSTANT.get('COLUMN') - 1;
-      toSquareIndex = fromSquareIndex - 2 * CONSTANT.get('COLUMN') - 1;
-      jumpedSquare = checkersState[jumpedSquareIndex];
-      toSquare = checkersState[toSquareIndex];
-
-      if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
-        moves.push([jumpedSquareIndex, toSquareIndex]);
-      }
-    }
-
-    // Check right, for the rightmost one, it can only jump left upwards.
-    if (fromSquareIndex % CONSTANT.get('COLUMN') !==
-        CONSTANT.get('COLUMN') - 1) {
-      jumpedSquareIndex = fromSquareIndex - CONSTANT.get('COLUMN');
-      toSquareIndex = fromSquareIndex - 2 * CONSTANT.get('COLUMN') + 1;
-      jumpedSquare = checkersState[jumpedSquareIndex];
-      toSquare = checkersState[toSquareIndex];
-
-      if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
-        moves.push([jumpedSquareIndex, toSquareIndex]);
-      }
-    }
-  } else {
-    // Odd row
-
-    // Check left first, for the leftmost one, it can only jump right upwards.
-    if (fromSquareIndex % CONSTANT.get('COLUMN') !== 0) {
       jumpedSquareIndex = fromSquareIndex - CONSTANT.get('COLUMN');
       toSquareIndex = fromSquareIndex - 2 * CONSTANT.get('COLUMN') - 1;
       jumpedSquare = checkersState[jumpedSquareIndex];
@@ -789,6 +839,32 @@ var getJumpUpMoves = function (checkersState, squareIndex) {
     // Check right, for the rightmost one, it can only jump left upwards.
     if (fromSquareIndex % CONSTANT.get('COLUMN') !== CONSTANT.get('COLUMN') - 1) {
       jumpedSquareIndex = fromSquareIndex - CONSTANT.get('COLUMN') + 1;
+      toSquareIndex = fromSquareIndex - 2 * CONSTANT.get('COLUMN') + 1;
+      jumpedSquare = checkersState[jumpedSquareIndex];
+      toSquare = checkersState[toSquareIndex];
+
+      if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
+        moves.push([jumpedSquareIndex, toSquareIndex]);
+      }
+    }
+  } else {
+    // Odd row
+
+    // Check left first, for the leftmost one, it can only jump right upwards.
+    if (fromSquareIndex % CONSTANT.get('COLUMN') !== 0) {
+      jumpedSquareIndex = fromSquareIndex - CONSTANT.get('COLUMN') - 1;
+      toSquareIndex = fromSquareIndex - 2 * CONSTANT.get('COLUMN') - 1;
+      jumpedSquare = checkersState[jumpedSquareIndex];
+      toSquare = checkersState[toSquareIndex];
+
+      if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
+        moves.push([jumpedSquareIndex, toSquareIndex]);
+      }
+    }
+
+    // Check right, for the rightmost one, it can only jump left upwards.
+    if (fromSquareIndex % CONSTANT.get('COLUMN') !== CONSTANT.get('COLUMN') - 1) {
+      jumpedSquareIndex = fromSquareIndex - CONSTANT.get('COLUMN');
       toSquareIndex = fromSquareIndex - 2 * CONSTANT.get('COLUMN') + 1;
       jumpedSquare = checkersState[jumpedSquareIndex];
       toSquare = checkersState[toSquareIndex];
@@ -836,32 +912,6 @@ var getJumpDownMoves = function (checkersState, squareIndex) {
 
     // Check left first, for the leftmost one, it can only jump right downwards.
     if (fromSquareIndex % CONSTANT.get('COLUMN') !== 0) {
-      jumpedSquareIndex = fromSquareIndex + CONSTANT.get('COLUMN') - 1;
-      toSquareIndex = fromSquareIndex + 2 * CONSTANT.get('COLUMN') - 1;
-      jumpedSquare = checkersState[jumpedSquareIndex];
-      toSquare = checkersState[toSquareIndex];
-
-      if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
-        moves.push([jumpedSquareIndex, toSquareIndex]);
-      }
-    }
-
-    // Check right, for the rightmost one, it can only jump left downwards.
-    if (fromSquareIndex % CONSTANT.get('COLUMN') !== CONSTANT.get('COLUMN') - 1) {
-      jumpedSquareIndex = fromSquareIndex + CONSTANT.get('COLUMN');
-      toSquareIndex = fromSquareIndex + 2 * CONSTANT.get('COLUMN') + 1;
-      jumpedSquare = checkersState[jumpedSquareIndex];
-      toSquare = checkersState[toSquareIndex];
-
-      if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
-        moves.push([jumpedSquareIndex, toSquareIndex]);
-      }
-    }
-  } else {
-    // Odd row
-
-    // Check left first, for the leftmost one, it can only jump right downwards.
-    if (fromSquareIndex % CONSTANT.get('COLUMN') !== 0) {
       jumpedSquareIndex = fromSquareIndex + CONSTANT.get('COLUMN');
       toSquareIndex = fromSquareIndex + 2 * CONSTANT.get('COLUMN') - 1;
       jumpedSquare = checkersState[jumpedSquareIndex];
@@ -875,6 +925,32 @@ var getJumpDownMoves = function (checkersState, squareIndex) {
     // Check right, for the rightmost one, it can only jump left downwards.
     if (fromSquareIndex % CONSTANT.get('COLUMN') !== CONSTANT.get('COLUMN') - 1) {
       jumpedSquareIndex = fromSquareIndex + CONSTANT.get('COLUMN') + 1;
+      toSquareIndex = fromSquareIndex + 2 * CONSTANT.get('COLUMN') + 1;
+      jumpedSquare = checkersState[jumpedSquareIndex];
+      toSquare = checkersState[toSquareIndex];
+
+      if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
+        moves.push([jumpedSquareIndex, toSquareIndex]);
+      }
+    }
+  } else {
+    // Odd row
+
+    // Check left first, for the leftmost one, it can only jump right downwards.
+    if (fromSquareIndex % CONSTANT.get('COLUMN') !== 0) {
+      jumpedSquareIndex = fromSquareIndex + CONSTANT.get('COLUMN') - 1;
+      toSquareIndex = fromSquareIndex + 2 * CONSTANT.get('COLUMN') - 1;
+      jumpedSquare = checkersState[jumpedSquareIndex];
+      toSquare = checkersState[toSquareIndex];
+
+      if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
+        moves.push([jumpedSquareIndex, toSquareIndex]);
+      }
+    }
+
+    // Check right, for the rightmost one, it can only jump left downwards.
+    if (fromSquareIndex % CONSTANT.get('COLUMN') !== CONSTANT.get('COLUMN') - 1) {
+      jumpedSquareIndex = fromSquareIndex + CONSTANT.get('COLUMN');
       toSquareIndex = fromSquareIndex + 2 * CONSTANT.get('COLUMN') + 1;
       jumpedSquare = checkersState[jumpedSquareIndex];
       toSquare = checkersState[toSquareIndex];
@@ -907,23 +983,21 @@ var getSimpleMoves = function (checkersState, squareIndex, turnIndex) {
 
   // Check whether it's the current player's piece first, if not, since the
   // player can not operate it, then no move will be available.
-  if (color === "B" && turnIndex === 1) {
+  if (checkTurnIndexMatchesPieceColor(turnIndex, color)) {
     if (kind === 'CRO') {
-      // Check backwards move
+      // Check both direction moves
       tmpMoves = getSimpleMoveUpMoves(checkersState, squareIndex);
       moves = moves.concat(tmpMoves);
-    }
-    tmpMoves = getSimpleMoveDownMoves(checkersState, squareIndex);
-    moves = moves.concat(tmpMoves);
-  } else if (color === "W" && turnIndex === 0) {
-    if (kind === 'CRO') {
-      // Check backwards move
+
+      tmpMoves = getSimpleMoveDownMoves(checkersState, squareIndex);
+      moves = moves.concat(tmpMoves);
+    } else if (color === 'W') {
+      tmpMoves = getSimpleMoveUpMoves(checkersState, squareIndex);
+      moves = moves.concat(tmpMoves);
+    } else if (color === 'B') {
       tmpMoves = getSimpleMoveDownMoves(checkersState, squareIndex);
       moves = moves.concat(tmpMoves);
     }
-
-    tmpMoves = getSimpleMoveUpMoves(checkersState, squareIndex);
-    moves = moves.concat(tmpMoves);
   }
 
   return moves;
@@ -948,23 +1022,21 @@ var getJumpMoves = function (checkersState, squareIndex, turnIndex) {
 
   // Check whether it's the current player's piece first, if not, since the
   // player can not operate it, then no move will be available.
-  if (color === "B" && turnIndex === 1) {
+  if (checkTurnIndexMatchesPieceColor(turnIndex, color)) {
     if (kind === 'CRO') {
-      // Check backwards jump
+      // Check both direction moves
       tmpMoves = getJumpUpMoves(checkersState, squareIndex);
       moves = moves.concat(tmpMoves);
-    }
-    tmpMoves = getJumpDownMoves(checkersState, squareIndex);
-    moves = moves.concat(tmpMoves);
-  } else if (color === "W" && turnIndex === 0) {
-    if (kind === 'CRO') {
-      // Check backwards jump
+
+      tmpMoves = getJumpDownMoves(checkersState, squareIndex);
+      moves = moves.concat(tmpMoves);
+    } else if (color === 'W') {
+      tmpMoves = getJumpUpMoves(checkersState, squareIndex);
+      moves = moves.concat(tmpMoves);
+    } else if (color === 'B') {
       tmpMoves = getJumpDownMoves(checkersState, squareIndex);
       moves = moves.concat(tmpMoves);
     }
-
-    tmpMoves = getJumpUpMoves(checkersState, squareIndex);
-    moves = moves.concat(tmpMoves);
   }
 
   return moves;
@@ -981,6 +1053,9 @@ var getJumpMoves = function (checkersState, squareIndex, turnIndex) {
  */
 var getAllPossibleMoves = function (checkersState, squareIndex, turnIndex) {
   var possibleMoves = [];
+
+  // Make sure the index is number
+  squareIndex = parseInt(squareIndex, 10);
 
   // First get all possible jump moves.
   possibleMoves = possibleMoves.concat(getJumpMoves(checkersState, squareIndex, turnIndex));
@@ -1038,32 +1113,40 @@ var calculateJumpedIndex = function (fromIndex, toIndex) {
     // EVEN
     switch (toIndex - fromIndex) {
       case 2 * column + 1:
-        jumpedIndex = fromIndex + column;
+        // down right
+        jumpedIndex = fromIndex + column + 1;
         break;
       case 2 * column - 1:
-        jumpedIndex = fromIndex + column - 1;
+        // down left
+        jumpedIndex = fromIndex + column;
         break;
       case -(2 * column + 1):
-        jumpedIndex = fromIndex - column - 1;
+        // up left
+        jumpedIndex = fromIndex - column;
         break;
       case -(2 * column - 1):
-        jumpedIndex = fromIndex - column;
+        // up right
+        jumpedIndex = fromIndex - column + 1;
         break;
     }
   } else {
     // ODD
     switch (toIndex - fromIndex) {
       case 2 * column + 1:
-        jumpedIndex = fromIndex + column + 1;
-        break;
-      case 2 * column - 1:
+        // down right
         jumpedIndex = fromIndex + column;
         break;
+      case 2 * column - 1:
+        // down left
+        jumpedIndex = fromIndex + column - 1;
+        break;
       case -(2 * column + 1):
-        jumpedIndex = fromIndex - column;
+        // up left
+        jumpedIndex = fromIndex - column - 1;
         break;
       case -(2 * column - 1):
-        jumpedIndex = fromIndex - column + 1;
+        // up right
+        jumpedIndex = fromIndex - column;
         break;
     }
   }
@@ -1089,8 +1172,7 @@ var getExpectedOperations = function (gameApiState, fromIndex, toIndex, turnInde
     isJumpMove = [2 * column + 1, 2 * column - 1].indexOf(Math.abs(toIndex - fromIndex)) !== -1;
 
   // First check if the player moves own color piece
-  if ((fromPiece.substr(0, 1) === 'W' && turnIndex === 1) ||
-      (fromPiece.substr(0, 1) === 'B' && turnIndex === 0)) {
+  if (!checkTurnIndexMatchesPieceColor(turnIndex, fromPiece.substr(0, 1))) {
     throw new Error("You can not operator opponent's pieces.");
   }
 
@@ -1155,9 +1237,12 @@ checkers.factory('checkersLogicService', function () {
     checkMandatoryJump: checkMandatoryJump,
     calculateJumpedIndex: calculateJumpedIndex,
     convertGameApiStateToCheckersState: convertGameApiStateToCheckersState,
+    checkTurnIndexMatchesPieceColor: checkTurnIndexMatchesPieceColor,
+    getIllegalEmailBody: getIllegalEmailBody,
     hasWon: hasWon,
     cloneObj: cloneObj,
     isEmptyObj: isEmptyObj,
-    CONSTANT: CONSTANT
+    CONSTANT: CONSTANT,
+    ILLEGAL_CODE: ILLEGAL_CODE
   };
 });

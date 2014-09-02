@@ -15,7 +15,7 @@ checkers.factory('checkersAiService', ['checkersLogicService', '$q',
      * @returns {string} the winner's color 'W' or 'B', if the game is not yet
      *                   ended, return ' '.
      */
-    var hasWon = function (state) {
+    var hasWon = function (state, turnIndex) {
       var hasWhite,
         hasBlack,
         squareIndex;
@@ -38,6 +38,17 @@ checkers.factory('checkersAiService', ['checkersLogicService', '$q',
       if (!hasWhite && hasBlack) {
         // The winner is black player with turn index 1
         return 'B';
+      }
+
+      if (getAllMoves(state, turnIndex).length === 0) {
+        // Check whether the player has any moves.
+        if (turnIndex === 0) {
+          // Black has no moves, therefore white wins
+          return 'W';
+        } else {
+          // White has no moves, therefore black wins
+          return 'B';
+        }
       }
 
       // No winner
@@ -92,7 +103,7 @@ checkers.factory('checkersAiService', ['checkersLogicService', '$q',
      * @param state the game API state.
      * @returns {*} the state value.
      */
-    var getStateValue = function getStateValue (state) {
+    var getStateValue = function getStateValue (state, turnIndex) {
       var stateValue = 0,
       // For different position of the board, there's a different weight.
         boardWeight = [
@@ -109,9 +120,9 @@ checkers.factory('checkersAiService', ['checkersLogicService', '$q',
         square,
         squareValue;
 
-      if (hasWon(state) === 'W') {
+      if (hasWon(state, turnIndex) === 'W') {
         return Number.MIN_VALUE;
-      } else if (hasWon(state) === 'B') {
+      } else if (hasWon(state, turnIndex) === 'B') {
         return Number.MAX_VALUE;
       }
 
@@ -121,11 +132,11 @@ checkers.factory('checkersAiService', ['checkersLogicService', '$q',
         // board weight.
         squareValue = getSquareValue(square, squareIndex) * boardWeight[squareIndex];
 
-        if (square.substr(0, 1) === 'W') {
-          // WHITE
+        if (square.substr(0, 1) === 'B') {
+          // BLACK
           stateValue -= squareValue;
         } else {
-          // BLACK
+          // WHITE
           stateValue += squareValue;
         }
       }
@@ -154,8 +165,9 @@ checkers.factory('checkersAiService', ['checkersLogicService', '$q',
 
       for (squareIndex in state) {
         // Only check if the piece within the square is the current player's.
-        if ((state[squareIndex].substr(0, 1) === 'W' && turnIndex === 0) ||
-            (state[squareIndex].substr(0, 1) === 'B' && turnIndex === 1)) {
+        if (checkersLogicService.checkTurnIndexMatchesPieceColor(turnIndex,
+            state[squareIndex].substr(0, 1)))
+        {
           squareIndex = parseInt(squareIndex, 10);
           checkersState =
               checkersLogicService.convertGameApiStateToCheckersState(state);
@@ -289,8 +301,8 @@ checkers.factory('checkersAiService', ['checkersLogicService', '$q',
         throw "Time's up";
       }
 
-      if (depth === 0 || hasWon(state) !== ' ') {
-        return getStateValue(state);
+      if (depth === 0 || hasWon(state, turnIndex) !== ' ') {
+        return getStateValue(state, turnIndex);
       }
 
       var possibleMoves = getAllMoves(state, turnIndex);

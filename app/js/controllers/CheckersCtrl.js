@@ -116,13 +116,13 @@ checkers.controller('CheckersCtrl',
           if (Math.floor(i / CONSTANT.get('COLUMN')) % 2 === 0) {
             // EVEN
 
-            uiState.push(darkUiSquare);
             uiState.push(lightUiSquare);
+            uiState.push(darkUiSquare);
           } else {
             // ODD
 
-            uiState.push(lightUiSquare);
             uiState.push(darkUiSquare);
+            uiState.push(lightUiSquare);
           }
         }
 
@@ -156,19 +156,20 @@ checkers.controller('CheckersCtrl',
             checkersLogicService.CONSTANT.get('COLUMN'); i += 1) {
 
           if (Math.floor(i / CONSTANT.get('COLUMN')) % 2 === 0) {
-            // Even row
-            square = $scope.uiState[2 * i];
-          } else {
-            // Odd row
+            // EVEN
             square = $scope.uiState[2 * i + 1];
+          } else {
+            // ODD
+            square = $scope.uiState[2 * i];
           }
 
           // If there exists a piece within the square and is the current
           // player's color, then check if it can make a move, otherwise set
           // it's 'canSelect' property to false.
-          if ((yourPlayerIndex === 0 && state[i].substr(0, 1) === 'W') ||
-              (yourPlayerIndex === 1 && state[i].substr(0, 1) === 'B')) {
-
+          if (checkersLogicService
+              .checkTurnIndexMatchesPieceColor(yourPlayerIndex,
+              state[i].substr(0, 1)))
+          {
             // If there's at least one mandatory, then check only the possible
             // jump moves of that square.
             if (hasMandatoryJump) {
@@ -238,11 +239,10 @@ checkers.controller('CheckersCtrl',
           for (var i = 0; i < possibleMoves.length; i++) {
             if (Math.floor(possibleMoves[i] / CONSTANT.get('COLUMN')) % 2 === 0) {
               // EVEN
-
-              $scope.uiState[2 * possibleMoves[i]].canSelect = true;
+              $scope.uiState[2 * possibleMoves[i] + 1].canSelect = true;
             } else {
               // ODD
-              $scope.uiState[2 * possibleMoves[i] + 1].canSelect = true;
+              $scope.uiState[2 * possibleMoves[i]].canSelect = true;
             }
           }
         }
@@ -266,10 +266,10 @@ checkers.controller('CheckersCtrl',
         if (Math.floor(jumpedIndex /
             checkersLogicService.CONSTANT.get('COLUMN')) % 2 === 0) {
           // EVEN
-          jumpedUiIndex = jumpedIndex * 2;
+          jumpedUiIndex = jumpedIndex * 2 + 1;
         } else {
           // ODD
-          jumpedUiIndex = jumpedIndex * 2 + 1;
+          jumpedUiIndex = jumpedIndex * 2;
         }
 
         // Add the corresponding animation class
@@ -350,7 +350,7 @@ checkers.controller('CheckersCtrl',
        * @param index the piece selected.
        */
       $scope.pieceSelected = function (index) {
-        console.log(index + ' isSelected.');
+//        console.log(index + ' isSelected.');
         var operations = [],
             square = $scope.uiState[index],
             isDnd = false;
@@ -429,10 +429,10 @@ checkers.controller('CheckersCtrl',
       var convertGameApiIndexToUiIndex = function (gameApiIndex) {
         if (Math.floor(gameApiIndex / checkersLogicService.CONSTANT.get('COLUMN')) % 2 === 0) {
           // Even row
-          return gameApiIndex * 2;
+          return gameApiIndex * 2 + 1;
         } else {
           // Odd row
-          return gameApiIndex * 2 + 1;
+          return gameApiIndex * 2;
         }
       };
 

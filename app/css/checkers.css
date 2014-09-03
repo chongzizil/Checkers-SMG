@@ -21,13 +21,13 @@ body {
   left: 0;
 }
 
-#board .isEmpty, .isBlackMan, .isBlackCro, .isWhiteMan, .isWhiteCro {
+.isEmpty, .isBlackMan, .isBlackCro, .isWhiteMan, .isWhiteCro {
   max-width: 100%;
-  z-index: 20;
   position: absolute;
+  z-index: 20;
 }
 
-.disappear {
+.jumped {
   opacity: 0;
 }
 
@@ -75,9 +75,9 @@ Animation
   animation: jump_down_right 0.6s linear forwards;
 }
 
-.disappear {
-  -webkit-animation: disappear 0.6s linear forwards;
-  animation: disappear 0.6s linear forwards;
+.jumped {
+  -webkit-animation: jumped 0.6s linear forwards;
+  animation: jumped 0.6s linear forwards;
 }
 
 /****************************************
@@ -369,11 +369,11 @@ Jump move key frames
 }
 
 /****************************************
-Disappear key frames
+jumped key frames
 ****************************************/
 
 /*Disappear*/
-@-webkit-keyframes disappear {
+@-webkit-keyframes jumped {
   0% {
     z-index: 15;
     top: 0;
@@ -421,7 +421,7 @@ Disappear key frames
   }
 }
 /*Disappear*/
-@keyframes disappear {
+@keyframes jumped {
   0% {
     z-index: 15;
     top: 0;

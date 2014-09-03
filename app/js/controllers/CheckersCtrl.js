@@ -292,22 +292,22 @@ checkers.controller('CheckersCtrl',
             break;
           case -(2 * column) - 2:
             // Jump move up left
+            $animate.addClass($('#' + jumpedUiIndex), 'jumped');
             $animate.addClass($('#' + fromUiIndex), 'jump_up_left');
-            $animate.addClass($('#' + jumpedUiIndex), 'disappear');
             break;
           case -(2 * column) + 2:
             // Jump move up right
+            $animate.addClass($('#' + jumpedUiIndex), 'jumped');
             $animate.addClass($('#' + fromUiIndex), 'jump_up_right');
-            $animate.addClass($('#' + jumpedUiIndex), 'disappear');
             break;
           case (2 * column) - 2:
             // Jump move down left
-            $animate.addClass($('#' + jumpedUiIndex), 'disappear');
+            $animate.addClass($('#' + jumpedUiIndex), 'jumped');
             $animate.addClass($('#' + fromUiIndex), 'jump_down_left');
             break;
           case (2 * column) + 2:
             // Jump move down right
-            $animate.addClass($('#' + jumpedUiIndex), 'disappear');
+            $animate.addClass($('#' + jumpedUiIndex), 'jumped');
             $animate.addClass($('#' + fromUiIndex), 'jump_down_right');
             break;
         }

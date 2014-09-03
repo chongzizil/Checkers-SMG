@@ -1,7 +1,7 @@
 {
   "name": "Checkers-SMG",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "A SMG game example",
   "repository": "https://github.com/chongzizil/Checkers-SMG",
   "license": "MIT",

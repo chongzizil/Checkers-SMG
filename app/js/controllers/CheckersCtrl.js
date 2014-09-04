@@ -286,6 +286,7 @@ checkers.controller('CheckersCtrl',
         var possibleMoves = checkersLogicService.getAllPossibleMoves(
             checkersState, Math.floor(squareIndex / 2), yourPlayerIndex);
 
+        console.log(possibleMoves);
         if (possibleMoves.length > 0) {
           // If the possible moves are jump moves, then only keep the
           // destination square indexes.
@@ -306,11 +307,9 @@ checkers.controller('CheckersCtrl',
           for (var i = 0; i < possibleMoves.length; i++) {
             if (Math.floor(possibleMoves[i] / CONSTANT.get('COLUMN')) % 2 === 0) {
               // EVEN
-              console.log(2 * possibleMoves[i] + 1);
               $scope.uiState[2 * possibleMoves[i] + 1].canSelect = true;
             } else {
               // ODD
-              console.log(2 * possibleMoves[i]);
               $scope.uiState[2 * possibleMoves[i]].canSelect = true;
             }
           }
@@ -526,6 +525,8 @@ checkers.controller('CheckersCtrl',
               $scope.uiState[selectedPiece[0]].isSelected = false;
               square.isSelected = true;
               selectedPiece[0] = index;
+
+              setInitialSelectableSquares();
               setSelectableSquares(index, isDnd);
             } else {
               // If the second selected is an empty square

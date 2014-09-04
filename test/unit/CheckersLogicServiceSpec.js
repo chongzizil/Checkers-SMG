@@ -916,6 +916,218 @@ describe('checkersLogicService unit tests:', function () {
       });
     });
 
+    /*
+     * TERMINATE TURN WHEN MOVES TO KINGS ROW - BLACK
+     *
+     *      0    1    2    3    4    5    6    7
+     * 0 | ** |  0 | ** |  1 | ** |  2 | ** |  3 |
+     *   | -- | -- | -- | -- | -- | -- | -- | -- |
+     * 1 |  4 | ** |  5 | ** |  6 | ** |  7 | ** |
+     *   | -- | -- | -- | -- | -- | -- | -- | -- |
+     * 2 | ** |  8 | ** |  9 | ** | 10 | ** | 11 |
+     *   | -- | -- | -- | -- | -- | -- | -- | -- |
+     * 3 | 12 | ** | 13 | ** | 14 | ** | 15 | ** |
+     *   | -- | -- | -- | -- | -- | -- | -- | -- |
+     * 4 | ** | 16 | ** | 17 | ** | 18 | ** | 19 |
+     *   | -- | -- | -- | -- | -- | -- | -- | -- |
+     * 5 | 20 | ** | 21 | ** | 22 | ** | 23 | ** |
+     *   | -- | -- | -- | -- | -- | -- | -- | -- |
+     * 6 | ** | 24 | ** | 25 | ** | 26 | ** | 27 |
+     *   | -- |BM/C| -- | WM | -- | -- | -- | -- |
+     * 7 | 28 | ** | 29 | ** | 30 | ** | 31 | ** |
+     *   | -- | -- | -- | -- | -- | -- | -- | -- |
+     *
+     *   Note: BM/C means it will be assigned to BMAN or BCRO according to the
+     *         specific test.
+     */
+    describe('TERMINATE TURN WHEN MOVES TO KINGS ROW FOR BLACK', function () {
+      var testState;
+      beforeEach(function setTestState() {
+        testState = emptyState;
+        testState['25'] = "WMAN";
+      });
+
+      it("24 -> 29*: Test for MAN", function () {
+        var match = {};
+        match.turnIndexBeforeMove = BLACK_TURN_INDEX;
+        match.turnIndexAfterMove = WHITE_TURN_INDEX;
+        match.stateBeforeMove = testState;
+        match.stateAfterMove = copyState(testState);
+        match.move = [];
+
+        match.stateBeforeMove['24'] = "BMAN";
+        match.stateAfterMove['24'] = "EMPTY";
+        match.stateAfterMove['29'] = "BCRO";
+        match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
+        match.move.push({set: {key: 24, value: "EMPTY"}});
+        match.move.push({set: {key: 29, value: "BCRO"}});
+
+        expect(checkersLogicService.isMoveOk(match)).toEqual(true);
+      });
+
+      it("24 -> 29*: Test for MAN, Illegal because once the piece enters the" +
+          "kings row, the turn is terminated", function () {
+        var match = {};
+        match.turnIndexBeforeMove = BLACK_TURN_INDEX;
+        match.turnIndexAfterMove = WHITE_TURN_INDEX;
+        match.stateBeforeMove = testState;
+        match.stateAfterMove = copyState(testState);
+        match.move = [];
+
+        match.stateBeforeMove['24'] = "BMAN";
+        match.stateAfterMove['24'] = "EMPTY";
+        match.stateAfterMove['29'] = "BCRO";
+        match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+        match.move.push({set: {key: 24, value: "EMPTY"}});
+        match.move.push({set: {key: 29, value: "BCRO"}});
+
+        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_SET_TURN'));
+      });
+
+      it("24 -> 29*: Test for CRO", function () {
+        var match = {};
+        match.turnIndexBeforeMove = BLACK_TURN_INDEX;
+        match.turnIndexAfterMove = WHITE_TURN_INDEX;
+        match.stateBeforeMove = testState;
+        match.stateAfterMove = copyState(testState);
+        match.move = [];
+
+        match.stateBeforeMove['24'] = "BCRO";
+        match.stateAfterMove['24'] = "EMPTY";
+        match.stateAfterMove['29'] = "BCRO";
+        match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
+        match.move.push({set: {key: 24, value: "EMPTY"}});
+        match.move.push({set: {key: 29, value: "BCRO"}});
+
+        expect(checkersLogicService.isMoveOk(match)).toEqual(true);
+      });
+
+      it("24 -> 29*: Test for CRO, Illegal because once the piece enters the" +
+          "kings row, the turn is terminated", function () {
+        var match = {};
+        match.turnIndexBeforeMove = BLACK_TURN_INDEX;
+        match.turnIndexAfterMove = WHITE_TURN_INDEX;
+        match.stateBeforeMove = testState;
+        match.stateAfterMove = copyState(testState);
+        match.move = [];
+
+        match.stateBeforeMove['24'] = "BCRO";
+        match.stateAfterMove['24'] = "EMPTY";
+        match.stateAfterMove['29'] = "BCRO";
+        match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+        match.move.push({set: {key: 24, value: "EMPTY"}});
+        match.move.push({set: {key: 29, value: "BCRO"}});
+
+        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_SET_TURN'));
+      });
+    });
+
+    /*
+     * TERMINATE TURN WHEN MOVES TO KINGS ROW - WHITE
+     *
+     *      0    1    2    3    4    5    6    7
+     * 0 | ** |  0 | ** |  1 | ** |  2 | ** |  3 |
+     *   | -- | -- | -- | -- | -- | -- | -- | -- |
+     * 1 |  4 | ** |  5 | ** |  6 | ** |  7 | ** |
+     *   | -- | -- |WM/B| -- | BM | -- | -- | -- |
+     * 2 | ** |  8 | ** |  9 | ** | 10 | ** | 11 |
+     *   | -- | -- | -- | -- | -- | -- | -- | -- |
+     * 3 | 12 | ** | 13 | ** | 14 | ** | 15 | ** |
+     *   | -- | -- | -- | -- | -- | -- | -- | -- |
+     * 4 | ** | 16 | ** | 17 | ** | 18 | ** | 19 |
+     *   | -- | -- | -- | -- | -- | -- | -- | -- |
+     * 5 | 20 | ** | 21 | ** | 22 | ** | 23 | ** |
+     *   | -- | -- | -- | -- | -- | -- | -- | -- |
+     * 6 | ** | 24 | ** | 25 | ** | 26 | ** | 27 |
+     *   | -- | -- | -- | -- | -- | -- | -- | -- |
+     * 7 | 28 | ** | 29 | ** | 30 | ** | 31 | ** |
+     *   | -- | -- | -- | -- | -- | -- | -- | -- |
+     *
+     *   Note: WM/C means it will be assigned to WMAN or WCRO according to the
+     *         specific test.
+     */
+    describe('TERMINATE TURN WHEN MOVES TO KINGS ROW FOR BLACK', function () {
+      var testState;
+      beforeEach(function setTestState() {
+        testState = emptyState;
+        testState['6'] = "BMAN";
+      });
+
+      it("24 -> 29*: Test for MAN", function () {
+        var match = {};
+        match.turnIndexBeforeMove = WHITE_TURN_INDEX;
+        match.turnIndexAfterMove = BLACK_TURN_INDEX;
+        match.stateBeforeMove = testState;
+        match.stateAfterMove = copyState(testState);
+        match.move = [];
+
+        match.stateBeforeMove['5'] = "WMAN";
+        match.stateAfterMove['5'] = "EMPTY";
+        match.stateAfterMove['1'] = "WCRO";
+        match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+        match.move.push({set: {key: 5, value: "EMPTY"}});
+        match.move.push({set: {key: 1, value: "WCRO"}});
+
+        expect(checkersLogicService.isMoveOk(match)).toEqual(true);
+      });
+
+      it("24 -> 29*: Test for MAN, Illegal because once the piece enters the" +
+          "kings row, the turn is terminated", function () {
+        var match = {};
+        match.turnIndexBeforeMove = WHITE_TURN_INDEX;
+        match.turnIndexAfterMove = BLACK_TURN_INDEX;
+        match.stateBeforeMove = testState;
+        match.stateAfterMove = copyState(testState);
+        match.move = [];
+
+        match.stateBeforeMove['5'] = "WMAN";
+        match.stateAfterMove['5'] = "EMPTY";
+        match.stateAfterMove['1'] = "WCRO";
+        match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
+        match.move.push({set: {key: 5, value: "EMPTY"}});
+        match.move.push({set: {key: 1, value: "WCRO"}});
+
+        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_SET_TURN'));
+      });
+
+      it("24 -> 29*: Test for CRO", function () {
+        var match = {};
+        match.turnIndexBeforeMove = WHITE_TURN_INDEX;
+        match.turnIndexAfterMove = BLACK_TURN_INDEX;
+        match.stateBeforeMove = testState;
+        match.stateAfterMove = copyState(testState);
+        match.move = [];
+
+        match.stateBeforeMove['5'] = "WCRO";
+        match.stateAfterMove['5'] = "EMPTY";
+        match.stateAfterMove['1'] = "WCRO";
+        match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+        match.move.push({set: {key: 5, value: "EMPTY"}});
+        match.move.push({set: {key: 1, value: "WCRO"}});
+
+        expect(checkersLogicService.isMoveOk(match)).toEqual(true);
+      });
+
+      it("24 -> 29*: Test for CRO, Illegal because once the piece enters the" +
+          "kings row, the turn is terminated", function () {
+        var match = {};
+        match.turnIndexBeforeMove = WHITE_TURN_INDEX;
+        match.turnIndexAfterMove = BLACK_TURN_INDEX;
+        match.stateBeforeMove = testState;
+        match.stateAfterMove = copyState(testState);
+        match.move = [];
+
+        match.stateBeforeMove['5'] = "WCRO";
+        match.stateAfterMove['5'] = "EMPTY";
+        match.stateAfterMove['1'] = "WCRO";
+        match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
+        match.move.push({set: {key: 5, value: "EMPTY"}});
+        match.move.push({set: {key: 1, value: "WCRO"}});
+
+        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_SET_TURN'));
+      });
+    });
+
     describe("ENDGAME SCENARIO - BLACK", function () {
       /*
        * END GAME SCENARIO - BLACK

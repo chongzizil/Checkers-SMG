@@ -23,8 +23,8 @@
  */
 
 checkers.controller('CheckersCtrl',
-    ['$scope', '$animate', '$timeout', '$location', 'checkersLogicService',
-      'checkersAiService', function ($scope, $animate, $timeout, $location, checkersLogicService, checkersAiService) {
+    ['$scope', '$animate', '$timeout', '$location', '$q', 'checkersLogicService'
+      , 'checkersAiService', function ($scope, $animate, $timeout, $location, $q, checkersLogicService, checkersAiService) {
       var yourPlayerIndex,
         makeMoveCallback,
         turnIndexBeforeMove,

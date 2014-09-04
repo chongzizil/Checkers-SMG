@@ -350,14 +350,13 @@ var isInitialMove = function (move) {
 };
 
 /**
- * Check if the square is legally crowned
+ * Check if the square is moving or jumping to the kings row
  *
- * @param square the index of the square holds the piece
  * @param toIndex the index of the square moving to or jumping to
  * @param playerTurnIndex the player's turn index
  * @returns true if the crowned is legal, otherwise false.
  */
-var isCrownOk = function (square, toIndex, playerTurnIndex) {
+var isToKingsRow = function (toIndex, playerTurnIndex) {
   // Check if the square can be crowned
   if (// For white square, it's moving or jumping to the first row
       (playerTurnIndex === 1 &&
@@ -513,7 +512,7 @@ var isMoveOk = function (match) {
   // The piece is crowned, check if it is legal
   if (pieceBeforeMove.substr(1) === 'MAN' && pieceBeforeMove.substr(1) !== pieceAfterMove.substr(1)) {
     // Check if the crowned move is legal
-    if (!isCrownOk(pieceBeforeMove, pieceIndexAfterMove, turnIndexBeforeMove)) {
+    if (!isToKingsRow(pieceIndexAfterMove, turnIndexBeforeMove)) {
       // Only if the piece is original a MAN that we should check whether it
       // is legally crowned.
       return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_CROWNED'));
@@ -571,8 +570,11 @@ var isMoveOk = function (match) {
   if (!isSimpleMove) {
     // Check if the set turn index is legal
     // For the same piece, check if it can do more jump moves
+    // Note: If the piece moves to the kings row, then the turn is terminated
+    //       no matter it can jump or not
     if (getJumpMoves(nextCheckersState, checkersMove[1],
-        turnIndexBeforeMove).length > 0) {
+        turnIndexBeforeMove).length > 0
+        && !isToKingsRow(pieceIndexAfterMove, turnIndexBeforeMove)) {
       // If the same piece can do more jumps, then the turnIndex remains.
       if (setTurnIndex !== turnIndexBeforeMove) {
         return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_SET_TURN'));
@@ -1190,8 +1192,8 @@ var getExpectedOperations = function (gameApiState, fromIndex, toIndex, turnInde
   }
 
 
-  // Check if the piece can be crowned
-  if (isCrownOk(fromPiece, toIndex, turnIndex)) {
+  // Check if the piece can be crowned if it's not already crowned
+  if (fromPiece.substr(1) !== 'CRO' && isToKingsRow(toIndex, turnIndex)) {
     // Note that the order for the operations are critical, don't change it!
     // It'll break this code below...
     operations[operations.length - 1] = {set: {key: toIndex, value: fromPiece.substr(0, 1) + 'CRO'}};
@@ -1201,7 +1203,10 @@ var getExpectedOperations = function (gameApiState, fromIndex, toIndex, turnInde
     nextState = getNextState(cloneObj(gameApiState), operations, turnIndex).nextState;
 
     // Check whether the player can make another jump for the same piece
-    if (getJumpMoves(nextState, toIndex, turnIndex).length > 0) {
+    // Note: If the piece moves to the kings row, then the turn is terminated
+    //       no matter it can jump or not.
+    if (getJumpMoves(nextState, toIndex, turnIndex).length > 0
+        && !isToKingsRow(toIndex, turnIndex)) {
       operations.push({setTurn: {turnIndex: turnIndex}});
     } else {
       operations.push({setTurn: {turnIndex: 1 - turnIndex}});

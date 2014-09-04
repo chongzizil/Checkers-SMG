@@ -3,15 +3,23 @@
 checkers.
     directive('ddDraggable', [function() {
       return {
-        restrict: "A",
+        restrict: "AC",
         link: function(scope, element, attrs) {
+          element.draggable({
+            revert: true,
+            start: function() {
+              var id = element[0].id;
 
-          element.attr("draggable", true);
-
-          element.bind("dragstart", function(eventObject) {
-            var id = element[0].id;
-            scope.handleDragStart(id);
+              // Handle the drag start event only if the square is selectable
+              if (scope.uiState[id].canSelect) {
+                scope.handleDragStart(id);
+              }
+            }
           });
+
+          // It seems the jQuery UI changed the css property of the element
+          // and will cause the problem for animation, so here change it back.
+          element[0].style.position = 'absolute';
         }
       };
     }]

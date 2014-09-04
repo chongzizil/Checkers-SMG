@@ -35,7 +35,7 @@ checkers.controller('CheckersCtrl',
         endMatchReason,
         playersInfo,
         state = {},
-        selectedPiece = [];
+        selectedSquares = [];
 
       /**
        * Set the UI square according to the game API square in order to update
@@ -45,6 +45,11 @@ checkers.controller('CheckersCtrl',
        * @param darkUiSquare the square as an object in ui state format
        */
       var setDarkUiSquare = function(gameApiSquare, darkUiSquare) {
+        darkUiSquare.isEmpty = false;
+        darkUiSquare.isBlackMan = false;
+        darkUiSquare.isBlackCro = false;
+        darkUiSquare.isWhiteMan = false;
+        darkUiSquare.isWhiteCro = false;
         switch (gameApiSquare) {
           case 'WMAN':
             darkUiSquare.isWhiteMan = true;
@@ -138,8 +143,8 @@ checkers.controller('CheckersCtrl',
       var updateUiState = function () {
         var gameApiSquare;
 
-        if (selectedPiece.length === 0) {
-          // If the selectedPiece is empty, then the last move should be the first
+        if (selectedSquares.length === 0) {
+          // If the selectedSquares is empty, then the last move should be the first
           // move perform by the black player in order to initialize the game.
           // So update each dark squares.
 
@@ -157,12 +162,12 @@ checkers.controller('CheckersCtrl',
             }
           }
         } else {
-          // It's not the first move, so check the selectedPiece for the squares
+          // It's not the first move, so check the selectedSquares for the squares
           // need to be updated.
 
           // UI index
-          var fromUiIndex = selectedPiece[0];
-          var toUiIndex = selectedPiece[1];
+          var fromUiIndex = selectedSquares[0];
+          var toUiIndex = selectedSquares[1];
           var jumpedUiIndex = -1;
 
           // Game API index
@@ -271,16 +276,12 @@ checkers.controller('CheckersCtrl',
       };
 
       /**
-       * If the select is by clicking, then set the possible move destination
-       * squares' canSelect to true and others remain the same.
-       * If the select is by DnD, then all other original selectable squares
-       * are disabled. If the piece is dropped at an illegal place, then
-       * reinitialize the selectable squares.
+       * Set the possible move destination squares' canSelect to true and
+       * others remain the same.
        *
        * @param squareIndex the square selected.
-       * @param isDnd true if the select is done by drag and drop.
        */
-      var setSelectableSquares = function (squareIndex, isDnd) {
+      var setSelectableSquares = function (squareIndex) {
         var checkersState =
             checkersLogicService.convertGameApiStateToCheckersState(state);
         var possibleMoves = checkersLogicService.getAllPossibleMoves(
@@ -293,13 +294,6 @@ checkers.controller('CheckersCtrl',
             for (var i = 0; i < possibleMoves.length; i++) {
               possibleMoves[i] = possibleMoves[i][1];
             }
-          }
-
-          // If the move is made by drag and drop, then previous all
-          // selectable squares are changed to unselectable. Hence the
-          // dragged piece can not be dropped on the illegal squares
-          if (isDnd) {
-            setAllSquareUnselectable();
           }
 
           // Set all possible move destination squares to be selectable
@@ -439,6 +433,9 @@ checkers.controller('CheckersCtrl',
        * @param selectedPiece the selected pieces as an array
        */
       var playAnimation = function(selectedPiece) {
+        // Disable all squares, so the player can not click anything squares
+        // during the animation which may cause errors.
+        setAllSquareUnselectable();
         $scope.animationIndexes = {
           column: checkersLogicService.CONSTANT.get('COLUMN') * 2,
           fromUiIndex: selectedPiece[0],
@@ -473,18 +470,27 @@ checkers.controller('CheckersCtrl',
        * @param fromUiIndex the UI index of the from piece
        * @param toUiIndex the UI index of the to piece
        */
-      var makeMove = function (fromUiIndex, toUiIndex) {
-        // Remove the animation class first, otherwise the square image
-        // will stayed at the same position after the animation.
-        removeAnimationClass($scope.animationIndexes);
+      var makeMove = function (fromUiIndex, toUiIndex, isDnD) {
+        if (!isDnD) {
+          // Remove the animation class first, otherwise the square image
+          // will stayed at the same position after the animation.
+          removeAnimationClass($scope.animationIndexes);
+        }
 
         var moveAudio = new Audio('audio/move.mp3');
         var jumpAudio = new Audio('audio/jump.mp3');
         var column = checkersLogicService.CONSTANT.get('COLUMN');
 
-        console.log('Move from ' + fromUiIndex + ' to ' + toUiIndex);
         var fromIndex = Math.floor(fromUiIndex / 2);
         var toIndex = Math.floor(toUiIndex / 2);
+
+//        console.log('Game API index: '
+//            + (yourPlayerIndex === 0 ? 'Black' : 'White')
+//            + ' Move from ' + fromUiIndex + ' to ' + toUiIndex);
+        console.log('Traditional index: '
+            + (yourPlayerIndex === 0 ? 'Black' : 'White')
+            + ' Move from ' + (fromIndex + 1) + ' to ' + (toIndex + 1));
+
         var operations = checkersLogicService.getExpectedOperations(state,
             fromIndex, toIndex, yourPlayerIndex);
 
@@ -506,50 +512,57 @@ checkers.controller('CheckersCtrl',
        *
        * @param index the piece selected.
        */
-      $scope.pieceSelected = function (index) {
+      $scope.pieceSelected = function (index, isDnD) {
 //        console.log(index + ' isSelected.');
         var operations = [],
-            square = $scope.uiState[index],
-            isDnd = false;
+            square = $scope.uiState[index];
 
         // Proceed only if it's dark square and it's selectable.
         if (square.isDark && square.canSelect) {
-          if (selectedPiece.length === 0) {
-            // If no piece is selected
+          if (selectedSquares.length === 0 && !square.isEmpty) {
+            // If no piece is selected, select it
             square.isSelected = true;
-            selectedPiece[0] = index;
+            selectedSquares[0] = index;
 
-            setSelectableSquares(index, isDnd);
-          } else if (selectedPiece.length === 1) {
+            setSelectableSquares(index);
+          } else if (selectedSquares.length === 1) {
+            // One square is already selected
             if (state[Math.floor(index / 2)].substr(0, 1) ===
-                state[Math.floor(selectedPiece[0] / 2)].substr(0, 1)) {
-              // It the second selected piece is still the player's, then change
-              // the first selected piece to the new one.
-              $scope.uiState[selectedPiece[0]].isSelected = false;
+                state[Math.floor(selectedSquares[0] / 2)].substr(0, 1)) {
+              // It the second selected piece is still the player's, no matter
+              // it's the same one or a different one, just change the first
+              // selected square to the new one.
+              $scope.uiState[selectedSquares[0]].isSelected = false;
               square.isSelected = true;
-              selectedPiece[0] = index;
+              selectedSquares[0] = index;
 
+              // Reinitialize all the selectable squares
               setInitialSelectableSquares();
-              setSelectableSquares(index, isDnd);
-            } else {
+              // Set the new selectable squares according to the selected one
+              setSelectableSquares(index);
+
+            } else if (square.isEmpty) {
               // If the second selected is an empty square
-              selectedPiece[1] = index;
+              selectedSquares[1] = index;
             }
           }
 
-          if (selectedPiece.length === 2) {
-            $scope.uiState[selectedPiece[0]].isSelected = false;
+          // If two squares are selected, then a move can be made
+          if (selectedSquares.length === 2) {
+            $scope.uiState[selectedSquares[0]].isSelected = false;
 
+            // Play the animation if the move is not done by drag and drop
+            if (!isDnD) {
+              playAnimation(selectedSquares);
 
-            // Play the animation
-            playAnimation(selectedPiece);
+              var delayMakeMove = function () {
+                makeMove(selectedSquares[0], selectedSquares[1], isDnD);
+              };
 
-            var delayMakeMove = function () {
-              makeMove(selectedPiece[0], selectedPiece[1]);
-            };
-
-            // Makes the move only when the animation finishes
-            $timeout(delayMakeMove, 420);
+              $timeout(delayMakeMove, 420);
+            } else {
+              makeMove(selectedSquares[0], selectedSquares[1], isDnD);
+            }
           }
         }
       };
@@ -562,10 +575,12 @@ checkers.controller('CheckersCtrl',
        */
       $scope.handleDragStart = function (index) {
         var square = $scope.uiState[index],
-            isDnd = true;
+            isDnD = true;
         if (square.isDark && square.canSelect) {
-          setSelectableSquares(index, isDnd);
-          selectedPiece[0] = index;
+          $scope.pieceSelected(index, isDnD);
+//          setSelectableSquares(index, isDnD);
+//          selectedSquares[0] = index;
+//          console.log(selectedSquares);
         }
       };
 
@@ -576,16 +591,12 @@ checkers.controller('CheckersCtrl',
        * @param index the index of the dropped on piece
        */
       $scope.handleDrop = function (index) {
-        var square = $scope.uiState[index];
+        var square = $scope.uiState[index],
+            isDnD = true;
         if (square.isDark && square.canSelect) {
-          selectedPiece[1] = index;
-          makeMove(selectedPiece[0], selectedPiece[1]);
-        } else {
-          // The target is not drappable, therefore clean the selectedPiece so
-          // the player may drag another one.
-          setInitialSelectableSquares(yourPlayerIndex);
-          selectedPiece = [];
+          $scope.pieceSelected(index, isDnD);
         }
+          // The target is not droppable, nothing will happen.
       };
 
       /**
@@ -626,12 +637,13 @@ checkers.controller('CheckersCtrl',
        * effect.
        */
       var aiMakeMove = function() {
-        var depth = 10;
-        var timeLimit = 800;
-        var timer = {
-          startTime: Date.now(),
-          timeLimit: timeLimit
-        };
+        var isDnD = false,
+          depth = 10,
+          timeLimit = 800,
+          timer = {
+            startTime: Date.now(),
+            timeLimit: timeLimit
+          };
 
         // Move on only after the best move is calculated.
         checkersAiService.
@@ -648,7 +660,7 @@ checkers.controller('CheckersCtrl',
               };
 
               var delayMakeMove = function () {
-                makeMove(fromUiIndex, toUiIndex);
+                makeMove(fromUiIndex, toUiIndex, isDnD);
               };
 
               // It seems a little delay will fix the animation bug...
@@ -689,8 +701,8 @@ checkers.controller('CheckersCtrl',
           // Update the graphics
           updateCheckersGraphics(isAiMode);
 
-          // Initialize the selectedPiece in each turn
-          selectedPiece = [];
+          // Initialize the selectedSquares in each turn
+          selectedSquares = [];
 
           // In case the board is not updated
           if (!$scope.$$phase) {

@@ -1,7 +1,7 @@
-node_modules
-app/bower_components
 .idea
 img_resources
 .idea/workspace.xml
-app/vendor/font-awesome-4.2.0/
-app/vendor/font-awesome-4.2.0/css/font-awesome.min.css
+bower_components/angular-loader
+bower_components/angular-mocks
+bower_components/angular-route
+node_modules

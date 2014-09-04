@@ -3,19 +3,17 @@
 checkers.
     directive('ddDropTarget', [function() {
       return {
-        restrict: "A",
+        restrict: "AC",
         link: function (scope, element, attributes, ctlr) {
-
-          element.bind("dragover", function(eventObject){
-            eventObject.preventDefault();
-          });
-
-          element.bind("drop", function(eventObject) {
-            var id = element[0].id;
-            scope.handleDrop(id);
-
-            // cancel actual UI element from dropping, since the angular will recreate a the UI element
-//            eventObject.preventDefault();
+          element.droppable({
+            drop: function (event, ui) {
+              var id = element[0].id;
+              
+              // Handle the drop only when the drop target is an empty square
+              if (scope.uiState[id].isEmpty) {
+                scope.handleDrop(id);
+              }
+            }
           });
         }
       };

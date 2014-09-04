@@ -17,6 +17,14 @@
 /*Large devices*/
 @media only screen and (min-width: 1200px) {
   #board {
+    width: 780px;
+    margin: auto;
+  }
+}
+
+/*Large devices*/
+@media only screen and (min-width: 1600px) {
+  #board {
     width: 960px;
     margin: auto;
   }

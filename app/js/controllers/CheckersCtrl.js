@@ -286,7 +286,6 @@ checkers.controller('CheckersCtrl',
         var possibleMoves = checkersLogicService.getAllPossibleMoves(
             checkersState, Math.floor(squareIndex / 2), yourPlayerIndex);
 
-        console.log(possibleMoves);
         if (possibleMoves.length > 0) {
           // If the possible moves are jump moves, then only keep the
           // destination square indexes.
@@ -475,6 +474,10 @@ checkers.controller('CheckersCtrl',
        * @param toUiIndex the UI index of the to piece
        */
       var makeMove = function (fromUiIndex, toUiIndex) {
+        // Remove the animation class first, otherwise the square image
+        // will stayed at the same position after the animation.
+        removeAnimationClass($scope.animationIndexes);
+
         var moveAudio = new Audio('audio/move.mp3');
         var jumpAudio = new Audio('audio/jump.mp3');
         var column = checkersLogicService.CONSTANT.get('COLUMN');
@@ -542,9 +545,6 @@ checkers.controller('CheckersCtrl',
             playAnimation(selectedPiece);
 
             var delayMakeMove = function () {
-              // Remove the animation class first, otherwise the square image
-              // will stayed at the same position after the animation.
-              removeAnimationClass($scope.animationIndexes);
               makeMove(selectedPiece[0], selectedPiece[1]);
             };
 

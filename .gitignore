@@ -1,5 +1,7 @@
 node_modules
 app/bower_components
 .idea
-app/img/resources
+img_resources
 .idea/workspace.xml
+app/vendor/font-awesome-4.2.0/
+app/vendor/font-awesome-4.2.0/css/font-awesome.min.css

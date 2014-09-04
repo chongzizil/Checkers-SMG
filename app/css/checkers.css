@@ -6,6 +6,14 @@ body {
   width: 100%;
 }
 
+#title {
+  font-family: 'Cinzel', serif;
+}
+
+#button_panel, #current_player_id {
+  font-family: 'Raleway', sans-serif;
+}
+
 #board .square {
   position: relative;
   width: 12.5%;
@@ -25,10 +33,20 @@ body {
   max-width: 100%;
   position: absolute;
   z-index: 20;
+  filter: brightness(100%);
+  -webkit-filter: brightness(100%);
+}
+
+.canSelect:hover {
+  filter: brightness(125%);
+  -webkit-filter: brightness(125%);
 }
 
 .jumped {
   opacity: 0;
+  z-index: 15;
+  -webkit-transition: opacity 0.2s linear;
+  transition: opacity 0.2s linear;
 }
 
 /****************************************
@@ -36,48 +54,43 @@ Animation
 ****************************************/
 
 .move_up_left {
-  -webkit-animation: move_up_left 0.6s linear forwards;
-  animation: move_up_left 0.6s linear forwards;
+  -webkit-animation: move_up_left 0.4s linear forwards;
+  animation: move_up_left 0.4s linear forwards;
 }
 
 .move_up_right {
-  -webkit-animation: move_up_right 0.6s linear forwards;
-  animation: move_up_right 0.6s linear forwards;
+  -webkit-animation: move_up_right 0.4s linear forwards;
+  animation: move_up_right 0.4s linear forwards;
 }
 
 .move_down_left {
-  -webkit-animation: move_down_left 0.6s linear forwards;
-  animation: move_down_left 0.6s linear forwards;
+  -webkit-animation: move_down_left 0.4s linear forwards;
+  animation: move_down_left 0.4s linear forwards;
 }
 
 .move_down_right {
-  -webkit-animation: move_down_right 0.6s linear forwards;
-  animation: move_down_right 0.6s linear forwards;
+  -webkit-animation: move_down_right 0.4s linear forwards;
+  animation: move_down_right 0.4s linear forwards;
 }
 
 .jump_up_left {
-  -webkit-animation: jump_up_left 0.6s linear forwards;
-  animation: jump_up_left 0.6s linear forwards;
+  -webkit-animation: jump_up_left 0.4s linear forwards;
+  animation: jump_up_left 0.4s linear forwards;
 }
 
 .jump_up_right {
-  -webkit-animation: jump_up_right 0.6s linear forwards;
-  animation: jump_up_right 0.6s linear forwards;
+  -webkit-animation: jump_up_right 0.4s linear forwards;
+  animation: jump_up_right 0.4s linear forwards;
 }
 
 .jump_down_left {
-  -webkit-animation: jump_down_left 0.6s linear forwards;
-  animation: jump_down_left 0.6s linear forwards;
+  -webkit-animation: jump_down_left 0.4s linear forwards;
+  animation: jump_down_left 0.4s linear forwards;
 }
 
 .jump_down_right {
-  -webkit-animation: jump_down_right 0.6s linear forwards;
-  animation: jump_down_right 0.6s linear forwards;
-}
-
-.jumped {
-  -webkit-animation: jumped 0.6s linear forwards;
-  animation: jumped 0.6s linear forwards;
+  -webkit-animation: jump_down_right 0.4s linear forwards;
+  animation: jump_down_right 0.4s linear forwards;
 }
 
 /****************************************
@@ -365,106 +378,5 @@ Jump move key frames
     max-width: 100%;
     top: 200%;
     left: 200%
-  }
-}
-
-/****************************************
-jumped key frames
-****************************************/
-
-/*Disappear*/
-@-webkit-keyframes jumped {
-  0% {
-    z-index: 15;
-    top: 0;
-    opacity: 1;
-  }
-  10% {
-    top: 30%;
-    opacity: 0.9;
-  }
-  20% {
-    top: -30%;
-    opacity: 0.8;
-  }
-  30% {
-    top: 30%;
-    opacity: 0.7;
-  }
-  40% {
-    top: -30%;
-    opacity: 0.6;
-  }
-  50% {
-    top: 30%;
-    opacity: 0.5;
-  }
-  60% {
-    top: -30%;
-    opacity: 0.4;
-  }
-  70% {
-    top: 30%;
-    opacity: 0.3;
-  }
-  80% {
-    top: -30%;
-    opacity: 0.2;
-  }
-  90% {
-    top: 30%;
-    opacity: 0.1;
-  }
-  100% {
-    top: 0;
-    opacity: 0;
-  }
-}
-/*Disappear*/
-@keyframes jumped {
-  0% {
-    z-index: 15;
-    top: 0;
-    opacity: 1;
-  }
-  10% {
-    top: 30%;
-    opacity: 0.9;
-  }
-  20% {
-    top: -30%;
-    opacity: 0.8;
-  }
-  30% {
-    top: 30%;
-    opacity: 0.7;
-  }
-  40% {
-    top: -30%;
-    opacity: 0.6;
-  }
-  50% {
-    top: 30%;
-    opacity: 0.5;
-  }
-  60% {
-    top: -30%;
-    opacity: 0.4;
-  }
-  70% {
-    top: 30%;
-    opacity: 0.3;
-  }
-  80% {
-    top: -30%;
-    opacity: 0.2;
-  }
-  90% {
-    top: 30%;
-    opacity: 0.1;
-  }
-  100% {
-    top: 0;
-    opacity: 0;
   }
 }

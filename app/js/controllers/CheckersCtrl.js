@@ -38,27 +38,56 @@ checkers.controller('CheckersCtrl',
         selectedPiece = [];
 
       /**
-       * Convert the game API state to the UI state. The ui state contains
-       * all 64 square objects as below:
-       * {
-         *   isBlackMan: false,
-         *   isBlackCro: false,
-         *   isWhiteMan: false,
-         *   isWhiteCro: false,
-         *   isEmpty: false,
-         *   isDark: false,
-         *   isLight: false,
-         *   canSelect: false,
-         *   isSelected: false,
-         * }
+       * Set the UI square according to the game API square in order to update
+       * the graphics.
        *
-       * @param state the game API state
-       * @returns {Array} the UI state
+       * @param gameApiSquare the square as a string in game API format
+       * @param darkUiSquare the square as an object in ui state format
        */
-      var convertStateToUiState = function (state) {
-        var uiState = [],
-          gameApiSquare,
-          lightUiSquare,
+      var setDarkUiSquare = function(gameApiSquare, darkUiSquare) {
+        switch (gameApiSquare) {
+          case 'WMAN':
+            darkUiSquare.isWhiteMan = true;
+            darkUiSquare.pieceSrc = 'img/white_man';
+            break;
+          case 'WCRO':
+            darkUiSquare.isWhiteCro = true;
+            darkUiSquare.pieceSrc = 'img/white_cro';
+            break;
+          case 'BMAN':
+            darkUiSquare.isBlackMan = true;
+            darkUiSquare.pieceSrc = 'img/black_man';
+            break;
+          case 'BCRO':
+            darkUiSquare.isBlackCro = true;
+            darkUiSquare.pieceSrc = 'img/black_cro';
+            break;
+          default:
+            darkUiSquare.isEmpty = true;
+            darkUiSquare.pieceSrc = 'img/empty';
+        }
+      };
+
+      /**
+       * Initialize the game, in another word is to create an empty board.
+       * For each square, it is represented as an object in the ui state:
+       * {
+       *   isBlackMan: false,
+       *   isBlackCro: false,
+       *   isWhiteMan: false,
+       *   isWhiteCro: false,
+       *   isEmpty: false,
+       *   isDark: false,
+       *   isLight: false,
+       *   canSelect: false,
+       *   isSelected: false,
+       * }
+       */
+      var initializeUiState = function () {
+        // Initialize the ui state as an array for new game
+        $scope.uiState = [];
+
+        var lightUiSquare,
           darkUiSquare,
           defaultUiSquare = {
             isBlackMan: false,
@@ -73,13 +102,12 @@ checkers.controller('CheckersCtrl',
             // Background image path
             bgSrc: '',
             // Piece image path
-            src: ''
+            pieceSrc: ''
           };
 
         for (var i = 0; i < checkersLogicService.CONSTANT.get('ROW') *
             checkersLogicService.CONSTANT.get('COLUMN'); i += 1) {
 
-          gameApiSquare = state[i];
           darkUiSquare = checkersLogicService.cloneObj(defaultUiSquare);
           lightUiSquare = checkersLogicService.cloneObj(defaultUiSquare);
 
@@ -88,56 +116,93 @@ checkers.controller('CheckersCtrl',
 
           lightUiSquare.isLight = true;
           lightUiSquare.isEmpty = true;
-          lightUiSquare.src = 'img/empty';
+          lightUiSquare.pieceSrc = 'img/empty';
           lightUiSquare.bgSrc = 'img/light_square.png';
 
-          switch (gameApiSquare) {
-            case 'WMAN':
-              darkUiSquare.isWhiteMan = true;
-              darkUiSquare.src = 'img/white_man';
-              break;
-            case 'WCRO':
-              darkUiSquare.isWhiteCro = true;
-              darkUiSquare.src = 'img/white_cro';
-              break;
-            case 'BMAN':
-              darkUiSquare.isBlackMan = true;
-              darkUiSquare.src = 'img/black_man';
-              break;
-            case 'BCRO':
-              darkUiSquare.isBlackCro = true;
-              darkUiSquare.src = 'img/black_cro';
-              break;
-            default:
-              darkUiSquare.isEmpty = true;
-              darkUiSquare.src = 'img/empty';
-          }
-
+          // Set each squares of the ui state
           if (Math.floor(i / CONSTANT.get('COLUMN')) % 2 === 0) {
-            // EVEN
-
-            uiState.push(lightUiSquare);
-            uiState.push(darkUiSquare);
+            // EVEN ROW
+            $scope.uiState[2 * i] = lightUiSquare;
+            $scope.uiState[2 * i + 1] = darkUiSquare;
           } else {
-            // ODD
-
-            uiState.push(darkUiSquare);
-            uiState.push(lightUiSquare);
+            // ODD ROW
+            $scope.uiState[2 * i + 1] = lightUiSquare;
+            $scope.uiState[2 * i ] = darkUiSquare;
           }
         }
+      };
 
-        return uiState;
+      /**
+       * Update the UI state after each move is made.
+       */
+      var updateUiState = function () {
+        var gameApiSquare;
+
+        if (selectedPiece.length === 0) {
+          // If the selectedPiece is empty, then the last move should be the first
+          // move perform by the black player in order to initialize the game.
+          // So update each dark squares.
+
+          for (var i = 0; i < checkersLogicService.CONSTANT.get('ROW') *
+              checkersLogicService.CONSTANT.get('COLUMN'); i += 1) {
+
+            gameApiSquare = state[i];
+
+            if (Math.floor(i / CONSTANT.get('COLUMN')) % 2 === 0) {
+              // EVEN
+              setDarkUiSquare(gameApiSquare, $scope.uiState[2 * i + 1]);
+            } else {
+              // ODD
+              setDarkUiSquare(gameApiSquare, $scope.uiState[2 * i]);
+            }
+          }
+        } else {
+          // It's not the first move, so check the selectedPiece for the squares
+          // need to be updated.
+
+          // UI index
+          var fromUiIndex = selectedPiece[0];
+          var toUiIndex = selectedPiece[1];
+          var jumpedUiIndex = -1;
+
+          // Game API index
+          var fromIndex = convertUiIndexToGameApiIndex(fromUiIndex);
+          var toIndex = convertUiIndexToGameApiIndex(toUiIndex);
+          var jumpedIndex = checkersLogicService.calculateJumpedIndex(
+              Math.floor(fromUiIndex / 2), Math.floor(toUiIndex / 2));
+
+          // Get the jumped square's index. If it's a simple move, then this
+          // index is illegal yet will not be used.
+
+
+          setDarkUiSquare(state[fromIndex], $scope.uiState[fromUiIndex]);
+          setDarkUiSquare(state[toIndex], $scope.uiState[toUiIndex]);
+          if (jumpedIndex !== -1) {
+            jumpedUiIndex = convertGameApiIndexToUiIndex(jumpedIndex);
+            setDarkUiSquare(state[jumpedIndex], $scope.uiState[jumpedUiIndex]);
+          }
+        }
       };
 
       /**
        * Update the graphics by convert the game API state to UI state and
        * set initial selectable squares.
+       *
+       * @param isAiMode true if it's in ai mode
        */
-      var updateCheckersGraphics = function () {
-        $scope.uiState = convertStateToUiState(state);
-        // If the state is not empty, then set the initial selectable squares.
+      var updateCheckersGraphics = function (isAiMode) {
+        updateUiState();
+        // If the state is not empty, then set the the selectablility of each
+        // square
         if (!checkersLogicService.isEmptyObj(state)) {
-          setInitialSelectableSquares(yourPlayerIndex);
+          if (isAiMode && yourPlayerIndex === 1) {
+            // It's the ai's turn, the player can not select any squares
+            setAllSquareUnselectable();
+          } else {
+            // It's not the ai's mode or the ai's turn, so set selectable
+            // suqares according to the player index.
+            setInitialSelectableSquares(yourPlayerIndex);
+          }
         }
       };
 
@@ -150,6 +215,8 @@ checkers.controller('CheckersCtrl',
             possibleMoves,
             hasMandatoryJump = checkersLogicService.checkMandatoryJump(state,
                 yourPlayerIndex);
+
+        setAllSquareUnselectable();
 
         // Check all dark squares
         for (var i = 0; i < checkersLogicService.CONSTANT.get('ROW') *
@@ -239,9 +306,11 @@ checkers.controller('CheckersCtrl',
           for (var i = 0; i < possibleMoves.length; i++) {
             if (Math.floor(possibleMoves[i] / CONSTANT.get('COLUMN')) % 2 === 0) {
               // EVEN
+              console.log(2 * possibleMoves[i] + 1);
               $scope.uiState[2 * possibleMoves[i] + 1].canSelect = true;
             } else {
               // ODD
+              console.log(2 * possibleMoves[i]);
               $scope.uiState[2 * possibleMoves[i]].canSelect = true;
             }
           }
@@ -251,27 +320,20 @@ checkers.controller('CheckersCtrl',
       /**
        * Add animation class so the animation may be performed accordingly
        *
-       * @param selectedPiece the selected pieces.
+       * @param animationIndexes an object containing the necessary info for
+       *          the animation. e.g.
+       *          {
+       *            column
+       *            fromUiIndex
+       *            toUiIndex
+       *            jumpedUiIndex
+       *          };
        */
-      var addAnimationClass = function (selectedPiece) {
-        var fromUiIndex = selectedPiece[0];
-        var toUiIndex = selectedPiece[1];
-        var column = checkersLogicService.CONSTANT.get('COLUMN') * 2;
-        var jumpedIndex = checkersLogicService.calculateJumpedIndex(
-            Math.floor(fromUiIndex / 2), Math.floor(toUiIndex / 2));
-        var jumpedUiIndex = -1;
-
-        // Get the jumped square's index. If it's a simple move, then this
-        // index is illegal yet will not be used.
-        if (Math.floor(jumpedIndex /
-            checkersLogicService.CONSTANT.get('COLUMN')) % 2 === 0) {
-          // EVEN
-          jumpedUiIndex = jumpedIndex * 2 + 1;
-        } else {
-          // ODD
-          jumpedUiIndex = jumpedIndex * 2;
-        }
-
+      var addAnimationClass = function (animationIndexes) {
+        var fromUiIndex = animationIndexes.fromUiIndex;
+        var toUiIndex = animationIndexes.toUiIndex;
+        var jumpedUiIndex = animationIndexes.jumpedUiIndex;
+        var column = animationIndexes.column;
         // Add the corresponding animation class
         switch (toUiIndex - fromUiIndex) {
           case -column - 1:
@@ -311,6 +373,99 @@ checkers.controller('CheckersCtrl',
             $animate.addClass($('#' + fromUiIndex), 'jump_down_right');
             break;
         }
+      };
+
+      /**
+       * remove animation class when the animation finishes.
+       *
+       * @param animationIndexes an object containing the necessary info for
+       *          the animation. e.g.
+       *          {
+       *            column
+       *            fromUiIndex
+       *            toUiIndex
+       *            jumpedUiIndex
+       *          };
+       */
+      var removeAnimationClass = function (animationIndexes) {
+        var fromUiIndex = animationIndexes.fromUiIndex;
+        var toUiIndex = animationIndexes.toUiIndex;
+        var jumpedUiIndex = animationIndexes.jumpedUiIndex;
+        var column = animationIndexes.column;
+        // remove the corresponding animation class
+        switch (toUiIndex - fromUiIndex) {
+          case -column - 1:
+            // Simple move up left
+            $animate.removeClass($('#' + fromUiIndex), 'move_up_left');
+            break;
+          case -column + 1:
+            // Simple move up right
+            $animate.removeClass($('#' + fromUiIndex), 'move_up_right');
+            break;
+          case column - 1:
+            // Simple move down left
+            $animate.removeClass($('#' + fromUiIndex), 'move_down_left');
+            break;
+          case column + 1:
+            // Simple move down right
+            $animate.removeClass($('#' + fromUiIndex), 'move_down_right');
+            break;
+          case -(2 * column) - 2:
+            // Jump move up left
+            $animate.removeClass($('#' + jumpedUiIndex), 'jumped');
+            $animate.removeClass($('#' + fromUiIndex), 'jump_up_left');
+            break;
+          case -(2 * column) + 2:
+            // Jump move up right
+            $animate.removeClass($('#' + jumpedUiIndex), 'jumped');
+            $animate.removeClass($('#' + fromUiIndex), 'jump_up_right');
+            break;
+          case (2 * column) - 2:
+            // Jump move down left
+            $animate.removeClass($('#' + jumpedUiIndex), 'jumped');
+            $animate.removeClass($('#' + fromUiIndex), 'jump_down_left');
+            break;
+          case (2 * column) + 2:
+            // Jump move down right
+            $animate.removeClass($('#' + jumpedUiIndex), 'jumped');
+            $animate.removeClass($('#' + fromUiIndex), 'jump_down_right');
+            break;
+        }
+      };
+
+      /**
+       * Calculate the indexes for play the animation first, an then add the
+       * proper animation class to the proper squares in order to play the
+       * animation.
+       *
+       * @param selectedPiece the selected pieces as an array
+       */
+      var playAnimation = function(selectedPiece) {
+        $scope.animationIndexes = {
+          column: checkersLogicService.CONSTANT.get('COLUMN') * 2,
+          fromUiIndex: selectedPiece[0],
+          toUiIndex: selectedPiece[1],
+          jumpedUiIndex: -1
+        };
+
+        var jumpedIndex = checkersLogicService.calculateJumpedIndex(
+            Math.floor($scope.animationIndexes.fromUiIndex / 2),
+            Math.floor($scope.animationIndexes.toUiIndex / 2)
+        );
+
+        // Get the jumped square's index. If it's a simple move, then this
+        // index is illegal yet will not be used.
+        if (Math.floor(jumpedIndex /
+            checkersLogicService.CONSTANT.get('COLUMN')) % 2 === 0) {
+          // EVEN
+          $scope.animationIndexes.jumpedUiIndex = jumpedIndex * 2 + 1;
+        } else {
+          // ODD
+          $scope.animationIndexes.jumpedUiIndex = jumpedIndex * 2;
+        }
+
+        // Add the animation class
+        addAnimationClass($scope.animationIndexes);
       };
 
       /**
@@ -358,19 +513,22 @@ checkers.controller('CheckersCtrl',
         // Proceed only if it's dark square and it's selectable.
         if (square.isDark && square.canSelect) {
           if (selectedPiece.length === 0) {
+            // If no piece is selected
             square.isSelected = true;
             selectedPiece[0] = index;
+
             setSelectableSquares(index, isDnd);
           } else if (selectedPiece.length === 1) {
             if (state[Math.floor(index / 2)].substr(0, 1) ===
                 state[Math.floor(selectedPiece[0] / 2)].substr(0, 1)) {
-              // If it's own color piece, then simply change the selected
-              // piece to this new one
+              // It the second selected piece is still the player's, then change
+              // the first selected piece to the new one.
               $scope.uiState[selectedPiece[0]].isSelected = false;
               square.isSelected = true;
               selectedPiece[0] = index;
               setSelectableSquares(index, isDnd);
             } else {
+              // If the second selected is an empty square
               selectedPiece[1] = index;
             }
           }
@@ -379,15 +537,18 @@ checkers.controller('CheckersCtrl',
             $scope.uiState[selectedPiece[0]].isSelected = false;
 
 
-            // Do the animation
-            addAnimationClass(selectedPiece);
+            // Play the animation
+            playAnimation(selectedPiece);
 
             var delayMakeMove = function () {
-              makeMove(selectedPiece[0], selectedPiece[1])
+              // Remove the animation class first, otherwise the square image
+              // will stayed at the same position after the animation.
+              removeAnimationClass($scope.animationIndexes);
+              makeMove(selectedPiece[0], selectedPiece[1]);
             };
 
-            // After the animation finishes, now makes the move.
-            $timeout(delayMakeMove, 600);
+            // Makes the move only when the animation finishes
+            $timeout(delayMakeMove, 420);
           }
         }
       };
@@ -426,8 +587,14 @@ checkers.controller('CheckersCtrl',
         }
       };
 
+      /**
+       * Convert the game API index (0 - 31) to the UI state index (0 - 63).
+       * @param gameApiIndex the game API index
+       * @returns {number} the ui state index
+       */
       var convertGameApiIndexToUiIndex = function (gameApiIndex) {
-        if (Math.floor(gameApiIndex / checkersLogicService.CONSTANT.get('COLUMN')) % 2 === 0) {
+        if (Math.floor(gameApiIndex
+            / checkersLogicService.CONSTANT.get('COLUMN')) % 2 === 0) {
           // Even row
           return gameApiIndex * 2 + 1;
         } else {
@@ -436,9 +603,64 @@ checkers.controller('CheckersCtrl',
         }
       };
 
+      /**
+       * Convert the UI state index (0 - 63) to the game API index (0 - 31).
+       * @param the UI state index
+       * @returns {number} the game API index
+       */
+      var convertUiIndexToGameApiIndex = function (uiIndex) {
+        if (Math.floor(uiIndex
+            / (checkersLogicService.CONSTANT.get('COLUMN') * 2)) % 2 === 0) {
+          // Even row
+          return (uiIndex - 1) / 2;
+        } else {
+          // Odd row
+          return uiIndex / 2;
+        }
+      };
+
+      /**
+       * This function use the alpha beta pruning algorithm to calculate a best
+       * move for the ai, then make the move and play the animation and sound
+       * effect.
+       */
+      var aiMakeMove = function() {
+        var depth = 10;
+        var timeLimit = 800;
+        var timer = {
+          startTime: Date.now(),
+          timeLimit: timeLimit
+        };
+
+        // Move on only after the best move is calculated.
+        checkersAiService.
+            findBestMove(state, yourPlayerIndex, depth, timer)
+            .then(function (data) {
+              var bestMove = data;
+              var fromUiIndex =
+                  convertGameApiIndexToUiIndex(bestMove.fromIndex);
+              var toUiIndex =
+                  convertGameApiIndexToUiIndex(bestMove.toIndex);
+
+              var delayAnimation = function () {
+                playAnimation([fromUiIndex, toUiIndex]);
+              };
+
+              var delayMakeMove = function () {
+                makeMove(fromUiIndex, toUiIndex);
+              };
+
+              // It seems a little delay will fix the animation bug...
+              $timeout(delayAnimation, 1);
+
+              // Makes the move only when the animation finishes
+              $timeout(delayMakeMove, 420);
+            });
+      };
+
       var game = (function () {
         function getGameDeveloperEmail() {
-          return "chongzizil@gmail.com";
+          return "yl1949@nyu.edu";
         }
 
         /**
@@ -446,6 +668,8 @@ checkers.controller('CheckersCtrl',
          * @param match
          */
         function updateUI(match) {
+          var isAiMode = $location.url() === '/PlayAgainstTheComputer';
+
           yourPlayerIndex = match.yourPlayerIndex;
           makeMoveCallback = match.makeMoveCallback;
           turnIndexBeforeMove = match.turnIndexBeforeMove;
@@ -458,22 +682,22 @@ checkers.controller('CheckersCtrl',
 
           $scope.yourPlayerIndex = yourPlayerIndex;
           $scope.playersInfo = playersInfo;
+
+          // Get the new state
+          state = stateAfterMove;
+          // Update the graphics
+          updateCheckersGraphics(isAiMode);
+
+          // Initialize the selectedPiece in each turn
           selectedPiece = [];
 
-          // Give it a time to between the move of player and ai...
-          $timeout(function () {
-          }, 50);
-
-          state = stateAfterMove;
-          updateCheckersGraphics();
-
-          // In case the ui is not updated
+          // In case the board is not updated
           if (!$scope.$$phase) {
             $scope.$apply();
           }
 
-          // If the state is empty and the player is white
-          // send the initial move.
+          // If the state is empty and the player is black,
+          // send the initial move to initialize the game board.
           if (checkersLogicService.isEmptyObj(stateAfterMove) &&
               turnIndexBeforeMove === 0) {
             makeMoveCallback(checkersLogicService.getInitialMove());
@@ -481,39 +705,10 @@ checkers.controller('CheckersCtrl',
 
           // If it's the AI mode and it's the AI turn, then let the AI makes
           // the move.
-          if ($location.url() === '/PlayAgainstTheComputer'
-              && yourPlayerIndex === 1) {
-            var depth = 8;
-            var timeLimit = 800;
-            var timer = {
-              startTime: Date.now(),
-              timeLimit: timeLimit
-            };
-
-            // Move on only after the best move is calculated.
-            checkersAiService.
-                findBestMove(state, yourPlayerIndex, depth, timer)
-                .then(function (data) {
-                  var bestMove = data;
-                  var fromUiIndex =
-                      convertGameApiIndexToUiIndex(bestMove.fromIndex);
-                  var toUiIndex =
-                      convertGameApiIndexToUiIndex(bestMove.toIndex);
-
-                  var delayAnimation = function () {
-                    addAnimationClass([fromUiIndex, toUiIndex]);
-                  };
-
-                  var delayMakeMove = function () {
-                    makeMove(fromUiIndex, toUiIndex);
-                  };
-
-                  // It seem a little delay will fix the animation bug...
-                  $timeout(delayAnimation, 1);
-
-                  // After the animation finishes, now makes the move.
-                  $timeout(delayMakeMove, 600);
-                });
+          if (isAiMode && yourPlayerIndex === 1) {
+            // Give it a little time for completing the sound effect of
+            // the player's move
+            $timeout(aiMakeMove, 50);
           }
         };
 
@@ -524,9 +719,17 @@ checkers.controller('CheckersCtrl',
         };
       })();
 
+      /**
+       * A function to start a new game.
+       */
       $scope.newGame = function () {
+        // Initialize the empty game board first
+        initializeUiState();
+        // Set the game
         platform.setGame(game);
         platform.showUI({minNumberOfPlayers: 2, maxNumberOfPlayers: 2});
       };
+
+      // Play!
       $scope.newGame();
     }]);

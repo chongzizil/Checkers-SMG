@@ -1,8 +1,8 @@
 <section>
   <section id="button_panel" class="text-center">
-    <a id="pass_and_play_btn" class="btn btn-default" href="#/PassAndPlay">Player & Player</a>
-    <button id="new_game_btn" class="btn btn-default" ng-click="newGame()">New game</button>
-    <a id="ai_btn" class="btn btn-default" href="#/PlayAgainstTheComputer">Player VS AI</a>
+    <a id="pass_and_play_btn" class="btn btn-sm btn-default" href="#/PassAndPlay"><i class="fa fa-user"></i> Human</a>
+    <button id="new_game_btn" class="btn btn-sm btn-default" ng-click="newGame()"><i class="fa fa-refresh"></i> New game</button>
+    <a id="ai_btn" class="btn btn-sm btn-default" href="#/PlayAgainstTheComputer"><i class="fa fa-desktop"></i> AI</a>
   </section>
 
   <div id="checkers_game">
@@ -14,10 +14,11 @@
         <div ng-class="{isDarkSquare: uiState[$index].isDark,
              isLightSquare: uiState[$index].isLight}">
           <img ng-src="{{square.bgSrc}}" class="background_image">
-          <img ng-src="{{square.src + (!square.isSelected ? '':'_selected') + '.png'}}" alt=""
+          <img ng-show="uiState[$index].isDark" ng-src="{{square.pieceSrc + (!square.isSelected ? '':'_selected') + '.png'}}" alt=""
                dd-draggable="true" dd-drop-target="true" id="{{$index}}"
                ng-click="pieceSelected($index)"
                ng-class="{
+             canSelect: square.canSelect,
              isBlackMan: uiState[$index].isBlackMan,
              isBlackCro: uiState[$index].isBlackCro,
              isWhiteMan: uiState[$index].isWhiteMan,

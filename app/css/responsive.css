@@ -9,7 +9,7 @@
 /*Medium devices*/
 @media only screen and (min-width: 992px) {
   #board {
-    width: 780px;
+    width: 720px;
     margin: auto;
   }
 }
@@ -17,15 +17,15 @@
 /*Large devices*/
 @media only screen and (min-width: 1200px) {
   #board {
-    width: 780px;
+    width: 720px;
     margin: auto;
   }
 }
 
 /*Large devices*/
-@media only screen and (min-width: 1600px) {
+@media only screen and (min-width: 1920px) {
   #board {
-    width: 960px;
+    width: 800px;
     margin: auto;
   }
 }

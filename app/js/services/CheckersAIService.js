@@ -147,8 +147,8 @@ checkers.factory('checkersAiService', ['checkersLogicService', '$q',
      * Get all possible moves.
      *
      * @param state the game API state
-     * @param turnIndex the turn index which 0 represents the white player and 1
-     *        represents the black player.
+     * @param turnIndex 0 represents the black player and 1
+     *        represents the white player.
      * @returns {
      *            fromIndex: number,
      *            toIndex: number
@@ -156,7 +156,7 @@ checkers.factory('checkersAiService', ['checkersLogicService', '$q',
      */
     var getAllMoves = function (state, turnIndex) {
       var allPossibleMoves = [],
-        hasMandatoryJump = checkersLogicService.checkMandatoryJump(state,
+        hasMandatoryJump = checkersLogicService.hasMandatoryJumps(state,
           turnIndex),
         possibleMoves,
         checkersState,
@@ -170,7 +170,7 @@ checkers.factory('checkersAiService', ['checkersLogicService', '$q',
         {
           squareIndex = parseInt(squareIndex, 10);
           checkersState =
-              checkersLogicService.convertGameApiStateToCheckersState(state);
+              checkersLogicService.convertGameApiStateToLogicState(state);
 
           if (hasMandatoryJump) {
             // If there's any mandatory jumps
@@ -212,8 +212,8 @@ checkers.factory('checkersAiService', ['checkersLogicService', '$q',
      *
      * @param state the game API state.
      * @param moveObj the move object.
-     * @param turnIndex the turn index which 0 represents the white player and 1
-     *        represents the black player.
+     * @param turnIndex 0 represents the black player and 1
+     *        represents the white player.
      * @returns {} the new state after the move.
      */
     var getNextState = function (state, moveObj, turnIndex) {
@@ -286,8 +286,8 @@ checkers.factory('checkersAiService', ['checkersLogicService', '$q',
      * Find the highest move score of a state.
      *
      * @param state the game API state
-     * @param turnIndex the turn index which 0 represents the white player and 1
-     *        represents the black player.
+     * @param turnIndex 0 represents the black player and 1
+     *        represents the white player.
      * @param depth the depth for the alpha beta pruning algorithm.
      * @param alpha the found max value.
      * @param beta the found min value.

@@ -1,35 +1,47 @@
 'use strict';
 
 /**
- * This is the logic service for the game Checkers.
+ * This is the logic service for Checkers.
  *
- * TO be clear, the state has two different format in the logic service:
- * 1. CheckersState is the game logic state represented as an array.
- *    Each element is a piece whether exist or not and the element's index is
- *    the square index.
- *    e.g. ["EMPTY", "WMAN"]
- * 2. GameApiState is the game API state represented as an object.
- *    A key and value pair represents the square index and the piece itself.
- *    e.g. {"0": "EMPTY, "1": "WMAN"}
+ * TO be clear in case of confusion, the state has two different format in the
+ * logic service:
  *
- * The move also has two different format:
- * 1. checkersMove is the game logic move represented as an array of Numbers.
- *    If it's a simple move, it will only contains the destination square index.
- *    If it's a jump move, it will contains the jumped (opponent) piece's square
- *    index and the destination square index.
+ * 1. LogicState: It's represented as an array with length equals to 32. Each
+ *                element represents a dark square content and each index
+ *                represents a dark square's index (0 - 31).
+ *    e.g. ["BMAN", ..., "EMPTY", ... "WMEN"]
+ *
+ * 2. GameApiState: It's represented as an object with size equals to 32. Each
+ *                  key and value pair represents a dark square index (0 - 31)
+ *                  and the content within it.
+ *    e.g. {0: "BMAN, ..., 12: "EMPTY", 20: "WMAN"}
+ *
+ * The move also has two different format in the logic service:
+ *
+ * 1. LogicMove: It's represented as an array of the move path, which is the
+ *               dark square's index. If it's a simple move, it will only
+ *               contains 1 index. If it's a jump move, it will contains two
+ *               indexes which are the jumped (opponent) piece's square index
+ *               and the destination empty square index.
  *    e.g. [13], [05, 10]
- * 2. gameApiMove is the game API move represented as an array of Objects.
- *    Each object is an operation which maybe set, setTurn, endMatchScore, etc.
+ *
+ * 2. GameApiMove: It's represented as an array of Objects. Each object is an
+ *                 operation which maybe set, setTurn, endMatchScore and etc...
  *    e.g. [{setTurn: {turnIndex: 1}}, {set: {key: 0, value: "EMPTY"}}]
  */
 
-// Constant. Do not touch!!!
+// Constants. Do not touch!!!
 var CONSTANT = (function () {
   var constant = {
     ROW: 8,
-    // Since for checkersState I only concern the light squares, therefore
-    // I only count the column to 4.
-    COLUMN: 4
+    // Since only the dark square may contain pieces, for both the gameApiState
+    // and logicState, I only concern the dark squares. Therefore the column is
+    // count to only 4.
+    COLUMN: 4,
+    BLACK: 'B',
+    WHITE: 'W',
+    BLACK_INDEX: 0,
+    WHITE_INDEX: 1
   };
 
   return {
@@ -62,7 +74,8 @@ var ILLEGAL_CODE = (function () {
 }());
 
 /**
- * 8x8 game board for reference.
+ * 8x8 board for reference. (Logic and game API state)
+ * The row number is zero based, so the first row is considered even row.
  *
  * EVEN | 00 | ** | 01 | ** | 02 | ** | 03 | ** |
  * ODD  | ** | 04 | ** | 05 | ** | 06 | ** | 07 |
@@ -74,227 +87,16 @@ var ILLEGAL_CODE = (function () {
  * ODD  | ** | 28 | ** | 29 | ** | 30 | ** | 31 |
  */
 
-var checkTurnIndexMatchesPieceColor = function (turnIndex, color) {
-  if ((turnIndex === 0 && color === 'B') ||
-      (turnIndex === 1 && color === 'W')) {
-    return true;
-  }
-  return false;
-};
-
 /**
  * Clone a object.
  *
- * @param obj
- * @returns {*} the copy
+ * @param obj the object need to be clones.
+ * @returns {*} the cloned object.
  */
 var cloneObj = function (obj) {
   var str = JSON.stringify(obj),
     copy = JSON.parse(str);
   return copy;
-};
-
-/**
- * Convert the game API state to game logic state.
- *
- * @param gameApiState the game API state.
- */
-var convertGameApiStateToCheckersState = function (gameApiState) {
-  var checkersState = [],
-    key,
-    index;
-  for (key in gameApiState) {
-    if (gameApiState.hasOwnProperty(key)) {
-      index = key;
-      checkersState[index] = gameApiState[key];
-    }
-  }
-
-  return checkersState;
-};
-
-/**
- * Calculate the next game api state after the move. If the game is ended, then
- * add the end match score.
- *
- * @param gameApiState the game API state.
- * @param move the game API move.
- * @param turnIndex the turn index which 0 represents the white player and 1
- *        represents the black player.
- * @returns {nextState: {*}} if the game is not ended,
- *          otherwise {nextState: {*}, endMatchScore: [*]}
- */
-var getNextState = function (gameApiState, move, turnIndex) {
-  var nextState = cloneObj(gameApiState),
-    hasWhite = false,
-    hasBlack = false,
-    index,
-    set;
-
-  // Alter the game state according to the moves
-  for (index in move) {
-    if (move.hasOwnProperty(index) && move[index].hasOwnProperty('set')) {
-      set = move[index].set;
-      nextState[set.key] = set.value;
-    }
-  }
-
-  // Check if the game ends
-  for (index in nextState) {
-    if (nextState.hasOwnProperty(index)) {
-      if (nextState[index].substr(0, 1) === 'W') {
-        hasWhite = true;
-      } else if (nextState[index].substr(0, 1) === 'B') {
-        hasBlack = true;
-      }
-    }
-  }
-
-  // White won
-  if (hasWhite && !hasBlack) {
-    return {nextState: nextState, endMatchScore: [0, 1]};
-  }
-
-  // Black won
-  if (!hasWhite && hasBlack) {
-    return {nextState: nextState, endMatchScore: [1, 0]};
-  }
-
-  var allPossibleMoves = [];
-  var checkersNextState = convertGameApiStateToCheckersState(nextState);
-  for (index in nextState) {
-    if (nextState.hasOwnProperty(index)) {
-      if (turnIndex === 0) {
-        // Check white's moves
-        if (nextState[index].substr(0, 1) === 'W') {
-          allPossibleMoves = allPossibleMoves.concat(
-              getAllPossibleMoves(checkersNextState, index, 1 - turnIndex));
-        }
-      } else {
-        // Check black's moves
-        if (nextState[index].substr(0, 1) === 'B') {
-          allPossibleMoves = allPossibleMoves.concat(
-              getAllPossibleMoves(checkersNextState, index, 1 - turnIndex));
-        }
-      }
-    }
-  }
-
-  if (allPossibleMoves.length === 0) {
-    if (turnIndex === 0) {
-      // White has no moves, so black wins!
-      return {nextState: nextState, endMatchScore: [1, 0]};
-    } else {
-      // Black has no moves, so white wins!
-      return {nextState: nextState, endMatchScore: [0, 1]};
-    }
-  }
-
-  // No winner
-  return {nextState: nextState};
-};
-
-/**
- * Retrieve the detail information of the game API move. Which includes the
- * game logic moves, the operated square's index, the next turn index and the
- * winner if it has one.
- *
- * @param gameApiMove the game API move
- * @returns {
- *    checkersMove: Array,
- *    pieceIndex: number,
- *    setTurnIndex: number,
- *    winner: string
- *  }
- */
-var retrieveGameApiMoveDetail = function (gameApiMove) {
-  var gameApiMoveDetail = {
-      checkersMove: [],
-      fromSquareIndex: -1,
-      setTurnIndex: -1,
-      winner: '',
-      checkIsInitialMove: false
-    },
-    setOperations = [],
-    index,
-    set;
-
-  for (index in gameApiMove) {
-    if (gameApiMove.hasOwnProperty(index)) {
-      if (gameApiMove[index].hasOwnProperty('setTurn')) {
-        // Get the setTurn value
-        gameApiMoveDetail.setTurnIndex =
-            gameApiMove[index].setTurn.turnIndex;
-      } else if (gameApiMove[index].hasOwnProperty('set')) {
-        // Get the set value
-        set = gameApiMove[index].set;
-        // Store all set operations
-        setOperations.push([set.key, set.value]);
-      } else if (gameApiMove[index].hasOwnProperty('endMatch')) {
-        // Get the endMatch if it exist and calculate the winner
-        if (gameApiMove[index].endMatch.endMatchScores[0] === 0) {
-          gameApiMoveDetail.winner = 'W';
-        } else {
-          gameApiMoveDetail.winner = 'B';
-        }
-      }
-    }
-  }
-
-  // Note the order of operation are important.
-  // The first one is the piece the player operates, which is assign to
-  // fromSquareIndex.
-  gameApiMoveDetail.fromSquareIndex = parseInt(setOperations[0][0], 10);
-
-  if (setOperations.length === 2) {
-    // If there's 2 set operations, then it's a simple move and the second set
-    // operation is for the destination square.
-    gameApiMoveDetail.checkersMove.push(parseInt(setOperations[1][0], 10));
-  } else if (setOperations.length === 3) {
-    // If there's 3 set operations, then it's a jump move and the second set
-    // operation is for the opponent (jumped) piece and the third set operation
-    // is for the destination square.
-    gameApiMoveDetail.checkersMove.push(parseInt(setOperations[1][0], 10));
-    gameApiMoveDetail.checkersMove.push(parseInt(setOperations[2][0], 10));
-  } else {
-    // If the set operations are more than 3, than it may be a initial move,
-    // mark it here and check it later in isMoveOk.
-    gameApiMoveDetail.checkIsInitialMove = true;
-  }
-
-  return gameApiMoveDetail;
-};
-
-/**
- * Check if the possible jump moves array contains the specific jump move.
- *
- * @param possibleJumpMoves an array contains all possible jump moves
- * @param checkerMove the move need to be checked
- * @returns {boolean}
- */
-var containJumpMove = function (possibleJumpMoves, checkerMove) {
-  var index;
-
-  for (index in possibleJumpMoves) {
-    if (possibleJumpMoves.hasOwnProperty(index)) {
-      if (possibleJumpMoves[index][0] === checkerMove[0]
-          && possibleJumpMoves[index][1] === checkerMove[1]) {
-        return true;
-      }
-    }
-  }
-  return false;
-};
-
-/**
- * Check if the square index is legal
- * @param squareIndex the squareIndex need to be check
- * @returns true if legal, otherwise false
- */
-var isLegalIndex = function (squareIndex) {
-  return squareIndex >= 0 &&
-      squareIndex < CONSTANT.get('ROW') * CONSTANT.get('COLUMN') &&
-      squareIndex % 1 === 0;
 };
 
 /**
@@ -313,35 +115,76 @@ var isEmptyObj = function (obj) {
 };
 
 /**
- * Check if the api move is the initial (initialize the game state) move.
+ * Check whether the turn index matches the color of the moving or jumping
+ * piece. In another word, check whether the player is operating his/her own
+ * piece.
  *
- * @param move the game API initialMove
- * @returns true if the move is initial move, otherwise false
+ * @param turnIndex 0 represents the black player and 1
+ *        represents the white player.
+ * @param color the color of the moving or jumping piece.
+ * @returns true if the index matches the color, otherwise false.
  */
-var isInitialMove = function (move) {
-  var i,
-      set;
+var isOwnColor = function (turnIndex, color) {
+  if ((turnIndex === CONSTANT.get('BLACK_INDEX')
+      && color === CONSTANT.get('BLACK'))
+      || (turnIndex === CONSTANT.get('WHITE_INDEX')
+          && color === CONSTANT.get('WHITE'))) {
+    return true;
+  }
+  return false;
+};
 
-  if (move === null || move === undefined) return false;
-  if (move.length !== move.length) return false;
+/**
+ * Check if the square index is legal
+ * @param squareIndex the squareIndex need to be check
+ * @returns true if legal, otherwise false
+ */
+var isLegalIndex = function (squareIndex) {
+  return squareIndex >= 0
+      && squareIndex < CONSTANT.get('ROW') * CONSTANT.get('COLUMN')
+      && squareIndex % 1 === 0;
+};
 
-  // Check setTurn operation is legal, it should be 0 which is still the white
-  if (!move[0].hasOwnProperty('setTurn') || move[0].setTurn['turnIndex'] !== 0) {
+/**
+ * Check if the game api move is the first move. (initialize the game state)
+ *
+ * @param move the game API move.
+ * @returns true if the move is the first move, otherwise false.
+ */
+var isFirstMove = function (move) {
+  var set;
+
+  if (move === null || move === undefined) {
+    return false;
+  }
+  // The move should has set operations for each dark square and 1 setTurn
+  // operation.
+  if (move.length !== CONSTANT.get('ROW') * CONSTANT.get('COLUMN') + 1) {
     return false;
   }
 
-  // Check set operations
-  for (i = 0; i < CONSTANT.get('ROW') * CONSTANT.get('COLUMN'); i += 1) {
-    // If the operation is no set, return false
+
+  // Warning: SetTurn operation should be the first in the game API moves.
+
+  // Check setTurn operation is legal, it should be 0 which is still black
+  if (!move[0].hasOwnProperty('setTurn')
+      || move[0].setTurn['turnIndex'] !== CONSTANT.get('BLACK_INDEX')) {
+    return false;
+  }
+
+  // Check all set operations
+  for (var i = 0; i < CONSTANT.get('ROW') * CONSTANT.get('COLUMN'); i += 1) {
     if (move[i + 1].hasOwnProperty('set')) {
       set = move[i + 1].set;
-      // If the set operation does not set the correct square, return false
+      // If the set operation does not has the correct value, return false
+      // The index is in hardcode here...
       if ((i < 12 && (set.key !== i || set.value !== 'BMAN'))
           || (i >= 12 && i < 20) && (set.key !== i || set.value !== 'EMPTY')
           || (i >= 20 && i < 32) && (set.key !== i || set.value !== 'WMAN')) {
         return false;
       }
     } else {
+      // If the operation is not set operation, return false
       return false;
     }
   }
@@ -350,13 +193,28 @@ var isInitialMove = function (move) {
 };
 
 /**
+ * Check if the jump is valid. The piece can only jump over an opponent piece
+ * and the destination square must be empty.
+ *
+ * @param fromSquare the player's piece which jumps
+ * @param jumpedSquare the jumped (opponent) piece which is being jumped over
+ * @param toSquare the destination square
+ * @returns true if the jump is valid, otherwise false
+ */
+var isValidJump = function (fromSquare, jumpedSquare, toSquare) {
+  return jumpedSquare !== 'EMPTY' &&
+      fromSquare.substr(0, 1) !== jumpedSquare.substr(0, 1) &&
+      toSquare === 'EMPTY';
+};
+
+/**
  * Check if the square is moving or jumping to the kings row
  *
  * @param toIndex the index of the square moving to or jumping to
  * @param playerTurnIndex the player's turn index
- * @returns true if the crowned is legal, otherwise false.
+ * @returns true if it enters the kings row, otherwise false.
  */
-var isToKingsRow = function (toIndex, playerTurnIndex) {
+var hasMoveOrJumpToKingsRow = function (toIndex, playerTurnIndex) {
   // Check if the square can be crowned
   if (// For white square, it's moving or jumping to the first row
       (playerTurnIndex === 1 &&
@@ -374,6 +232,46 @@ var isToKingsRow = function (toIndex, playerTurnIndex) {
   return false;
 };
 
+/**
+ * Check if there's any mandatory jumps for the player.
+ *
+ * @returns true if there has, otherwise false.
+ */
+var hasMandatoryJumps = function (state, yourPlayerIndex) {
+  var possibleMoves = [];
+  for (var i = 0; i < CONSTANT.get('ROW') * CONSTANT.get('COLUMN'); i += 1) {
+    possibleMoves =
+        possibleMoves.concat(getJumpMoves(state, i, yourPlayerIndex));
+  }
+
+  return possibleMoves.length > 0;
+};
+
+/**
+ * Convert the game API state to logic state.
+ *
+ * @param gameApiState the game API state.
+ * @param [*] the logic state.
+ */
+var convertGameApiStateToLogicState = function (gameApiState) {
+  var logicState = [],
+      key;
+
+  for (key in gameApiState) {
+    if (gameApiState.hasOwnProperty(key)) {
+      logicState[key] = gameApiState[key];
+    }
+  }
+
+  return logicState;
+};
+
+/**
+ * Get the email body according to the specific illegal code.
+ *
+ * @param illegalCode
+ * @returns {string} the email body
+ */
 var getIllegalEmailBody = function (illegalCode) {
   var emailBody = '';
 
@@ -405,6 +303,12 @@ var getIllegalEmailBody = function (illegalCode) {
   return emailBody;
 };
 
+/**
+ * Get the email object according to the illegal code.
+ *
+ * @param illegalCode
+ * @returns {{email: string, emailSubject: string, emailBody: string}}
+ */
 var getIllegalEmailObj = function (illegalCode) {
   return {
     email: 'yl1949@nyu.edu',
@@ -414,676 +318,111 @@ var getIllegalEmailObj = function (illegalCode) {
 };
 
 /**
- * Check if the move is OK.
+ * Get the color of the piece within the square.
  *
- * @param match the match info which contains stateBeforeMove, stateAfterMove,
- *              turnIndexBeforeMove, turnIndexAfterMove, move.
- * @returns return true if the move is ok, otherwise false.
+ * @param square the square of the board.
+ * @returns string "B" if the piece is black, "W" if the piece is white,
+ *          otherwise it's empty.
  */
-var isMoveOk = function (match) {
-  var gameApiStateBeforeMove = match.stateBeforeMove,
-      gameApiStateAfterMove = match.stateAfterMove,
-      turnIndexBeforeMove = match.turnIndexBeforeMove,
-//      turnIndexAfterMove = match.turnIndexAfterMove,
-      move = match.move,
-      checkersStateBeforeMove =
-          convertGameApiStateToCheckersState(gameApiStateBeforeMove),
-      nextStateObj =
-          getNextState(gameApiStateBeforeMove, move, turnIndexBeforeMove),
-      nextGameApiState = nextStateObj.nextState,
-      nextCheckersState = convertGameApiStateToCheckersState(nextGameApiState),
-      gameApiMoveDetail,
-      checkersMove,
-      squareIndex,
-      setTurnIndex,
-      winner,
-      isSimpleMove = true,
-      possibleMoves = [],
-      index,
-      i;
-
-  //////////////////////////////////////////////////////////////////////////////
-  // 1. Check if the state is empty (need initialize move)
-  //////////////////////////////////////////////////////////////////////////////
-  if (isEmptyObj(gameApiStateBeforeMove) && move.length === 0) {
-    // If the state is empty and no move is made, then it's the initial state
-    return true;
-  } else {
-    // Otherwise retrieve the move details
-    gameApiMoveDetail = retrieveGameApiMoveDetail(move);
-    checkersMove = gameApiMoveDetail.checkersMove;
-    squareIndex = gameApiMoveDetail.fromSquareIndex;
-    setTurnIndex = gameApiMoveDetail.setTurnIndex;
-    winner = gameApiMoveDetail.winner;
-  }
-
-  //////////////////////////////////////////////////////////////////////////////
-  // 2. Check if the move is an initialize move first, only if the moves are
-  // different from the simple move or jump move.
-  //////////////////////////////////////////////////////////////////////////////
-  if (gameApiMoveDetail.checkIsInitialMove) {
-    // The initial move must be send by the white player with turn index 0
-    if (turnIndexBeforeMove !== 0) {
-      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_MOVE'));
-    }
-
-    // Check if the game state is empty
-    if (!isEmptyObj(gameApiStateBeforeMove)) {
-      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_MOVE'));
-    }
-
-    // Check if the initial move is legal
-    if (isInitialMove(getInitialMove(), move)) {
-      return true;
-    } else {
-      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_MOVE'));
-    }
-  }
-
-  //////////////////////////////////////////////////////////////////////////////
-  // 3. Check if the square index and the move's indexes is legal
-  //////////////////////////////////////////////////////////////////////////////
-  if (!isLegalIndex(squareIndex)) {
-    return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_INDEX'));
-  }
-  for (i = 0; i < checkersMove.length; i += 1) {
-    if (!isLegalIndex(checkersMove[i])) {
-      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_INDEX'));
-    }
-  }
-
-  //////////////////////////////////////////////////////////////////////////////
-  // 4. Check if the piece remains the same or is legally crowned.
-  //////////////////////////////////////////////////////////////////////////////
-  var pieceBeforeMove = gameApiStateBeforeMove[squareIndex];
-  var pieceIndexAfterMove = checkersMove[checkersMove.length - 1];
-  var pieceAfterMove = gameApiStateAfterMove[pieceIndexAfterMove];
-
-  // Check if the piece's color is changed which is illegal all time
-  if (pieceBeforeMove.substr(0, 1) !== pieceAfterMove.substr(0, 1)) {
-    return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_COLOR_CHANGED'));
-  }
-
-  // Check if the piece is uncrowned which is illegal all time
-  if (pieceBeforeMove.substr(1) === 'CRO' && pieceBeforeMove.substr(1) !== pieceAfterMove.substr(1)) {
-    return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_UNCROWNED'));
-  }
-
-  // The piece is crowned, check if it is legal
-  if (pieceBeforeMove.substr(1) === 'MAN' && pieceBeforeMove.substr(1) !== pieceAfterMove.substr(1)) {
-    // Check if the crowned move is legal
-    if (!isToKingsRow(pieceIndexAfterMove, turnIndexBeforeMove)) {
-      // Only if the piece is original a MAN that we should check whether it
-      // is legally crowned.
-      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_CROWNED'));
-    }
-  }
-
-  //////////////////////////////////////////////////////////////////////////////
-  // 5. Check if the move is legal
-  //////////////////////////////////////////////////////////////////////////////
-  if (checkersMove.length === 1) {
-    // Simple move
-
-    // Check all pieces if there are any mandatory jumps
-    for (index in checkersStateBeforeMove) {
-      if (checkTurnIndexMatchesPieceColor(turnIndexBeforeMove,
-          checkersStateBeforeMove[index].substr(0, 1)))
-      {
-        if (getJumpMoves(checkersStateBeforeMove, parseInt(index, 10),
-            turnIndexBeforeMove).length !== 0) {
-          // Mandatory jump is ignored, hacker!!!
-          return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_IGNORE_MANDATORY_JUMP'));
-        }
-      }
-    }
-
-    // No mandatory jump
-    possibleMoves = getSimpleMoves(checkersStateBeforeMove, squareIndex,
-        turnIndexBeforeMove);
-
-    // If the move is among the possible moves, then it's valid
-    if (possibleMoves.indexOf(checkersMove[0]) === -1) {
-      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_SIMPLE_MOVE'));
-    }
-
-  } else if (checkersMove.length === 2) {
-    // Jump move
-
-    possibleMoves =
-        getJumpMoves(checkersStateBeforeMove, squareIndex, turnIndexBeforeMove);
-
-    // If the move is among the possible moves, then it's valid
-    if (!containJumpMove(possibleMoves, checkersMove, turnIndexBeforeMove)) {
-      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_JUMP_MOVE'));
-    }
-
-    isSimpleMove = false;
-  } else {
-    return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_MOVE'));
-  }
-
-  //////////////////////////////////////////////////////////////////////////////
-  // 6. Check the set turn, it's only legal to perform another move if there
-  // more jump moves available for the operated piece.
-  //////////////////////////////////////////////////////////////////////////////
-  if (!isSimpleMove) {
-    // Check if the set turn index is legal
-    // For the same piece, check if it can do more jump moves
-    // Note: If the piece moves to the kings row, then the turn is terminated
-    //       no matter it can jump or not
-    if (getJumpMoves(nextCheckersState, checkersMove[1],
-        turnIndexBeforeMove).length > 0
-        && !isToKingsRow(pieceIndexAfterMove, turnIndexBeforeMove)) {
-      // If the same piece can do more jumps, then the turnIndex remains.
-      if (setTurnIndex !== turnIndexBeforeMove) {
-        return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_SET_TURN'));
-      }
-    } else {
-      // It the same piece can't do more jumps, then the turnIndex will change.
-      if (setTurnIndex === turnIndexBeforeMove) {
-        return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_SET_TURN'));
-      }
-    }
-  } else {
-    // The turnIndex must change if the move is just a simple move.
-    if (setTurnIndex === turnIndexBeforeMove) {
-      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_SET_TURN'));
-    }
-  }
-
-  //////////////////////////////////////////////////////////////////////////////
-  // 6. Check if the game ends properly
-  //////////////////////////////////////////////////////////////////////////////
-  if (winner === 'B') {
-    if (!(nextStateObj.hasOwnProperty('endMatchScore')
-        && nextStateObj.endMatchScore[0] === 1)) {
-      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_END_MATCH_SCORE'));
-    }
-  }
-
-  if (winner === 'W') {
-    if (!(nextStateObj.hasOwnProperty('endMatchScore')
-        && nextStateObj.endMatchScore[1] === 1)) {
-      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_END_MATCH_SCORE'));
-    }
-  }
-
-  return true;
+var getColor = function (square) {
+  return square.substr(0, 1);
 };
 
 /**
- * Each time the player makes a move, check whether the opponent player can make
- * any move in the new state, if he can than the game is not over yet, otherwise
- * the game is ended.
+ * Get the kind of the piece within the square.
+ *
+ * @param square the square of the board.
+ * @returns string "MAN" if the piece is man, "CRO" if the piece king or crowned
+ */
+var getKind = function (square) {
+  return square.substr(1);
+};
+
+/**
+ * Get the winner based on the current state.
  *
  * @param gameApiState the current game API state
- * @param move the move the player made
- * @param yourPlayerIndex the player's turn index
- * @returns {boolean}
+ * @param turnIndex 0 represents the black player and 1
+ *        represents the white player.
+ * @returns string "B" if the piece is black, "W" if the piece is white,
+ *          otherwise it's empty.
  */
-var hasWon = function (gameApiState, move, yourPlayerIndex) {
+var getWinner = function (logicState, turnIndex) {
+  var allPossibleMoves = [],
+      hasWhite,
+      hasBlack,
+      square;
 
-  var nextGameApiState =
-          getNextState(cloneObj(gameApiState), move, yourPlayerIndex).nextState,
-      nextCheckersState = convertGameApiStateToCheckersState(nextGameApiState),
-      opponentTurnIndex = 1 - yourPlayerIndex,
-      moves = [];
+  // Check whether there's any piece for both of the player
+  for (var index in logicState) {
+    if (getColor(logicState[index]) === CONSTANT.get('WHITE')) {
+      hasWhite = true;
+    } else if (getColor(logicState[index]) === CONSTANT.get('BLACK')) {
+      hasBlack = true;
+    }
 
-  for (var i = 0; i < nextCheckersState.length; i += 1) {
-    moves = moves.concat(getJumpMoves(nextCheckersState, i, opponentTurnIndex));
-    if (moves.length > 0) {
-      return false;
+    if (hasWhite === true && hasBlack === true) {
+      // No need to check the rest
+      break;
     }
   }
 
-  for (var i = 0; i < nextCheckersState.length; i += 1) {
-    moves =
-        moves.concat(getSimpleMoves(nextCheckersState, i, opponentTurnIndex));
-    if (moves.length > 0) {
-      return false;
-    }
+  // White won because white player has no pieces
+  if (hasWhite && !hasBlack) {
+    return CONSTANT.get("WHITE");
   }
 
-  // The opponent has no move to made, whether he/she has or has not any pieces
-  // left on the board.
-  return true;
-};
-
-/**
- * Check if there's any mandatory jumps.
- *
- * @returns {boolean}
- */
-var checkMandatoryJump = function (state, yourPlayerIndex) {
-  var possibleMoves = [];
-  for (var i = 0; i < CONSTANT.get('ROW') * CONSTANT.get('COLUMN'); i += 1) {
-    possibleMoves =
-        possibleMoves.concat(getJumpMoves(state, i, yourPlayerIndex));
+  // Black won because black player has no pieces
+  if (!hasWhite && hasBlack) {
+    return CONSTANT.get("BLACK");
   }
 
-  return possibleMoves.length > 0;
-};
+  // Get all the moves for the current turn player
+  for (index in logicState) {
+    square = logicState[index];
 
-/**
- * Get all possible upwards simple moves for a specific piece by its square
- * index.
- *
- * @param checkersState the game logic state
- * @param squareIndex the index of the square holds the piece
- * @return an array of all possible moves
- */
-var getSimpleMoveUpMoves = function (checkersState, squareIndex) {
-  var moves = [],
-    leftUpSquareIndex,
-    rightUpSquareIndex;
-
-  // If the piece is in the first row, then there's no way to move upwards.
-  if (Math.floor(squareIndex / CONSTANT.get('COLUMN')) === 0) {
-    return moves;
-  }
-
-  // Since for the even row, the dark square starts first but for the odd row,
-  // the light square starts first, so the difference of the indexes between two
-  // adjacent rows is not always the same.
-  if (Math.floor(squareIndex / CONSTANT.get('COLUMN')) % 2 === 0) {
-    // EVEN ROW
-
-    // Check left first
-    leftUpSquareIndex = squareIndex - CONSTANT.get('COLUMN');
-    if (checkersState[leftUpSquareIndex] === 'EMPTY') {
-      moves.push(leftUpSquareIndex);
-    }
-
-    // Check right
-    rightUpSquareIndex = squareIndex - CONSTANT.get('COLUMN') + 1;
-    // for the rightmost one, it can only move to the left up side.
-    if (squareIndex % CONSTANT.get('COLUMN') !== CONSTANT.get('COLUMN') - 1
-        && checkersState[rightUpSquareIndex] === 'EMPTY') {
-      moves.push(rightUpSquareIndex);
-    }
-  } else {
-    // ODD ROW
-
-    // Check left first
-    leftUpSquareIndex = squareIndex - CONSTANT.get('COLUMN') - 1;
-    // For the leftmost one, it can only move to the right up side.
-    if (squareIndex % CONSTANT.get('COLUMN') !== 0
-        && checkersState[leftUpSquareIndex] === 'EMPTY') {
-      moves.push(leftUpSquareIndex);
-    }
-
-    // Check right
-    rightUpSquareIndex = squareIndex - CONSTANT.get('COLUMN');
-    if (checkersState[rightUpSquareIndex] === 'EMPTY') {
-      moves.push(rightUpSquareIndex);
-    }
-  }
-
-  return moves;
-};
-
-/**
- * Get all possible downwards simple moves for a specific piece by its square
- * index.
- *
- * @param checkersState the game logic state
- * @param squareIndex the index of the square holds the piece
- * @return an array of all possible moves
- */
-var getSimpleMoveDownMoves = function (checkersState, squareIndex) {
-  var moves = [],
-    leftUpSquareIndex,
-    rightUpSquareIndex;
-
-  // If the piece is in the last row, then there's no way to move downwards.
-  if (Math.floor(squareIndex / CONSTANT.get('COLUMN'))
-      === (CONSTANT.get('ROW') - 1)) {
-    return moves;
-  }
-
-  // Since for the even row, the dark square starts first but for the odd row,
-  // the light square starts first, so the difference of the indexes between two
-  // adjacent rows is not always the same.
-  if (Math.floor(squareIndex / CONSTANT.get('COLUMN')) % 2 === 0) {
-    // EVEN ROW
-
-    // Check left first
-    leftUpSquareIndex = squareIndex + CONSTANT.get('COLUMN');
-    if (checkersState[leftUpSquareIndex] === 'EMPTY') {
-      moves.push(leftUpSquareIndex);
-    }
-
-    // Check right
-    rightUpSquareIndex = squareIndex + CONSTANT.get('COLUMN') + 1;
-    // for the rightmost one, it can only move to the left down side.
-    if (squareIndex % CONSTANT.get('COLUMN') !== CONSTANT.get('COLUMN') - 1
-        && checkersState[rightUpSquareIndex] === 'EMPTY') {
-      moves.push(rightUpSquareIndex);
-    }
-  } else {
-    // ODD ROW
-
-    // Check left first
-    leftUpSquareIndex = squareIndex + CONSTANT.get('COLUMN') - 1;
-    // For the leftmost one, it can only move to the right down side.
-    if (squareIndex % CONSTANT.get('COLUMN') !== 0
-        && checkersState[leftUpSquareIndex] === 'EMPTY') {
-      moves.push(leftUpSquareIndex);
-    }
-
-    // Check right
-    rightUpSquareIndex = squareIndex + CONSTANT.get('COLUMN');
-    if (checkersState[rightUpSquareIndex] === 'EMPTY') {
-      moves.push(rightUpSquareIndex);
-    }
-  }
-
-  return moves;
-};
-
-/**
- * Check if the jump is valid. The piece can only jump over an opponent piece
- * and the destination square must be empty.
- *
- * @param fromSquare the player's piece which jumps
- * @param jumpedSquare the jumped (opponent) piece which is being jumped over
- * @param toSquare the destination square
- * @returns true if the jump is valid, otherwise false
- */
-var isValidJump = function (fromSquare, jumpedSquare, toSquare) {
-  return jumpedSquare !== 'EMPTY' &&
-    fromSquare.substr(0, 1) !== jumpedSquare.substr(0, 1) &&
-    toSquare === 'EMPTY';
-};
-
-/**
- * Get all possible upwards jump moves for a specific piece by its square
- * index.
- *
- * @param checkersState the game logic state
- * @param squareIndex the index of the square holds the piece
- * @return an array of all possible moves
- */
-var getJumpUpMoves = function (checkersState, squareIndex) {
-  var fromSquareIndex = squareIndex,
-    fromSquare = checkersState[squareIndex],
-    jumpedSquareIndex,
-    jumpedSquare,
-    toSquareIndex,
-    toSquare,
-    moves = [];
-
-  // If the piece is in either the first or the second row, then there's no way
-  // to jump upwards.
-  if (Math.floor(fromSquareIndex / CONSTANT.get('COLUMN')) < 2) {
-    return moves;
-  }
-
-  // Since for the even row, the dark square starts first but for the odd row,
-  // the light square starts first, so the difference of the indexes between two
-  // adjacent rows is not always the same.
-  if (Math.floor(fromSquareIndex / CONSTANT.get('COLUMN')) % 2 === 0) {
-    // Even row
-
-    // Check left first, for the leftmost one, it can only jump right upwards.
-    if (fromSquareIndex % CONSTANT.get('COLUMN') !== 0) {
-      jumpedSquareIndex = fromSquareIndex - CONSTANT.get('COLUMN');
-      toSquareIndex = fromSquareIndex - 2 * CONSTANT.get('COLUMN') - 1;
-      jumpedSquare = checkersState[jumpedSquareIndex];
-      toSquare = checkersState[toSquareIndex];
-
-      if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
-        moves.push([jumpedSquareIndex, toSquareIndex]);
+    if (turnIndex === CONSTANT.get('BLACK_INDEX')) {
+      // Get all black's moves
+      if (getColor(square) === CONSTANT.get('BLACK')) {
+        allPossibleMoves = allPossibleMoves.concat(
+            getAllPossibleMoves(logicState, index, turnIndex));
       }
-    }
-
-    // Check right, for the rightmost one, it can only jump left upwards.
-    if (fromSquareIndex % CONSTANT.get('COLUMN') !== CONSTANT.get('COLUMN') - 1) {
-      jumpedSquareIndex = fromSquareIndex - CONSTANT.get('COLUMN') + 1;
-      toSquareIndex = fromSquareIndex - 2 * CONSTANT.get('COLUMN') + 1;
-      jumpedSquare = checkersState[jumpedSquareIndex];
-      toSquare = checkersState[toSquareIndex];
-
-      if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
-        moves.push([jumpedSquareIndex, toSquareIndex]);
-      }
-    }
-  } else {
-    // Odd row
-
-    // Check left first, for the leftmost one, it can only jump right upwards.
-    if (fromSquareIndex % CONSTANT.get('COLUMN') !== 0) {
-      jumpedSquareIndex = fromSquareIndex - CONSTANT.get('COLUMN') - 1;
-      toSquareIndex = fromSquareIndex - 2 * CONSTANT.get('COLUMN') - 1;
-      jumpedSquare = checkersState[jumpedSquareIndex];
-      toSquare = checkersState[toSquareIndex];
-
-      if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
-        moves.push([jumpedSquareIndex, toSquareIndex]);
-      }
-    }
-
-    // Check right, for the rightmost one, it can only jump left upwards.
-    if (fromSquareIndex % CONSTANT.get('COLUMN') !== CONSTANT.get('COLUMN') - 1) {
-      jumpedSquareIndex = fromSquareIndex - CONSTANT.get('COLUMN');
-      toSquareIndex = fromSquareIndex - 2 * CONSTANT.get('COLUMN') + 1;
-      jumpedSquare = checkersState[jumpedSquareIndex];
-      toSquare = checkersState[toSquareIndex];
-
-      if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
-        moves.push([jumpedSquareIndex, toSquareIndex]);
+    } else {
+      // Get all white's moves
+      if (getColor(square) === CONSTANT.get('WHITE')) {
+        allPossibleMoves = allPossibleMoves.concat(
+            getAllPossibleMoves(logicState, index, turnIndex));
       }
     }
   }
 
-  return moves;
-};
-
-/**
- * Get all possible downwards jump moves for a specific piece by its square
- * index.
- *
- * @param checkersState the game logic state
- * @param squareIndex the index of the square holds the piece
- * @return an array of all possible moves
- */
-var getJumpDownMoves = function (checkersState, squareIndex) {
-  var fromSquareIndex = squareIndex,
-    fromSquare = checkersState[fromSquareIndex],
-    jumpedSquareIndex,
-    jumpedSquare,
-    toSquareIndex,
-    toSquare,
-    moves = [];
-
-  squareIndex = parseInt(squareIndex, 10);
-
-  // If the piece is in either the last or the second to the last row, then
-  // there's no way to jump downwards.
-  if (Math.floor(fromSquareIndex / CONSTANT.get('COLUMN')) >=
-    CONSTANT.get('ROW') - 2) {
-    return moves;
-  }
-
-  // Since for the even row, the dark square starts first but for the odd row,
-  // the light square starts first, so the difference of the indexes between two
-  // adjacent rows is not always the same.
-  if (Math.floor(fromSquareIndex / CONSTANT.get('COLUMN')) % 2 === 0) {
-    // Even row
-
-    // Check left first, for the leftmost one, it can only jump right downwards.
-    if (fromSquareIndex % CONSTANT.get('COLUMN') !== 0) {
-      jumpedSquareIndex = fromSquareIndex + CONSTANT.get('COLUMN');
-      toSquareIndex = fromSquareIndex + 2 * CONSTANT.get('COLUMN') - 1;
-      jumpedSquare = checkersState[jumpedSquareIndex];
-      toSquare = checkersState[toSquareIndex];
-
-      if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
-        moves.push([jumpedSquareIndex, toSquareIndex]);
-      }
-    }
-
-    // Check right, for the rightmost one, it can only jump left downwards.
-    if (fromSquareIndex % CONSTANT.get('COLUMN') !== CONSTANT.get('COLUMN') - 1) {
-      jumpedSquareIndex = fromSquareIndex + CONSTANT.get('COLUMN') + 1;
-      toSquareIndex = fromSquareIndex + 2 * CONSTANT.get('COLUMN') + 1;
-      jumpedSquare = checkersState[jumpedSquareIndex];
-      toSquare = checkersState[toSquareIndex];
-
-      if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
-        moves.push([jumpedSquareIndex, toSquareIndex]);
-      }
-    }
-  } else {
-    // Odd row
-
-    // Check left first, for the leftmost one, it can only jump right downwards.
-    if (fromSquareIndex % CONSTANT.get('COLUMN') !== 0) {
-      jumpedSquareIndex = fromSquareIndex + CONSTANT.get('COLUMN') - 1;
-      toSquareIndex = fromSquareIndex + 2 * CONSTANT.get('COLUMN') - 1;
-      jumpedSquare = checkersState[jumpedSquareIndex];
-      toSquare = checkersState[toSquareIndex];
-
-      if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
-        moves.push([jumpedSquareIndex, toSquareIndex]);
-      }
-    }
-
-    // Check right, for the rightmost one, it can only jump left downwards.
-    if (fromSquareIndex % CONSTANT.get('COLUMN') !== CONSTANT.get('COLUMN') - 1) {
-      jumpedSquareIndex = fromSquareIndex + CONSTANT.get('COLUMN');
-      toSquareIndex = fromSquareIndex + 2 * CONSTANT.get('COLUMN') + 1;
-      jumpedSquare = checkersState[jumpedSquareIndex];
-      toSquare = checkersState[toSquareIndex];
-
-      if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
-        moves.push([jumpedSquareIndex, toSquareIndex]);
-      }
+  if (allPossibleMoves.length === 0) {
+    if (turnIndex === CONSTANT.get('BLACK_INDEX')) {
+      // Black has no moves, so white wins!
+      return CONSTANT.get("WHITE");
+    } else {
+      // White has no moves, so black wins!
+      return CONSTANT.get("BLACK");
     }
   }
 
-  return moves;
+  // No winner, the game is not ended.
+  return '';
 };
 
 /**
- * Get all possible simple moves for a specific piece by its square index. If it
- * is crowned, also check if it can move one step backward.
- *
- * @param checkersState the game logic state
- * @param squareIndex the index of the square holds the piece
- * @param turnIndex the turn index which 0 represents the white player and 1
- *        represents the black player.
- * @return an array of all possible moves.
- */
-var getSimpleMoves = function (checkersState, squareIndex, turnIndex) {
-  var moves = [],
-    tmpMoves = [],
-    fromSquare = checkersState[squareIndex],
-    color = fromSquare.substr(0, 1),
-    kind = fromSquare.substr(1);
-
-  // Check whether it's the current player's piece first, if not, since the
-  // player can not operate it, then no move will be available.
-  if (checkTurnIndexMatchesPieceColor(turnIndex, color)) {
-    if (kind === 'CRO') {
-      // Check both direction moves
-      tmpMoves = getSimpleMoveUpMoves(checkersState, squareIndex);
-      moves = moves.concat(tmpMoves);
-
-      tmpMoves = getSimpleMoveDownMoves(checkersState, squareIndex);
-      moves = moves.concat(tmpMoves);
-    } else if (color === 'W') {
-      tmpMoves = getSimpleMoveUpMoves(checkersState, squareIndex);
-      moves = moves.concat(tmpMoves);
-    } else if (color === 'B') {
-      tmpMoves = getSimpleMoveDownMoves(checkersState, squareIndex);
-      moves = moves.concat(tmpMoves);
-    }
-  }
-
-  return moves;
-};
-
-/**
- * Get all possible jump moves for a specific piece by its square index. If it
- * is crowned, also check if it can jump one step backward.
- *
- * @param checkersState the game logic state
- * @param squareIndex the index of the square holds the piece
- * @param turnIndex the turn index which 0 represents the white player and 1
- *        represents the black player.
- * @return an array of all possible moves
- */
-var getJumpMoves = function (checkersState, squareIndex, turnIndex) {
-  var moves = [],
-    tmpMoves = [],
-    fromSquare = checkersState[squareIndex],
-    color = fromSquare.substr(0, 1),
-    kind = fromSquare.substr(1);
-
-  // Check whether it's the current player's piece first, if not, since the
-  // player can not operate it, then no move will be available.
-  if (checkTurnIndexMatchesPieceColor(turnIndex, color)) {
-    if (kind === 'CRO') {
-      // Check both direction moves
-      tmpMoves = getJumpUpMoves(checkersState, squareIndex);
-      moves = moves.concat(tmpMoves);
-
-      tmpMoves = getJumpDownMoves(checkersState, squareIndex);
-      moves = moves.concat(tmpMoves);
-    } else if (color === 'W') {
-      tmpMoves = getJumpUpMoves(checkersState, squareIndex);
-      moves = moves.concat(tmpMoves);
-    } else if (color === 'B') {
-      tmpMoves = getJumpDownMoves(checkersState, squareIndex);
-      moves = moves.concat(tmpMoves);
-    }
-  }
-
-  return moves;
-};
-
-/**
- * Get all possible moves for a specific piece by its square index.
- *
- * @param gameApiState the game API state.
- * @param squareIndex the index of the square holds the piece
- * @param turnIndex the turn index which 0 represents the white player and 1
- *        represents the black player.
- * @return an array of all possible move.
- */
-var getAllPossibleMoves = function (checkersState, squareIndex, turnIndex) {
-  var possibleMoves = [];
-
-  // Make sure the index is number
-  squareIndex = parseInt(squareIndex, 10);
-
-  // First get all possible jump moves.
-  possibleMoves = possibleMoves.concat(getJumpMoves(checkersState, squareIndex, turnIndex));
-
-  // If there's at least one jump move, then no need to check the simple moves
-  // since jump move is mandatory.
-  if (possibleMoves.length === 0) {
-    possibleMoves = possibleMoves.concat(getSimpleMoves(checkersState, squareIndex, turnIndex));
-  }
-
-  return possibleMoves;
-};
-
-/**
- * Get the initial moves (operations).
+ * Get the first move.
  *
  * @returns {Array}
  */
-var getInitialMove = function () {
+var getFirstMove = function () {
   var operations = [],
-    i;
+      i;
 
   operations.push({setTurn: {turnIndex: 0}});
 
   for (i = 0; i < (CONSTANT.get('ROW') - 2)
-    / 2 * CONSTANT.get('COLUMN');
+      / 2 * CONSTANT.get('COLUMN');
        i += 1) {
     operations.push({set: {key: i, value: 'BMAN'}});
   }
@@ -1102,9 +441,499 @@ var getInitialMove = function () {
 };
 
 /**
+ * Get all possible upwards simple moves for a specific piece by its square
+ * index.
+ *
+ * @param logicState the logic state
+ * @param squareIndex the index of the square holds the piece
+ * @return an array of all possible moves
+ */
+var getSimpleMoveUpMoves = function (logicState, squareIndex) {
+  var moves = [],
+      leftUpSquareIndex,
+      rightUpSquareIndex;
+
+  // If the piece is in the first row, then there's no way to move upwards.
+  if (Math.floor(squareIndex / CONSTANT.get('COLUMN')) === 0) {
+    return moves;
+  }
+
+  // Since for the even row, the dark square starts first but for the odd row,
+  // the light square starts first, so the difference of the indexes between two
+  // adjacent rows is not always the same.
+  if (Math.floor(squareIndex / CONSTANT.get('COLUMN')) % 2 === 0) {
+    // EVEN ROW
+
+    // Check left first
+    leftUpSquareIndex = squareIndex - CONSTANT.get('COLUMN');
+    if (logicState[leftUpSquareIndex] === 'EMPTY') {
+      moves.push(leftUpSquareIndex);
+    }
+
+    // Check right
+    rightUpSquareIndex = squareIndex - CONSTANT.get('COLUMN') + 1;
+    // for the rightmost one, it can only move to the left up side.
+    if (squareIndex % CONSTANT.get('COLUMN') !== CONSTANT.get('COLUMN') - 1
+        && logicState[rightUpSquareIndex] === 'EMPTY') {
+      moves.push(rightUpSquareIndex);
+    }
+  } else {
+    // ODD ROW
+
+    // Check left first
+    leftUpSquareIndex = squareIndex - CONSTANT.get('COLUMN') - 1;
+    // For the leftmost one, it can only move to the right up side.
+    if (squareIndex % CONSTANT.get('COLUMN') !== 0
+        && logicState[leftUpSquareIndex] === 'EMPTY') {
+      moves.push(leftUpSquareIndex);
+    }
+
+    // Check right
+    rightUpSquareIndex = squareIndex - CONSTANT.get('COLUMN');
+    if (logicState[rightUpSquareIndex] === 'EMPTY') {
+      moves.push(rightUpSquareIndex);
+    }
+  }
+
+  return moves;
+};
+
+/**
+ * Get all possible downwards simple moves for a specific piece by its square
+ * index.
+ *
+ * @param logicState the logic state
+ * @param squareIndex the index of the square holds the piece
+ * @return an array of all possible moves
+ */
+var getSimpleMoveDownMoves = function (logicState, squareIndex) {
+  var moves = [],
+      leftUpSquareIndex,
+      rightUpSquareIndex;
+
+  // If the piece is in the last row, then there's no way to move downwards.
+  if (Math.floor(squareIndex / CONSTANT.get('COLUMN'))
+      === (CONSTANT.get('ROW') - 1)) {
+    return moves;
+  }
+
+  // Since for the even row, the dark square starts first but for the odd row,
+  // the light square starts first, so the difference of the indexes between two
+  // adjacent rows is not always the same.
+  if (Math.floor(squareIndex / CONSTANT.get('COLUMN')) % 2 === 0) {
+    // EVEN ROW
+
+    // Check left first
+    leftUpSquareIndex = squareIndex + CONSTANT.get('COLUMN');
+    if (logicState[leftUpSquareIndex] === 'EMPTY') {
+      moves.push(leftUpSquareIndex);
+    }
+
+    // Check right
+    rightUpSquareIndex = squareIndex + CONSTANT.get('COLUMN') + 1;
+    // for the rightmost one, it can only move to the left down side.
+    if (squareIndex % CONSTANT.get('COLUMN') !== CONSTANT.get('COLUMN') - 1
+        && logicState[rightUpSquareIndex] === 'EMPTY') {
+      moves.push(rightUpSquareIndex);
+    }
+  } else {
+    // ODD ROW
+
+    // Check left first
+    leftUpSquareIndex = squareIndex + CONSTANT.get('COLUMN') - 1;
+    // For the leftmost one, it can only move to the right down side.
+    if (squareIndex % CONSTANT.get('COLUMN') !== 0
+        && logicState[leftUpSquareIndex] === 'EMPTY') {
+      moves.push(leftUpSquareIndex);
+    }
+
+    // Check right
+    rightUpSquareIndex = squareIndex + CONSTANT.get('COLUMN');
+    if (logicState[rightUpSquareIndex] === 'EMPTY') {
+      moves.push(rightUpSquareIndex);
+    }
+  }
+
+  return moves;
+};
+
+/**
+ * Get all possible upwards jump moves for a specific piece by its square
+ * index.
+ *
+ * @param logicState the logic state
+ * @param squareIndex the index of the square holds the piece
+ * @return an array of all possible moves
+ */
+var getJumpUpMoves = function (logicState, squareIndex) {
+  var fromSquareIndex = squareIndex,
+      fromSquare = logicState[squareIndex],
+      jumpedSquareIndex,
+      jumpedSquare,
+      toSquareIndex,
+      toSquare,
+      moves = [];
+
+  // If the piece is in either the first or the second row, then there's no way
+  // to jump upwards.
+  if (Math.floor(fromSquareIndex / CONSTANT.get('COLUMN')) < 2) {
+    return moves;
+  }
+
+  // Since for the even row, the dark square starts first but for the odd row,
+  // the light square starts first, so the difference of the indexes between two
+  // adjacent rows is not always the same.
+  if (Math.floor(fromSquareIndex / CONSTANT.get('COLUMN')) % 2 === 0) {
+    // Even row
+
+    // Check left first, for the leftmost one, it can only jump right upwards.
+    if (fromSquareIndex % CONSTANT.get('COLUMN') !== 0) {
+      jumpedSquareIndex = fromSquareIndex - CONSTANT.get('COLUMN');
+      toSquareIndex = fromSquareIndex - 2 * CONSTANT.get('COLUMN') - 1;
+      jumpedSquare = logicState[jumpedSquareIndex];
+      toSquare = logicState[toSquareIndex];
+
+      if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
+        moves.push([jumpedSquareIndex, toSquareIndex]);
+      }
+    }
+
+    // Check right, for the rightmost one, it can only jump left upwards.
+    if (fromSquareIndex % CONSTANT.get('COLUMN') !== CONSTANT.get('COLUMN') - 1)
+    {
+      jumpedSquareIndex = fromSquareIndex - CONSTANT.get('COLUMN') + 1;
+      toSquareIndex = fromSquareIndex - 2 * CONSTANT.get('COLUMN') + 1;
+      jumpedSquare = logicState[jumpedSquareIndex];
+      toSquare = logicState[toSquareIndex];
+
+      if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
+        moves.push([jumpedSquareIndex, toSquareIndex]);
+      }
+    }
+  } else {
+    // Odd row
+
+    // Check left first, for the leftmost one, it can only jump right upwards.
+    if (fromSquareIndex % CONSTANT.get('COLUMN') !== 0) {
+      jumpedSquareIndex = fromSquareIndex - CONSTANT.get('COLUMN') - 1;
+      toSquareIndex = fromSquareIndex - 2 * CONSTANT.get('COLUMN') - 1;
+      jumpedSquare = logicState[jumpedSquareIndex];
+      toSquare = logicState[toSquareIndex];
+
+      if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
+        moves.push([jumpedSquareIndex, toSquareIndex]);
+      }
+    }
+
+    // Check right, for the rightmost one, it can only jump left upwards.
+    if (fromSquareIndex % CONSTANT.get('COLUMN') !== CONSTANT.get('COLUMN') - 1)
+    {
+      jumpedSquareIndex = fromSquareIndex - CONSTANT.get('COLUMN');
+      toSquareIndex = fromSquareIndex - 2 * CONSTANT.get('COLUMN') + 1;
+      jumpedSquare = logicState[jumpedSquareIndex];
+      toSquare = logicState[toSquareIndex];
+
+      if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
+        moves.push([jumpedSquareIndex, toSquareIndex]);
+      }
+    }
+  }
+
+  return moves;
+};
+
+/**
+ * Get all possible downwards jump moves for a specific piece by its square
+ * index.
+ *
+ * @param logicState the logic state
+ * @param squareIndex the index of the square holds the piece
+ * @return an array of all possible moves
+ */
+var getJumpDownMoves = function (logicState, squareIndex) {
+  var fromSquareIndex = squareIndex,
+      fromSquare = logicState[fromSquareIndex],
+      jumpedSquareIndex,
+      jumpedSquare,
+      toSquareIndex,
+      toSquare,
+      moves = [];
+
+  squareIndex = parseInt(squareIndex, 10);
+
+  // If the piece is in either the last or the second to the last row, then
+  // there's no way to jump downwards.
+  if (Math.floor(fromSquareIndex / CONSTANT.get('COLUMN')) >=
+      CONSTANT.get('ROW') - 2) {
+    return moves;
+  }
+
+  // Since for the even row, the dark square starts first but for the odd row,
+  // the light square starts first, so the difference of the indexes between two
+  // adjacent rows is not always the same.
+  if (Math.floor(fromSquareIndex / CONSTANT.get('COLUMN')) % 2 === 0) {
+    // Even row
+
+    // Check left first, for the leftmost one, it can only jump right downwards.
+    if (fromSquareIndex % CONSTANT.get('COLUMN') !== 0) {
+      jumpedSquareIndex = fromSquareIndex + CONSTANT.get('COLUMN');
+      toSquareIndex = fromSquareIndex + 2 * CONSTANT.get('COLUMN') - 1;
+      jumpedSquare = logicState[jumpedSquareIndex];
+      toSquare = logicState[toSquareIndex];
+
+      if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
+        moves.push([jumpedSquareIndex, toSquareIndex]);
+      }
+    }
+
+    // Check right, for the rightmost one, it can only jump left downwards.
+    if (fromSquareIndex % CONSTANT.get('COLUMN') !== CONSTANT.get('COLUMN') - 1)
+    {
+      jumpedSquareIndex = fromSquareIndex + CONSTANT.get('COLUMN') + 1;
+      toSquareIndex = fromSquareIndex + 2 * CONSTANT.get('COLUMN') + 1;
+      jumpedSquare = logicState[jumpedSquareIndex];
+      toSquare = logicState[toSquareIndex];
+
+      if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
+        moves.push([jumpedSquareIndex, toSquareIndex]);
+      }
+    }
+  } else {
+    // Odd row
+
+    // Check left first, for the leftmost one, it can only jump right downwards.
+    if (fromSquareIndex % CONSTANT.get('COLUMN') !== 0) {
+      jumpedSquareIndex = fromSquareIndex + CONSTANT.get('COLUMN') - 1;
+      toSquareIndex = fromSquareIndex + 2 * CONSTANT.get('COLUMN') - 1;
+      jumpedSquare = logicState[jumpedSquareIndex];
+      toSquare = logicState[toSquareIndex];
+
+      if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
+        moves.push([jumpedSquareIndex, toSquareIndex]);
+      }
+    }
+
+    // Check right, for the rightmost one, it can only jump left downwards.
+    if (fromSquareIndex % CONSTANT.get('COLUMN') !== CONSTANT.get('COLUMN') - 1)
+    {
+      jumpedSquareIndex = fromSquareIndex + CONSTANT.get('COLUMN');
+      toSquareIndex = fromSquareIndex + 2 * CONSTANT.get('COLUMN') + 1;
+      jumpedSquare = logicState[jumpedSquareIndex];
+      toSquare = logicState[toSquareIndex];
+
+      if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
+        moves.push([jumpedSquareIndex, toSquareIndex]);
+      }
+    }
+  }
+
+  return moves;
+};
+
+/**
+ * Get all possible simple moves for a specific piece by its square index. If it
+ * is crowned, also check if it can move one step backward.
+ *
+ * @param logicState the logic state
+ * @param squareIndex the index of the square holds the piece
+ * @param turnIndex 0 represents the black player and 1
+ *        represents the white player.
+ * @return an array of all possible moves.
+ */
+var getSimpleMoves = function (logicState, squareIndex, turnIndex) {
+  var moves = [],
+      tmpMoves = [],
+      fromSquare = logicState[squareIndex],
+      color = fromSquare.substr(0, 1),
+      kind = fromSquare.substr(1);
+
+  // Check whether it's the current player's piece first, if not, since the
+  // player can not operate it, then no move will be available.
+  if (isOwnColor(turnIndex, color)) {
+    if (kind === 'CRO') {
+      // Check both direction moves
+      tmpMoves = getSimpleMoveUpMoves(logicState, squareIndex);
+      moves = moves.concat(tmpMoves);
+
+      tmpMoves = getSimpleMoveDownMoves(logicState, squareIndex);
+      moves = moves.concat(tmpMoves);
+    } else if (color === 'W') {
+      tmpMoves = getSimpleMoveUpMoves(logicState, squareIndex);
+      moves = moves.concat(tmpMoves);
+    } else if (color === 'B') {
+      tmpMoves = getSimpleMoveDownMoves(logicState, squareIndex);
+      moves = moves.concat(tmpMoves);
+    }
+  }
+
+  return moves;
+};
+
+/**
+ * Get all possible jump moves for a specific piece by its square index. If it
+ * is crowned, also check if it can jump one step backward.
+ *
+ * @param logicState the logic state
+ * @param squareIndex the index of the square holds the piece
+ * @param turnIndex 0 represents the black player and 1
+ *        represents the white player.
+ * @return an array of all possible moves
+ */
+var getJumpMoves = function (logicState, squareIndex, turnIndex) {
+  var moves = [],
+      tmpMoves = [],
+      fromSquare = logicState[squareIndex],
+      color = fromSquare.substr(0, 1),
+      kind = fromSquare.substr(1);
+
+  // Check whether it's the current player's piece first, if not, since the
+  // player can not operate it, then no move will be available.
+  if (isOwnColor(turnIndex, color)) {
+    if (kind === 'CRO') {
+      // Check both direction moves
+      tmpMoves = getJumpUpMoves(logicState, squareIndex);
+      moves = moves.concat(tmpMoves);
+
+      tmpMoves = getJumpDownMoves(logicState, squareIndex);
+      moves = moves.concat(tmpMoves);
+    } else if (color === 'W') {
+      tmpMoves = getJumpUpMoves(logicState, squareIndex);
+      moves = moves.concat(tmpMoves);
+    } else if (color === 'B') {
+      tmpMoves = getJumpDownMoves(logicState, squareIndex);
+      moves = moves.concat(tmpMoves);
+    }
+  }
+
+  return moves;
+};
+
+/**
+ * Get all possible moves for a specific piece by its square index.
+ *
+ * @param logicState the logic state.
+ * @param squareIndex the index of the square holds the piece
+ * @param turnIndex 0 represents the black player and 1
+ *        represents the white player.
+ * @return an array of all possible move.
+ */
+var getAllPossibleMoves = function (logicState, squareIndex, turnIndex) {
+  var possibleMoves = [];
+
+  // Make sure the index is number
+  squareIndex = parseInt(squareIndex, 10);
+
+  // First get all possible jump moves.
+  possibleMoves =
+      possibleMoves.concat(getJumpMoves(logicState, squareIndex, turnIndex));
+
+  // If there's at least one jump move, then no need to check the simple moves
+  // since jump move is mandatory.
+  if (possibleMoves.length === 0) {
+    possibleMoves =possibleMoves
+        .concat(getSimpleMoves(logicState, squareIndex, turnIndex));
+  }
+
+  return possibleMoves;
+};
+
+/**
+ * Retrieve the detail information from the game API move. Which are logic
+ * moves, the from (moving or jumping) square's index, the next turn index and
+ * the winner if it has one.
+ *
+ * Warning: the order of set operation are important.
+ *
+ * @param gameApiMove the game API move
+ * @returns {
+ *    logicMove: Array,
+ *    fromSquareIndex: number,
+ *    toSquare: string,
+ *    nextTurnIndex: number,
+ *    winner: string
+ *    checkIsFirstMove: boolean
+ *  }
+ */
+var retrieveGameApiMoveDetail = function (gameApiMove) {
+  var gameApiMoveDetail = {
+      logicMoves: [],
+      fromSquareIndex: -1,
+      toSquare: '',
+      nextTurnIndex: -1,
+      winner: '',
+      checkIsFirstMove: false
+    },
+    setOperations = [],
+    index,
+    set;
+
+  for (index in gameApiMove) {
+      if (gameApiMove[index].hasOwnProperty('setTurn')) {
+        // Get the next turn index
+        gameApiMoveDetail.nextTurnIndex = gameApiMove[index].setTurn.turnIndex;
+      } else if (gameApiMove[index].hasOwnProperty('set')) {
+        // Get the set operation and store it first
+        set = gameApiMove[index].set;
+        setOperations.push([set.key, set.value]);
+      } else if (gameApiMove[index].hasOwnProperty('endMatch')) {
+        // Get the endMatch if it exist and retrieve the winner
+        if (gameApiMove[index].endMatch.endMatchScores[0] === 0) {
+          gameApiMoveDetail.winner = CONSTANT.get('WHITE');
+        } else {
+          gameApiMoveDetail.winner = CONSTANT.get('BLACK');
+        }
+      }
+  }
+
+  // Warning: the order of set operation are important.
+
+  // The first set operation is the piece the player operates.
+  gameApiMoveDetail.fromSquareIndex = parseInt(setOperations[0][0], 10);
+
+  if (setOperations.length === 2) {
+    // If there's 2 set operations, then it's a simple move and the second set
+    // operation is for the destination square which is empty.
+    gameApiMoveDetail.logicMoves.push(parseInt(setOperations[1][0], 10));
+    gameApiMoveDetail.toSquare = setOperations[1][1];
+  } else if (setOperations.length === 3) {
+    // If there's 3 set operations, then it's a jump move and the second set
+    // operation is for the jumped (opponent) square and the third set operation
+    // is for the destination square which is empty.
+    gameApiMoveDetail.logicMoves.push(parseInt(setOperations[1][0], 10));
+    gameApiMoveDetail.logicMoves.push(parseInt(setOperations[2][0], 10));
+    gameApiMoveDetail.toSquare = setOperations[2][1];
+  } else {
+    // If there are more than 3 set operations, than it may be the first move
+    // which initialize the game, so need to check it later in isMoveOk.
+    gameApiMoveDetail.checkIsFirstMove = true;
+  }
+
+  return gameApiMoveDetail;
+};
+
+/**
+ * Check if the possible jump moves array contains the specific jump move.
+ *
+ * @param possibleJumpMoves an array contains all possible jump moves.
+ * @param move the move need to be checked.
+ * @returns true if the move exists in the possible jump moves, otherwise false.
+ */
+var containJumpMove = function (possibleJumpMoves, move) {
+  var index;
+
+  for (index in possibleJumpMoves) {
+    if (possibleJumpMoves[index][0] === move[0]
+        && possibleJumpMoves[index][1] === move[1]) {
+      return true;
+    }
+  }
+  return false;
+};
+
+/**
  * Calculate the jumped (opponent) square index
- * @param fromIndex the square index of the piece jumps from
- * @param toIndex the square index of the piece jumps to
+ * @param fromIndex the first selected square index. (The one moving or jumping)
+ * @param toIndex the second selected square index. (The destination)
  * @returns {number} the jumped (opponent) square index
  */
 var calculateJumpedIndex = function (fromIndex, toIndex) {
@@ -1157,26 +986,318 @@ var calculateJumpedIndex = function (fromIndex, toIndex) {
 };
 
 /**
- * Get the expected operations for the selectedPieces.
+ * Calculate the next game API state based on the last move. If the game is
+ * ended, then adds the end match score.
  *
- * @param gameApiState the game API state
- * @param selectedPieces the selected piece indexes in game API format [0 - 31]
- * @param turnIndex the player's turn index
+ * @param gameApiState the game API state.
+ * @param move the game API move.
+ * @returns {nextState: {*}} if the game is not ended,
+ *          otherwise {nextState: {*}, endMatchScore: [*]}
+ */
+var getNextState = function (gameApiState, move) {
+  var nextGameApiState = cloneObj(gameApiState),
+      nextTurnIndex = -1,
+      endMatch,
+      nextLogicState,
+      winner,
+      set;
+
+  /*****************************************************************************
+   * Calculate the next game state.
+   ****************************************************************************/
+
+  // Alter the game state according to the set operations and retrieve next turn
+  // index and the endMatch operation if the game is ended.
+  for (var index in move) {
+    if (move[index].hasOwnProperty('set')) {
+      set = move[index].set;
+      nextGameApiState[set.key] = set.value;
+    } else if (move[index].hasOwnProperty('setTurn')) {
+      nextTurnIndex = move[index].setTurn.turnIndex;
+    } else if (move[index].hasOwnProperty('endMatch')) {
+      endMatch = move[index].endMatch;
+    }
+  }
+
+  // If there's no set turn operation in the move, just
+  if (nextTurnIndex === -1) {
+    return {nextState: nextGameApiState};
+  }
+
+  /*****************************************************************************
+   * Add the end match score if it ends.
+   ****************************************************************************/
+
+  nextLogicState = convertGameApiStateToLogicState(nextGameApiState);
+
+  winner = getWinner(nextLogicState, nextTurnIndex);
+
+  // Has a winner
+  if (winner === CONSTANT.get('BLACK')) {
+    return {nextState: nextGameApiState, endMatchScore: [1, 0]};
+  } else if  (winner === CONSTANT.get('WHITE')) {
+    return {nextState: nextGameApiState, endMatchScore: [0, 1]};
+  }
+
+  // No winner
+  return {nextState: nextGameApiState};
+};
+
+/**
+ * Check if the move is OK.
+ *
+ * @param match the match info which contains stateBeforeMove, stateAfterMove,
+ *              turnIndexBeforeMove, turnIndexAfterMove, move.
+ * @returns return true if the move is ok, otherwise false.
+ */
+var isMoveOk = function (match) {
+  var gameApiStateBeforeMove = match.stateBeforeMove,
+      gameApiStateAfterMove = match.stateAfterMove,
+      turnIndexBeforeMove = match.turnIndexBeforeMove,
+//      turnIndexAfterMove = match.turnIndexAfterMove,
+      move = match.move,
+      logicStateBeforeMove =
+          convertGameApiStateToLogicState(gameApiStateBeforeMove),
+      nextStateObj =
+          getNextState(gameApiStateBeforeMove, move, turnIndexBeforeMove),
+      nextGameApiState = nextStateObj.nextState,
+      nextLogicState = convertGameApiStateToLogicState(nextGameApiState),
+      gameApiMoveDetail,
+      logicMove,
+      fromSquareIndex,
+      toSquare,
+      setTurnIndex,
+      winner,
+      checkIsFirstMove,
+      squareBeforeMove,
+      squareAfterMove,
+      isJumpMove,
+      possibleMoves = [],
+      index,
+      i;
+
+  /*****************************************************************************
+   * 1. Check if the state is empty.
+   *    When the player loads the game, the state shall be empty at first and
+   *    no move has been done yet.
+   ****************************************************************************/
+
+  if (isEmptyObj(gameApiStateBeforeMove) && move.length === 0) {
+    // If the state is empty and no move has been made,
+    return true;
+  }
+
+  // Retrieve the move details
+  gameApiMoveDetail = retrieveGameApiMoveDetail(move);
+  logicMove = gameApiMoveDetail.logicMoves;
+  fromSquareIndex = gameApiMoveDetail.fromSquareIndex;
+  toSquare = gameApiMoveDetail.toSquare;
+  setTurnIndex = gameApiMoveDetail.nextTurnIndex;
+  winner = gameApiMoveDetail.winner;
+  checkIsFirstMove = gameApiMoveDetail.checkIsFirstMove;
+
+  /*****************************************************************************
+   * 2. Check if the move is the first move, only if the moves has more than 3
+   *    operations.
+   ****************************************************************************/
+
+  if (checkIsFirstMove) {
+    // The first move must be made by the black player
+    if (turnIndexBeforeMove !== CONSTANT.get('BLACK_INDEX')) {
+      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_MOVE'));
+    }
+
+    // The before game state must be empty
+    if (!isEmptyObj(gameApiStateBeforeMove)) {
+      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_MOVE'));
+    }
+
+    // The first move must be legal
+    if (isFirstMove(move)) {
+      return true;
+    } else {
+      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_MOVE'));
+    }
+  }
+
+  /*****************************************************************************
+   * 3. Check all indexes
+   ****************************************************************************/
+
+  // The moving or jumping index
+  if (!isLegalIndex(fromSquareIndex)) {
+    return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_INDEX'));
+  }
+
+  // the move indexes
+  for (i = 0; i < logicMove.length; i += 1) {
+    if (!isLegalIndex(logicMove[i])) {
+      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_INDEX'));
+    }
+  }
+
+  /*****************************************************************************
+   * 4. Check if the piece remains the same or is legally crowned.
+   ****************************************************************************/
+
+  squareBeforeMove = gameApiStateBeforeMove[fromSquareIndex];
+  squareAfterMove = toSquare;
+
+  // The color should never be changed.
+  if (getColor(squareBeforeMove) !== getColor(squareAfterMove)) {
+    return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_COLOR_CHANGED'));
+  }
+
+  // A crowned piece should never be uncrowned. (king -> man)
+  if (getKind(squareBeforeMove) === 'CRO'
+      && getKind(squareBeforeMove) !== getKind(squareAfterMove)) {
+    return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_UNCROWNED'));
+  }
+
+  // Only man can be crowned.
+  if (getKind(squareBeforeMove) === 'MAN'
+      && getKind(squareBeforeMove) !== getKind(squareAfterMove)) {
+    // The piece has to move into the kings row in order to be crowned.
+    if (!hasMoveOrJumpToKingsRow(logicMove[logicMove.length - 1],
+        turnIndexBeforeMove))
+    {
+      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_CROWNED'));
+    }
+  }
+
+  /*****************************************************************************
+   * 5. Check if the move is legal
+   ****************************************************************************/
+  if (logicMove.length === 1) {
+    // Simple move
+
+    // Check all pieces if there are any mandatory jumps.
+    for (index in logicStateBeforeMove) {
+      if (isOwnColor(turnIndexBeforeMove,
+          getColor(logicStateBeforeMove[index])))
+      {
+        if (getJumpMoves(logicStateBeforeMove, parseInt(index, 10),
+            turnIndexBeforeMove).length !== 0) {
+          // There has jump moves, since jump move is mandatory
+          // we found hacker!!!
+          return getIllegalEmailObj(ILLEGAL_CODE
+              .get('ILLEGAL_IGNORE_MANDATORY_JUMP'));
+        }
+      }
+    }
+
+    // No mandatory jumps.
+    possibleMoves = getSimpleMoves(logicStateBeforeMove, fromSquareIndex,
+        turnIndexBeforeMove);
+
+    // The move should exist in the possible simple moves.
+    if (possibleMoves.indexOf(logicMove[0]) === -1) {
+      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_SIMPLE_MOVE'));
+    }
+  } else if (logicMove.length === 2) {
+    // Jump move
+
+    possibleMoves = getJumpMoves(logicStateBeforeMove, fromSquareIndex,
+        turnIndexBeforeMove);
+
+    // If the move exists in the possible jump moves, then it's valid
+    if (!containJumpMove(possibleMoves, logicMove, turnIndexBeforeMove)) {
+      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_JUMP_MOVE'));
+    }
+  } else {
+    return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_MOVE'));
+  }
+
+  /*****************************************************************************
+   * 6. Check the set turn, it's only legal to perform another move if there's
+   *    more jump moves available for the operated piece. Note if the piece is
+   *    entering the kings row, than the turn will be terminate even if it can
+   *    jump back.
+   ****************************************************************************/
+
+  isJumpMove = logicMove.length === 2;
+
+  if (isJumpMove) {
+    if (getJumpMoves(nextLogicState, logicMove[1],
+        turnIndexBeforeMove).length > 0
+        && !hasMoveOrJumpToKingsRow(logicMove[logicMove.length - 1],
+            turnIndexBeforeMove))
+    {
+      // If the same piece can make any more jump moves and it does not enter
+      // the kings row, then the next turn remains unchanged.
+      if (setTurnIndex !== turnIndexBeforeMove) {
+        return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_SET_TURN'));
+      }
+    } else {
+      // The piece can not make any more jump moves or it enters the kings row
+      if (setTurnIndex === turnIndexBeforeMove) {
+        return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_SET_TURN'));
+      }
+    }
+  } else {
+    // The next turn will be the next player's if it's a simple move.
+    if (setTurnIndex === turnIndexBeforeMove) {
+      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_SET_TURN'));
+    }
+  }
+
+  /*****************************************************************************
+   * 7. Check if the game ends properly
+   ****************************************************************************/
+
+  if (winner === CONSTANT.get('BLACK')) {
+    if (!(nextStateObj.hasOwnProperty('endMatchScore')
+        && nextStateObj.endMatchScore[0] === 1)) {
+      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_END_MATCH_SCORE'));
+    }
+  }
+
+  if (winner === CONSTANT.get('WHITE')) {
+    if (!(nextStateObj.hasOwnProperty('endMatchScore')
+        && nextStateObj.endMatchScore[1] === 1)) {
+      return getIllegalEmailObj(ILLEGAL_CODE.get('ILLEGAL_END_MATCH_SCORE'));
+    }
+  }
+
+  // The move is ok :)
+  return true;
+};
+
+/**
+ * Get the expected operations for the selected squares (from and to square
+ * indexes).
+ *
+ * @param gameApiState the game API state.
+ * @param fromIndex the first selected square index. (The one moving or jumping)
+ * @param toIndex the second selected square index. (The destination)
+ * @param turnIndex 0 represents the black player and 1
+ *        represents the white player.
  * @returns {Array} operations
  */
-var getExpectedOperations = function (gameApiState, fromIndex, toIndex, turnIndex) {
+var getExpectedOperations = function (gameApiState, fromIndex,
+                                      toIndex, turnIndex)
+{
   var operations = [],
-    nextState,
-    fromPiece = gameApiState[fromIndex],
-    jumpedIndex,
-    column = CONSTANT.get('COLUMN'),
-    isSimpleMove = [column - 1, column, column + 1].indexOf(Math.abs(toIndex - fromIndex)) !== -1,
-    isJumpMove = [2 * column + 1, 2 * column - 1].indexOf(Math.abs(toIndex - fromIndex)) !== -1;
+      nextGameApiStateObj,
+      nextGameApiState,
+      nextTurnIndex,
+      fromPiece = gameApiState[fromIndex],
+      jumpedIndex,
+      winner,
+      column = CONSTANT.get('COLUMN'),
+      isSimpleMove = [column - 1, column, column + 1]
+          .indexOf(Math.abs(toIndex - fromIndex)) !== -1,
+      isJumpMove = [2 * column + 1, 2 * column - 1]
+          .indexOf(Math.abs(toIndex - fromIndex)) !== -1;
 
   // First check if the player moves own color piece
-  if (!checkTurnIndexMatchesPieceColor(turnIndex, fromPiece.substr(0, 1))) {
+  if (!isOwnColor(turnIndex, fromPiece.substr(0, 1))) {
     throw new Error("You can not operator opponent's pieces.");
   }
+
+  /*****************************************************************************
+   * 1. Get the set operations
+   ****************************************************************************/
 
   if (isSimpleMove) {
     // Simple move
@@ -1191,37 +1312,50 @@ var getExpectedOperations = function (gameApiState, fromIndex, toIndex, turnInde
     operations.push({set: {key: toIndex, value: fromPiece}});
   }
 
-
   // Check if the piece can be crowned if it's not already crowned
-  if (fromPiece.substr(1) !== 'CRO' && isToKingsRow(toIndex, turnIndex)) {
+  if (getKind(fromPiece) === 'MAN'
+      && hasMoveOrJumpToKingsRow(toIndex, turnIndex)) {
     // Note that the order for the operations are critical, don't change it!
-    // It'll break this code below...
-    operations[operations.length - 1] = {set: {key: toIndex, value: fromPiece.substr(0, 1) + 'CRO'}};
+    operations[operations.length - 1] =
+    {set: {key: toIndex, value: getColor(fromPiece) + 'CRO'}};
   }
 
-  if (isJumpMove) {
-    nextState = getNextState(cloneObj(gameApiState), operations, turnIndex).nextState;
+  /*****************************************************************************
+   * 2. Get the set turn operation
+   ****************************************************************************/
 
+  nextGameApiStateObj = getNextState(gameApiState, operations);
+  nextGameApiState = nextGameApiStateObj.nextState;
+
+  if (isJumpMove) {
     // Check whether the player can make another jump for the same piece
     // Note: If the piece moves to the kings row, then the turn is terminated
     //       no matter it can jump or not.
-    if (getJumpMoves(nextState, toIndex, turnIndex).length > 0
-        && !isToKingsRow(toIndex, turnIndex)) {
-      operations.push({setTurn: {turnIndex: turnIndex}});
+    if (getJumpMoves(nextGameApiState, toIndex, turnIndex).length > 0
+        && !hasMoveOrJumpToKingsRow(toIndex, turnIndex)) {
+      nextTurnIndex = turnIndex;
     } else {
-      operations.push({setTurn: {turnIndex: 1 - turnIndex}});
+      nextTurnIndex = 1 - turnIndex;
     }
   } else if (isSimpleMove) {
-    operations.push({setTurn: {turnIndex: 1 - turnIndex}});
+    nextTurnIndex = 1 - turnIndex;
   }
 
-  // Check the player has won or not after the move
-  if (hasWon(gameApiState, operations, turnIndex)) {
-    if (turnIndex === 0) {
-      operations.push(({endMatch: {endMatchScores: [1, 0]}}));
-    } else {
-      operations.push(({endMatch: {endMatchScores: [0, 1]}}));
-    }
+  operations.push({setTurn: {turnIndex: nextTurnIndex}});
+
+  /*****************************************************************************
+   * 3. Get the end match operation
+   ****************************************************************************/
+
+  winner =
+      getWinner(convertGameApiStateToLogicState(nextGameApiState),
+          nextTurnIndex);
+
+  // Has a winner
+  if (winner === CONSTANT.get('BLACK')) {
+    operations.push({endMatch: {endMatchScores: [1, 0]}});
+  } else if  (winner === CONSTANT.get('WHITE')) {
+    operations.push({endMatch: {endMatchScores: [0, 1]}});
   }
 
   return operations;
@@ -1234,17 +1368,17 @@ checkers.factory('checkersLogicService', function () {
   return {
     isMoveOk: isMoveOk,
     getNextState: getNextState,
-    getInitialMove: getInitialMove,
+    getFirstMove: getFirstMove,
     getExpectedOperations: getExpectedOperations,
     getJumpMoves: getJumpMoves,
     getSimpleMoves: getSimpleMoves,
     getAllPossibleMoves: getAllPossibleMoves,
-    checkMandatoryJump: checkMandatoryJump,
+    hasMandatoryJumps: hasMandatoryJumps,
     calculateJumpedIndex: calculateJumpedIndex,
-    convertGameApiStateToCheckersState: convertGameApiStateToCheckersState,
-    checkTurnIndexMatchesPieceColor: checkTurnIndexMatchesPieceColor,
+    convertGameApiStateToLogicState: convertGameApiStateToLogicState,
+    checkTurnIndexMatchesPieceColor: isOwnColor,
     getIllegalEmailBody: getIllegalEmailBody,
-    hasWon: hasWon,
+    getWinner: getWinner,
     cloneObj: cloneObj,
     isEmptyObj: isEmptyObj,
     CONSTANT: CONSTANT,

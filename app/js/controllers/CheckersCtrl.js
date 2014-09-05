@@ -218,7 +218,7 @@ checkers.controller('CheckersCtrl',
       var setInitialSelectableSquares = function () {
         var square,
             possibleMoves,
-            hasMandatoryJump = checkersLogicService.checkMandatoryJump(state,
+            hasMandatoryJump = checkersLogicService.hasMandatoryJumps(state,
                 yourPlayerIndex);
 
         setAllSquareUnselectable();
@@ -283,7 +283,7 @@ checkers.controller('CheckersCtrl',
        */
       var setSelectableSquares = function (squareIndex) {
         var checkersState =
-            checkersLogicService.convertGameApiStateToCheckersState(state);
+            checkersLogicService.convertGameApiStateToLogicState(state);
         var possibleMoves = checkersLogicService.getAllPossibleMoves(
             checkersState, Math.floor(squareIndex / 2), yourPlayerIndex);
 
@@ -713,7 +713,7 @@ checkers.controller('CheckersCtrl',
           // send the initial move to initialize the game board.
           if (checkersLogicService.isEmptyObj(stateAfterMove) &&
               turnIndexBeforeMove === 0) {
-            makeMoveCallback(checkersLogicService.getInitialMove());
+            makeMoveCallback(checkersLogicService.getFirstMove());
           }
 
           // If it's the AI mode and it's the AI turn, then let the AI makes

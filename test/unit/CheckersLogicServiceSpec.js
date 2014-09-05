@@ -13,16 +13,8 @@ var copyState = function (state) {
 };
 
 var expectIllegalOperation = function (checkersLogicService, match, illegalCode) {
-  var emailBody = '';
-
-  emailBody = checkersLogicService.getIllegalEmailBody(illegalCode);
-
   expect(checkersLogicService.isMoveOk(match)).
-      toEqual({
-        email: 'yl1949@nyu.edu',
-        emailSubject: 'hacker!',
-        emailBody: emailBody
-      });
+      toEqual(getIllegalEmailObj(illegalCode));
 };
 
 describe('checkersLogicService unit tests:', function () {
@@ -93,24 +85,24 @@ describe('checkersLogicService unit tests:', function () {
   it('Should have those functions.', function () {
     expect(angular.isFunction(checkersLogicService.isMoveOk)).toBe(true);
     expect(angular.isFunction(checkersLogicService.getNextState)).toBe(true);
-    expect(angular.isFunction(checkersLogicService.getInitialMove)).toBe(true);
+    expect(angular.isFunction(checkersLogicService.getFirstMove)).toBe(true);
     expect(angular.isFunction(checkersLogicService.getExpectedOperations)).
         toBe(true);
     expect(angular.isFunction(checkersLogicService.getJumpMoves)).toBe(true);
     expect(angular.isFunction(checkersLogicService.getSimpleMoves)).toBe(true);
     expect(angular.isFunction(checkersLogicService.getAllPossibleMoves))
         .toBe(true);
-    expect(angular.isFunction(checkersLogicService.checkMandatoryJump))
+    expect(angular.isFunction(checkersLogicService.hasMandatoryJumps))
         .toBe(true);
     expect(angular.isFunction(checkersLogicService.calculateJumpedIndex))
         .toBe(true);
     expect(angular.isFunction(
-        checkersLogicService.convertGameApiStateToCheckersState
+        checkersLogicService.convertGameApiStateToLogicState
     )).toBe(true);
     expect(angular.isFunction(
         checkersLogicService.checkTurnIndexMatchesPieceColor
     )).toBe(true);
-    expect(angular.isFunction(checkersLogicService.hasWon)).toBe(true);
+    expect(angular.isFunction(checkersLogicService.getWinner)).toBe(true);
     expect(angular.isFunction(checkersLogicService.cloneObj)).toBe(true);
     expect(angular.isFunction(checkersLogicService.isEmptyObj)).toBe(true);
   });
@@ -123,7 +115,7 @@ describe('checkersLogicService unit tests:', function () {
         match.turnIndexAfterMove = BLACK_TURN_INDEX;
         match.stateBeforeMove = {};
         match.stateAfterMove = initialState;
-        match.move = checkersLogicService.getInitialMove();
+        match.move = checkersLogicService.getFirstMove();
 
         expect(checkersLogicService.isMoveOk(match)).toBe(true);
       });
@@ -135,7 +127,7 @@ describe('checkersLogicService unit tests:', function () {
             match.turnIndexAfterMove = BLACK_TURN_INDEX;
             match.stateBeforeMove = initialState;
             match.stateAfterMove = initialState;
-            match.move = checkersLogicService.getInitialMove();
+            match.move = checkersLogicService.getFirstMove();
 
             expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_MOVE'));
           });
@@ -146,7 +138,7 @@ describe('checkersLogicService unit tests:', function () {
         match.turnIndexAfterMove = WHITE_TURN_INDEX;
         match.stateBeforeMove = {};
         match.stateAfterMove = initialState;
-        match.move = checkersLogicService.getInitialMove();
+        match.move = checkersLogicService.getFirstMove();
 
         expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_MOVE'));
       });
@@ -761,7 +753,6 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 21, value: "EMPTY"}});
         match.move.push({set: {key: 25, value: "EMPTY"}});
         match.move.push({set: {key: 30, value: "BCRO"}});
-        //TODO: Fix the kind check later.
 
         expect(checkersLogicService.isMoveOk(match)).toEqual(true);
       });

@@ -219,6 +219,10 @@ checkers.controller('CheckersCtrl',
        * @param isAiMode true if it's in ai mode
        */
       var updateCheckersGraphics = function (isAiMode) {
+        // Initialize the selectedSquares first
+        selectedSquares = [];
+
+        // Update the board
         updateUiState();
 
         // If the state is not empty, then set the the selectablility for each
@@ -339,81 +343,97 @@ checkers.controller('CheckersCtrl',
         }
       };
 
+      var getAnimationIndexes = function() {
+        var fromUiIndex = selectedSquares[0],
+            toUiIndex = selectedSquares[1],
+            jumpedUiIndex = -1,
+            jumpedIndex = checkersLogicService.getJumpedIndex(
+                convertUiIndexToGameApiIndex(fromUiIndex),
+                convertUiIndexToGameApiIndex(toUiIndex));
+
+        // Get the jumped square's index. If it's a simple move, then this
+        // index is illegal yet will not be used.
+        if (Math.floor(jumpedIndex / CONSTANT.COLUMN) % 2 === 0) {
+          // EVEN
+          jumpedUiIndex = jumpedIndex * 2 + 1;
+        } else {
+          // ODD
+          jumpedUiIndex = jumpedIndex * 2;
+        }
+
+        return {
+          fromUiIndex: fromUiIndex,
+          toUiIndex: toUiIndex,
+          jumpedUiIndex: jumpedUiIndex,
+          // The column is based on 8 x 8 UI state
+          column: CONSTANT.COLUMN * 2
+        }
+      };
+
       /**
        * Add animation class so the animation may be performed accordingly
        *
-       * @param animationIndexes an object containing the necessary info for
-       *          the animation. e.g.
-       *          {
-       *            column
-       *            fromUiIndex
-       *            toUiIndex
-       *            jumpedUiIndex
-       *          };
+       * @param callback makeMove function which will be called after the
+       *                 animation is completed.
        */
-      var addAnimationClass = function (animationIndexes) {
-        var fromUiIndex = animationIndexes.fromUiIndex;
-        var toUiIndex = animationIndexes.toUiIndex;
-        var jumpedUiIndex = animationIndexes.jumpedUiIndex;
-        var column = animationIndexes.column;
+      var addAnimationClass = function (callback) {
+        var animationIndexes = getAnimationIndexes(),
+            column = animationIndexes.column,
+            fromUiIndex = animationIndexes.fromUiIndex,
+            toUiIndex = animationIndexes.toUiIndex,
+            jumpedUiIndex = animationIndexes.jumpedUiIndex;
+
         // Add the corresponding animation class
         switch (toUiIndex - fromUiIndex) {
           case -column - 1:
             // Simple move up left
-            $animate.addClass($('#' + fromUiIndex), 'move_up_left');
+            $animate.addClass($('#' + fromUiIndex), 'move_up_left', callback);
             break;
           case -column + 1:
             // Simple move up right
-            $animate.addClass($('#' + fromUiIndex), 'move_up_right');
+            $animate.addClass($('#' + fromUiIndex), 'move_up_right', callback);
             break;
           case column - 1:
             // Simple move down left
-            $animate.addClass($('#' + fromUiIndex), 'move_down_left');
+            $animate.addClass($('#' + fromUiIndex), 'move_down_left', callback);
             break;
           case column + 1:
             // Simple move down right
-            $animate.addClass($('#' + fromUiIndex), 'move_down_right');
+            $animate.addClass($('#' + fromUiIndex), 'move_down_right', callback);
             break;
           case -(2 * column) - 2:
             // Jump move up left
             $animate.addClass($('#' + jumpedUiIndex), 'jumped');
-            $animate.addClass($('#' + fromUiIndex), 'jump_up_left');
+            $animate.addClass($('#' + fromUiIndex), 'jump_up_left', callback);
             break;
           case -(2 * column) + 2:
             // Jump move up right
             $animate.addClass($('#' + jumpedUiIndex), 'jumped');
-            $animate.addClass($('#' + fromUiIndex), 'jump_up_right');
+            $animate.addClass($('#' + fromUiIndex), 'jump_up_right', callback);
             break;
           case (2 * column) - 2:
             // Jump move down left
             $animate.addClass($('#' + jumpedUiIndex), 'jumped');
-            $animate.addClass($('#' + fromUiIndex), 'jump_down_left');
+            $animate.addClass($('#' + fromUiIndex), 'jump_down_left', callback);
             break;
           case (2 * column) + 2:
             // Jump move down right
             $animate.addClass($('#' + jumpedUiIndex), 'jumped');
-            $animate.addClass($('#' + fromUiIndex), 'jump_down_right');
+            $animate.addClass($('#' + fromUiIndex), 'jump_down_right', callback);
             break;
         }
       };
 
       /**
        * remove animation class when the animation finishes.
-       *
-       * @param animationIndexes an object containing the necessary info for
-       *          the animation. e.g.
-       *          {
-       *            column
-       *            fromUiIndex
-       *            toUiIndex
-       *            jumpedUiIndex
-       *          };
        */
-      var removeAnimationClass = function (animationIndexes) {
-        var fromUiIndex = animationIndexes.fromUiIndex;
-        var toUiIndex = animationIndexes.toUiIndex;
-        var jumpedUiIndex = animationIndexes.jumpedUiIndex;
-        var column = animationIndexes.column;
+      var removeAnimationClass = function () {
+        var animationIndexes = getAnimationIndexes(),
+            column = animationIndexes.column,
+            fromUiIndex = animationIndexes.fromUiIndex,
+            toUiIndex = animationIndexes.toUiIndex,
+            jumpedUiIndex = animationIndexes.jumpedUiIndex;
+
         // remove the corresponding animation class
         switch (toUiIndex - fromUiIndex) {
           case -column - 1:
@@ -456,84 +476,76 @@ checkers.controller('CheckersCtrl',
       };
 
       /**
-       * Calculate the indexes for play the animation first, an then add the
-       * proper animation class to the proper squares in order to play the
-       * animation.
+       * This function will play the animation by adding proper class to the
+       * element if the move is not made by drag and drop. During the animation
+       * all squares will also be set to unselectable.
        *
-       * @param selectedPiece the selected pieces as an array
+       * @param isDnD true if the move is made by drag and drop, otherwise false
+       * @param callback makeMove function which will be called after the
+       *                 animation is completed.
        */
-      var playAnimation = function(selectedPiece) {
-        // Disable all squares, so the player can not click anything squares
-        // during the animation which may cause errors.
+      var playAnimation = function(isDnD, callback) {
+        // Disable all squares, so the player can not click any squares before
+        // the move is done and the board is updated.
         setAllSquareUnselectable();
-        $scope.animationIndexes = {
-          column: CONSTANT.COLUMN * 2,
-          fromUiIndex: selectedPiece[0],
-          toUiIndex: selectedPiece[1],
-          jumpedUiIndex: -1
-        };
 
-        var jumpedIndex = checkersLogicService.getJumpedIndex(
-            Math.floor($scope.animationIndexes.fromUiIndex / 2),
-            Math.floor($scope.animationIndexes.toUiIndex / 2)
-        );
-
-        // Get the jumped square's index. If it's a simple move, then this
-        // index is illegal yet will not be used.
-        if (Math.floor(jumpedIndex /
-            CONSTANT.COLUMN) % 2 === 0) {
-          // EVEN
-          $scope.animationIndexes.jumpedUiIndex = jumpedIndex * 2 + 1;
-        } else {
-          // ODD
-          $scope.animationIndexes.jumpedUiIndex = jumpedIndex * 2;
+        // If the move is made by drag and drop, just call the callback function
+        if (isDnD) {
+          callback();
+          return;
         }
 
-        // Add the animation class
-        addAnimationClass($scope.animationIndexes);
+        // Add the animation class in order to play the animation
+        addAnimationClass(callback);
       };
 
       /**
        * Make the move by first playing the sound effect, then send the
        * corresponding operations to the makeMoveCallback.
        *
-       * @param fromUiIndex the UI index of the from piece
-       * @param toUiIndex the UI index of the to piece
+       * @param isDnD true if the move is made by drag and drop, otherwise false
        */
-      var makeMove = function (fromUiIndex, toUiIndex, isDnD) {
-        if (!isDnD) {
-          // Remove the animation class first, otherwise the square image
-          // will stayed at the same position after the animation.
-          removeAnimationClass($scope.animationIndexes);
-        }
+      var makeMove = function (isDnD) {
+        // Play the animation first!!!
+        playAnimation(isDnD, function () {
+          // Callback function. It's called when the animation is completed.
 
-        var moveAudio = new Audio('audio/move.mp3');
-        var jumpAudio = new Audio('audio/jump.mp3');
-        var column = CONSTANT.COLUMN;
+          var moveAudio,
+              jumpAudio,
+              column = CONSTANT.COLUMN,
+              fromIndex = convertUiIndexToGameApiIndex(selectedSquares[0]),
+              toIndex = convertUiIndexToGameApiIndex(selectedSquares[1]);
 
-        var fromIndex = Math.floor(fromUiIndex / 2);
-        var toIndex = Math.floor(toUiIndex / 2);
+          console.log('Traditional index: '
+              + (yourPlayerIndex === 0 ? 'Black' : 'White')
+              + ' Move from ' + (fromIndex + 1) + ' to ' + (toIndex + 1));
 
-//        console.log('Game API index: '
-//            + (yourPlayerIndex === 0 ? 'Black' : 'White')
-//            + ' Move from ' + fromUiIndex + ' to ' + toUiIndex);
-        console.log('Traditional index: '
-            + (yourPlayerIndex === 0 ? 'Black' : 'White')
-            + ' Move from ' + (fromIndex + 1) + ' to ' + (toIndex + 1));
+          // Get the operations
+          var operations = checkersLogicService.getExpectedOperations(state,
+              fromIndex, toIndex, yourPlayerIndex);
 
-        var operations = checkersLogicService.getExpectedOperations(state,
-            fromIndex, toIndex, yourPlayerIndex);
+          // Play the sound effect
+          if ([column - 1, column, column + 1].
+              indexOf(Math.abs(toIndex - fromIndex)) !== -1) {
+            // Simple move
+            moveAudio = new Audio('audio/move.mp3');
+            moveAudio.play();
+          } else {
+            // Jump move
+            jumpAudio = new Audio('audio/jump.mp3');
+            jumpAudio.play();
+          }
 
-        if ([column - 1, column, column + 1].
-            indexOf(Math.abs(toIndex - fromIndex)) !== -1) {
-          // Simple move
-          moveAudio.play();
-        } else {
-          // Jump move
-          jumpAudio.play();
-        }
+          // If the move is not made by drag and drop, then we need to remove
+          // the animation class, otherwise the square image will stayed at the
+          // same position after the animation.
+          if (!isDnD) {
+            // Remove the animation class first,
+            removeAnimationClass();
+          }
 
-        makeMoveCallback(operations);
+          makeMoveCallback(operations);
+        });
       };
 
       /**
@@ -581,18 +593,7 @@ checkers.controller('CheckersCtrl',
           if (selectedSquares.length === 2) {
             $scope.uiState[selectedSquares[0]].isSelected = false;
 
-            // Play the animation if the move is not done by drag and drop
-            if (!isDnD) {
-              playAnimation(selectedSquares);
-
-              var delayMakeMove = function () {
-                makeMove(selectedSquares[0], selectedSquares[1], isDnD);
-              };
-
-              $timeout(delayMakeMove, 420);
-            } else {
-              makeMove(selectedSquares[0], selectedSquares[1], isDnD);
-            }
+            makeMove(isDnD);
           }
         }
       };
@@ -608,9 +609,6 @@ checkers.controller('CheckersCtrl',
             isDnD = true;
         if (square.isDark && square.canSelect) {
           $scope.pieceSelected(index, isDnD);
-//          setSelectableSquares(index, isDnD);
-//          selectedSquares[0] = index;
-//          console.log(selectedSquares);
         }
       };
 
@@ -672,25 +670,16 @@ checkers.controller('CheckersCtrl',
         checkersAiService.
             findBestMove(state, yourPlayerIndex, depth, timer)
             .then(function (data) {
-              var bestMove = data;
-              var fromUiIndex =
-                  convertGameApiIndexToUiIndex(bestMove.fromIndex);
-              var toUiIndex =
-                  convertGameApiIndexToUiIndex(bestMove.toIndex);
+              var bestMove = data,
+                  sDnD = false;
 
-              var delayAnimation = function () {
-                playAnimation([fromUiIndex, toUiIndex]);
-              };
+              // Set the selected squares according to the best move.
+              selectedSquares =[
+                convertGameApiIndexToUiIndex(bestMove.fromIndex),
+                convertGameApiIndexToUiIndex(bestMove.toIndex)
+              ];
 
-              var delayMakeMove = function () {
-                makeMove(fromUiIndex, toUiIndex, isDnD);
-              };
-
-              // It seems a little delay will fix the animation bug...
-              $timeout(delayAnimation, 1);
-
-              // Makes the move only when the animation finishes
-              $timeout(delayMakeMove, 420);
+              makeMove(isDnD);
             });
       };
 
@@ -719,32 +708,34 @@ checkers.controller('CheckersCtrl',
           $scope.yourPlayerIndex = yourPlayerIndex;
           $scope.playersInfo = playersInfo;
 
-          // Get the new state
-          state = stateAfterMove;
-          // Update the graphics
-          updateCheckersGraphics(isAiMode);
-
-          // Initialize the selectedSquares in each turn
-          selectedSquares = [];
-
-          // In case the board is not updated
-          if (!$scope.$$phase) {
-            $scope.$apply();
-          }
-
-          // If the state is empty and the player is black,
-          // send the initial move to initialize the game board.
-          if (checkersLogicService.isEmptyObj(stateAfterMove) &&
-              turnIndexBeforeMove === 0) {
+          if (checkersLogicService.isEmptyObj(stateAfterMove)
+              && turnIndexBeforeMove === 0)
+          {
+            // If the state is empty and the player is black, the first player
+            // with turn index 0 will make the first move to initialize the game.
+            // Make the first move
             makeMoveCallback(checkersLogicService.getFirstMove());
-          }
+          } else {
+            // The game is properly initialized, let's make a move :)
 
-          // If it's the AI mode and it's the AI turn, then let the AI makes
-          // the move.
-          if (isAiMode && yourPlayerIndex === 1) {
-            // Give it a little time for completing the sound effect of
-            // the player's move
-            $timeout(aiMakeMove, 50);
+            // Get the new state
+            state = stateAfterMove;
+
+            // Update the graphics
+            updateCheckersGraphics(isAiMode);
+
+            // In case the board is not updated
+            if (!$scope.$$phase) {
+              $scope.$apply();
+            }
+
+            // If it's the AI mode and it's the AI turn, then let the AI makes
+            // the move.
+            if (isAiMode && yourPlayerIndex === 1) {
+              // Give it a little time for completing the sound effect of
+              // the player's move
+              $timeout(aiMakeMove, 50);
+            }
           }
         };
 
@@ -765,7 +756,4 @@ checkers.controller('CheckersCtrl',
         platform.setGame(game);
         platform.showUI({minNumberOfPlayers: 2, maxNumberOfPlayers: 2});
       };
-
-      // Play!
-      $scope.newGame();
     }]);

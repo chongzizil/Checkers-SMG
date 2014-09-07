@@ -1,30 +1,39 @@
 /**
- * This is the controller for the game Checkers.
+ * This is the controller for Checkers.
+ *
+ * TO be clear in case of confusion, the state has two different format in the
+ * controller:
  *
  * TO be clear, the state has two different format in the controller:
- * 1. uiState is the controller state represented as an array of objects.
- *    Each element is a square which contains all the information necessary.
- *    Unlike the game API state, All light squares and dark squares are stored.
- *    e.g. {
- *           isBlackMan: false,
- *           isBlackCro: false,
- *           isWhiteMan: false,
- *           isWhiteCro: false,
- *           isEmpty: false,
- *           isDark: false,
- *           isLight: false,
- *           canSelect: false,
- *           isSelected: false,
- *         }
- * 2. GameApiState is the game API state represented as an object.
- *    A key and value pair represents the square index and the piece itself.
- *    Only the dark squares are contained.
- *    e.g. {"0": "EMPTY, "1": "WMAN"}
+ * 1. uiState: It's represented as an array of objects with length of 64. Each
+ *             element is a square which contains all its information such as
+ *             is it a white crown (king) or black crown (king).
+ *             Unlike the game API state, All light squares are also stored.
+ *    e.g. [{
+ *            isBlackMan: boolean,
+ *            isBlackCro: boolean,
+ *            isWhiteMan: boolean,
+ *            isWhiteCro: boolean,
+ *            isEmpty: boolean,
+ *            isDark: boolean,
+ *            isLight: boolean,
+ *            canSelect: boolean,
+ *            isSelected: boolean,
+ *            // Background image path
+ *            bgSrc: string,
+ *            // Piece image path
+ *            pieceSrc: string
+ *         }...]
+ *
+ * 2. GameApiState: It's represented as an object with size equals to 32. Each
+ *                  key and value pair represents a dark square index (0 - 31)
+ *                  and the content within it.
+ *    e.g. {0: "BMAN, ..., 12: "EMPTY", 20: "WMAN", ...}
  */
 
 checkers.controller('CheckersCtrl',
-    ['$scope', '$animate', '$timeout', '$location', '$q', 'checkersLogicService'
-      , 'checkersAiService', function ($scope, $animate, $timeout, $location, $q, checkersLogicService, checkersAiService) {
+    ['$scope', '$animate', '$timeout', '$location', '$q', 'checkersLogicService', 'checkersAiService', 'constantService', function ($scope, $animate, $timeout, $location, $q, checkersLogicService, checkersAiService, constantService) {
+      var CONSTANT = constantService;
       var yourPlayerIndex,
         makeMoveCallback,
         turnIndexBeforeMove,
@@ -38,58 +47,67 @@ checkers.controller('CheckersCtrl',
         selectedSquares = [];
 
       /**
-       * Set the UI square according to the game API square in order to update
-       * the graphics.
+       * Update the square of the UI state according to the new square of
+       * the game API state in order to update the graphics.
        *
-       * @param gameApiSquare the square as a string in game API format
-       * @param darkUiSquare the square as an object in ui state format
+       * @param gameApiSquare the square of the game API state.
+       * @param uiSquare the square of the UI state.
        */
-      var setDarkUiSquare = function(gameApiSquare, darkUiSquare) {
-        darkUiSquare.isEmpty = false;
-        darkUiSquare.isBlackMan = false;
-        darkUiSquare.isBlackCro = false;
-        darkUiSquare.isWhiteMan = false;
-        darkUiSquare.isWhiteCro = false;
+      var updateUiSquare = function (gameApiSquare, uiSquare) {
+        // Reset the information of the content within the square
+        uiSquare.isEmpty = false;
+        uiSquare.isBlackMan = false;
+        uiSquare.isBlackCro = false;
+        uiSquare.isWhiteMan = false;
+        uiSquare.isWhiteCro = false;
+        uiSquare.canSelect = false;
+        uiSquare.isSelected = false;
+
         switch (gameApiSquare) {
           case 'WMAN':
-            darkUiSquare.isWhiteMan = true;
-            darkUiSquare.pieceSrc = 'img/white_man';
+            uiSquare.isWhiteMan = true;
+            uiSquare.pieceSrc = 'img/white_man';
             break;
           case 'WCRO':
-            darkUiSquare.isWhiteCro = true;
-            darkUiSquare.pieceSrc = 'img/white_cro';
+            uiSquare.isWhiteCro = true;
+            uiSquare.pieceSrc = 'img/white_cro';
             break;
           case 'BMAN':
-            darkUiSquare.isBlackMan = true;
-            darkUiSquare.pieceSrc = 'img/black_man';
+            uiSquare.isBlackMan = true;
+            uiSquare.pieceSrc = 'img/black_man';
             break;
           case 'BCRO':
-            darkUiSquare.isBlackCro = true;
-            darkUiSquare.pieceSrc = 'img/black_cro';
+            uiSquare.isBlackCro = true;
+            uiSquare.pieceSrc = 'img/black_cro';
             break;
           default:
-            darkUiSquare.isEmpty = true;
-            darkUiSquare.pieceSrc = 'img/empty';
+            uiSquare.isEmpty = true;
+            uiSquare.pieceSrc = 'img/empty';
         }
       };
 
       /**
-       * Initialize the game, in another word is to create an empty board.
+       * Initialize the game, in another word create an empty board.
+       *
        * For each square, it is represented as an object in the ui state:
-       * {
-       *   isBlackMan: false,
-       *   isBlackCro: false,
-       *   isWhiteMan: false,
-       *   isWhiteCro: false,
-       *   isEmpty: false,
-       *   isDark: false,
-       *   isLight: false,
-       *   canSelect: false,
-       *   isSelected: false,
-       * }
+       * e.g. [{
+       *        isBlackMan: boolean,
+       *        isBlackCro: boolean,
+       *        isWhiteMan: boolean,
+       *        isWhiteCro: boolean,
+       *        isEmpty: boolean,
+       *        isDark: boolean,
+       *        isLight: boolean,
+       *        canSelect: boolean,
+       *        isSelected: boolean,
+       *        // Background image path
+       *        bgSrc: string,
+       *        // Piece image path
+       *        pieceSrc: string
+       *       }...]
        */
       var initializeUiState = function () {
-        // Initialize the ui state as an array for new game
+        // Initialize the ui state as an array first
         $scope.uiState = [];
 
         var lightUiSquare,
@@ -99,33 +117,36 @@ checkers.controller('CheckersCtrl',
             isBlackCro: false,
             isWhiteMan: false,
             isWhiteCro: false,
-            isEmpty: false,
+            isEmpty: true,
             isDark: false,
             isLight: false,
             canSelect: false,
             isSelected: false,
-            // Background image path
             bgSrc: '',
-            // Piece image path
-            pieceSrc: ''
+            pieceSrc: 'img/empty'
           };
 
-        for (var i = 0; i < checkersLogicService.CONSTANT.get('ROW') *
-            checkersLogicService.CONSTANT.get('COLUMN'); i += 1) {
+        // Each time initialize two square at once, one dark and one light
+        for (var i = 0; i < CONSTANT.ROW *
+            CONSTANT.COLUMN; i += 1) {
 
           darkUiSquare = checkersLogicService.cloneObj(defaultUiSquare);
           lightUiSquare = checkersLogicService.cloneObj(defaultUiSquare);
 
+          // Set the dark square
           darkUiSquare.isDark = true;
           darkUiSquare.bgSrc = 'img/dark_square.png';
 
+          // Set the light square
           lightUiSquare.isLight = true;
-          lightUiSquare.isEmpty = true;
-          lightUiSquare.pieceSrc = 'img/empty';
           lightUiSquare.bgSrc = 'img/light_square.png';
+          // Since light square will not be used and clicked, no piece image
+          // will be set for it.
+          lightUiSquare.isEmpty = false;
+          lightUiSquare.pieceSrc = '';
 
-          // Set each squares of the ui state
-          if (Math.floor(i / CONSTANT.get('COLUMN')) % 2 === 0) {
+          // Push the light and dark squares into the ui state
+          if (Math.floor(i / CONSTANT.COLUMN) % 2 === 0) {
             // EVEN ROW
             $scope.uiState[2 * i] = lightUiSquare;
             $scope.uiState[2 * i + 1] = darkUiSquare;
@@ -138,74 +159,77 @@ checkers.controller('CheckersCtrl',
       };
 
       /**
-       * Update the UI state after each move is made.
+       * Update the UI state after the last move.
        */
       var updateUiState = function () {
-        var gameApiSquare;
+        var gameApiSquare,
+          darkUiSquare;
 
         if (selectedSquares.length === 0) {
-          // If the selectedSquares is empty, then the last move should be the first
-          // move perform by the black player in order to initialize the game.
-          // So update each dark squares.
+          // If the selectedSquares is empty, then the last move should be the
+          // first move maded by the black player in order to initialize th
+          // game. So update each dark squares.
 
-          for (var i = 0; i < checkersLogicService.CONSTANT.get('ROW') *
-              checkersLogicService.CONSTANT.get('COLUMN'); i += 1) {
+          for (var i = 0; i < CONSTANT.ROW *
+              CONSTANT.COLUMN; i += 1) {
 
             gameApiSquare = state[i];
 
-            if (Math.floor(i / CONSTANT.get('COLUMN')) % 2 === 0) {
+            if (Math.floor(i / CONSTANT.COLUMN) % 2 === 0) {
               // EVEN
-              setDarkUiSquare(gameApiSquare, $scope.uiState[2 * i + 1]);
+              darkUiSquare = $scope.uiState[2 * i + 1];
+              updateUiSquare(gameApiSquare, darkUiSquare);
             } else {
               // ODD
-              setDarkUiSquare(gameApiSquare, $scope.uiState[2 * i]);
+              darkUiSquare = $scope.uiState[2 * i ];
+              updateUiSquare(gameApiSquare, darkUiSquare);
             }
           }
         } else {
-          // It's not the first move, so check the selectedSquares for the squares
-          // need to be updated.
+          // It's not the first move, so check the selectedSquares for the
+          // squares need to be updated.
 
-          // UI index
+          // UI state index
           var fromUiIndex = selectedSquares[0];
           var toUiIndex = selectedSquares[1];
           var jumpedUiIndex = -1;
 
-          // Game API index
+          // Game API state index
           var fromIndex = convertUiIndexToGameApiIndex(fromUiIndex);
           var toIndex = convertUiIndexToGameApiIndex(toUiIndex);
-          var jumpedIndex = checkersLogicService.calculateJumpedIndex(
-              Math.floor(fromUiIndex / 2), Math.floor(toUiIndex / 2));
 
           // Get the jumped square's index. If it's a simple move, then this
-          // index is illegal yet will not be used.
+          // index is illegal, yet will not be used.
+          var jumpedIndex =
+              checkersLogicService.getJumpedIndex(fromIndex, toIndex);
 
-
-          setDarkUiSquare(state[fromIndex], $scope.uiState[fromUiIndex]);
-          setDarkUiSquare(state[toIndex], $scope.uiState[toUiIndex]);
+          updateUiSquare(state[fromIndex], $scope.uiState[fromUiIndex]);
+          updateUiSquare(state[toIndex], $scope.uiState[toUiIndex]);
           if (jumpedIndex !== -1) {
             jumpedUiIndex = convertGameApiIndexToUiIndex(jumpedIndex);
-            setDarkUiSquare(state[jumpedIndex], $scope.uiState[jumpedUiIndex]);
+            updateUiSquare(state[jumpedIndex], $scope.uiState[jumpedUiIndex]);
           }
         }
       };
 
       /**
-       * Update the graphics by convert the game API state to UI state and
+       * Update the graphics (UI state) according to the new game API state and
        * set initial selectable squares.
        *
        * @param isAiMode true if it's in ai mode
        */
       var updateCheckersGraphics = function (isAiMode) {
         updateUiState();
-        // If the state is not empty, then set the the selectablility of each
-        // square
+
+        // If the state is not empty, then set the the selectablility for each
+        // square.
         if (!checkersLogicService.isEmptyObj(state)) {
           if (isAiMode && yourPlayerIndex === 1) {
-            // It's the ai's turn, the player can not select any squares
+            // It's ai's turn, the player can not select any squares
             setAllSquareUnselectable();
           } else {
-            // It's not the ai's mode or the ai's turn, so set selectable
-            // suqares according to the player index.
+            // It's not in ai's mode or ai's turn, so set selectable
+            // squares according to the player index.
             setInitialSelectableSquares(yourPlayerIndex);
           }
         }
@@ -213,37 +237,38 @@ checkers.controller('CheckersCtrl',
 
       /**
        * For each piece, set its property 'canSelect' to true only if it can
-       * makes a simple move or jump move.
+       * makes a jump move or a simple move if there's no mandatory jumps.
        */
       var setInitialSelectableSquares = function () {
-        var square,
+        var darkUiSquare,
             possibleMoves,
             hasMandatoryJump = checkersLogicService.hasMandatoryJumps(state,
                 yourPlayerIndex);
 
+        // First reset all squares to unselectable.
         setAllSquareUnselectable();
 
         // Check all dark squares
-        for (var i = 0; i < checkersLogicService.CONSTANT.get('ROW') *
-            checkersLogicService.CONSTANT.get('COLUMN'); i += 1) {
+        for (var i = 0; i < CONSTANT.ROW *
+            CONSTANT.COLUMN; i += 1) {
 
-          if (Math.floor(i / CONSTANT.get('COLUMN')) % 2 === 0) {
+          if (Math.floor(i / CONSTANT.COLUMN) % 2 === 0) {
             // EVEN
-            square = $scope.uiState[2 * i + 1];
+            darkUiSquare = $scope.uiState[2 * i + 1];
           } else {
             // ODD
-            square = $scope.uiState[2 * i];
+            darkUiSquare = $scope.uiState[2 * i];
           }
 
-          // If there exists a piece within the square and is the current
+          // If there exists a piece within the darkUiSquare and is the current
           // player's color, then check if it can make a move, otherwise set
           // it's 'canSelect' property to false.
           if (checkersLogicService
-              .checkTurnIndexMatchesPieceColor(yourPlayerIndex,
+              .isOwnColor(yourPlayerIndex,
               state[i].substr(0, 1)))
           {
-            // If there's at least one mandatory, then check only the possible
-            // jump moves of that square.
+            // If there's at least one mandatory jump, then only check the
+            // possible jump moves.
             if (hasMandatoryJump) {
               possibleMoves = checkersLogicService.getJumpMoves(state,
                   i, yourPlayerIndex);
@@ -252,15 +277,16 @@ checkers.controller('CheckersCtrl',
                   i, yourPlayerIndex);
             }
 
-            // If there's at least one possible move, then the square can be
-            // select.
+            // If there's at least one possible move, then the darkUiSquare can
+            // be select.
             if (possibleMoves.length > 0) {
-              square.canSelect = true;
+              darkUiSquare.canSelect = true;
             } else {
-              square.canSelect = false;
+              darkUiSquare.canSelect = false;
             }
           } else {
-            square.canSelect = false;
+            // It's not the player's piece, so can not be selected.
+            darkUiSquare.canSelect = false;
           }
         }
       };
@@ -269,8 +295,8 @@ checkers.controller('CheckersCtrl',
        * Set all squares unselectable.
        */
       var setAllSquareUnselectable = function () {
-        for (var i = 0; i < checkersLogicService.CONSTANT.get('ROW') *
-            checkersLogicService.CONSTANT.get('COLUMN') * 2; i += 1) {
+        for (var i = 0; i < CONSTANT.ROW *
+            CONSTANT.COLUMN * 2; i += 1) {
           $scope.uiState[i].canSelect = false;
         }
       };
@@ -279,18 +305,20 @@ checkers.controller('CheckersCtrl',
        * Set the possible move destination squares' canSelect to true and
        * others remain the same.
        *
-       * @param squareIndex the square selected.
+       * @param squareUiIndex the square selected.
        */
-      var setSelectableSquares = function (squareIndex) {
-        var checkersState =
+      var setSelectableSquares = function (squareUiIndex) {
+        var logicState =
             checkersLogicService.convertGameApiStateToLogicState(state);
-        var possibleMoves = checkersLogicService.getAllPossibleMoves(
-            checkersState, Math.floor(squareIndex / 2), yourPlayerIndex);
+        var possibleMoves =
+            checkersLogicService.getAllPossibleMoves(logicState,
+                convertUiIndexToGameApiIndex(squareUiIndex), yourPlayerIndex);
 
         if (possibleMoves.length > 0) {
           // If the possible moves are jump moves, then only keep the
           // destination square indexes.
           if (typeof possibleMoves[0] !== 'number') {
+            // Jump move
             for (var i = 0; i < possibleMoves.length; i++) {
               possibleMoves[i] = possibleMoves[i][1];
             }
@@ -298,7 +326,9 @@ checkers.controller('CheckersCtrl',
 
           // Set all possible move destination squares to be selectable
           for (var i = 0; i < possibleMoves.length; i++) {
-            if (Math.floor(possibleMoves[i] / CONSTANT.get('COLUMN')) % 2 === 0) {
+            if (Math.floor(possibleMoves[i] /
+                CONSTANT.COLUMN) % 2 === 0)
+            {
               // EVEN
               $scope.uiState[2 * possibleMoves[i] + 1].canSelect = true;
             } else {
@@ -437,13 +467,13 @@ checkers.controller('CheckersCtrl',
         // during the animation which may cause errors.
         setAllSquareUnselectable();
         $scope.animationIndexes = {
-          column: checkersLogicService.CONSTANT.get('COLUMN') * 2,
+          column: CONSTANT.COLUMN * 2,
           fromUiIndex: selectedPiece[0],
           toUiIndex: selectedPiece[1],
           jumpedUiIndex: -1
         };
 
-        var jumpedIndex = checkersLogicService.calculateJumpedIndex(
+        var jumpedIndex = checkersLogicService.getJumpedIndex(
             Math.floor($scope.animationIndexes.fromUiIndex / 2),
             Math.floor($scope.animationIndexes.toUiIndex / 2)
         );
@@ -451,7 +481,7 @@ checkers.controller('CheckersCtrl',
         // Get the jumped square's index. If it's a simple move, then this
         // index is illegal yet will not be used.
         if (Math.floor(jumpedIndex /
-            checkersLogicService.CONSTANT.get('COLUMN')) % 2 === 0) {
+            CONSTANT.COLUMN) % 2 === 0) {
           // EVEN
           $scope.animationIndexes.jumpedUiIndex = jumpedIndex * 2 + 1;
         } else {
@@ -479,7 +509,7 @@ checkers.controller('CheckersCtrl',
 
         var moveAudio = new Audio('audio/move.mp3');
         var jumpAudio = new Audio('audio/jump.mp3');
-        var column = checkersLogicService.CONSTANT.get('COLUMN');
+        var column = CONSTANT.COLUMN;
 
         var fromIndex = Math.floor(fromUiIndex / 2);
         var toIndex = Math.floor(toUiIndex / 2);
@@ -606,7 +636,7 @@ checkers.controller('CheckersCtrl',
        */
       var convertGameApiIndexToUiIndex = function (gameApiIndex) {
         if (Math.floor(gameApiIndex
-            / checkersLogicService.CONSTANT.get('COLUMN')) % 2 === 0) {
+            / CONSTANT.COLUMN) % 2 === 0) {
           // Even row
           return gameApiIndex * 2 + 1;
         } else {
@@ -621,14 +651,7 @@ checkers.controller('CheckersCtrl',
        * @returns {number} the game API index
        */
       var convertUiIndexToGameApiIndex = function (uiIndex) {
-        if (Math.floor(uiIndex
-            / (checkersLogicService.CONSTANT.get('COLUMN') * 2)) % 2 === 0) {
-          // Even row
-          return (uiIndex - 1) / 2;
-        } else {
-          // Odd row
-          return uiIndex / 2;
-        }
+        return Math.floor(uiIndex / 2);
       };
 
       /**

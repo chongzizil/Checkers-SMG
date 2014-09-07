@@ -12,13 +12,15 @@ var copyState = function (state) {
   return copyState;
 };
 
-var expectIllegalOperation = function (checkersLogicService, match, illegalCode) {
+var expectIllegalOperation =
+    function (checkersLogicService, match, illegalCode) {
   expect(checkersLogicService.isMoveOk(match)).
-      toEqual(getIllegalEmailObj(illegalCode));
+      toEqual(checkersLogicService.getIllegalEmailObj(illegalCode));
 };
 
 describe('checkersLogicService unit tests:', function () {
   var checkersLogicService,
+      CONSTANT,
       ILLEGAL_CODE,
       emptyState = {},
       initialState = {},
@@ -32,18 +34,25 @@ describe('checkersLogicService unit tests:', function () {
   // Set up the service
   beforeEach(inject(function (_checkersLogicService_) {
     checkersLogicService = _checkersLogicService_;
-    ILLEGAL_CODE = checkersLogicService.ILLEGAL_CODE;
+  }));
+
+  beforeEach(inject(function (_constantService_) {
+    CONSTANT = _constantService_;
+  }));
+
+  beforeEach(inject(function (_enumService_) {
+    ILLEGAL_CODE = _enumService_.ILLEGAL_CODE;
   }));
 
   // Set up an empty (no pieces on board) state for test random situation
   beforeEach(function setEmptyState() {
     emptyState = {};
     for (
-      i = 0;
-      i < checkersLogicService.CONSTANT.get('ROW') *
-          checkersLogicService.CONSTANT.get('COLUMN');
-      i += 1
-    ) {
+        i = 0;
+        i < CONSTANT.ROW *
+            CONSTANT.COLUMN;
+        i += 1
+        ) {
       emptyState[i] = 'EMPTY';
     }
   });
@@ -53,31 +62,31 @@ describe('checkersLogicService unit tests:', function () {
     initialState = {};
 
     for (
-      i = 0;
-      i < (checkersLogicService.CONSTANT.get('ROW') - 2)
-          / 2 * checkersLogicService.CONSTANT.get('COLUMN');
-      i += 1
-    ) {
+        i = 0;
+        i < (CONSTANT.ROW - 2)
+            / 2 * CONSTANT.COLUMN;
+        i += 1
+        ) {
       initialState[i] = 'BMAN';
     }
 
     for (
-      i = (checkersLogicService.CONSTANT.get('ROW') / 2 - 1)
-        * checkersLogicService.CONSTANT.get('COLUMN');
-      i < (checkersLogicService.CONSTANT.get('ROW') / 2 + 1)
-        * checkersLogicService.CONSTANT.get('COLUMN');
-      i  += 1
-    ) {
+        i = (CONSTANT.ROW / 2 - 1)
+            * CONSTANT.COLUMN;
+        i < (CONSTANT.ROW / 2 + 1)
+            * CONSTANT.COLUMN;
+        i += 1
+        ) {
       initialState[i] = 'EMPTY';
     }
 
     for (
-      i = (checkersLogicService.CONSTANT.get('ROW') / 2 + 1)
-        * checkersLogicService.CONSTANT.get('COLUMN');
-      i < checkersLogicService.CONSTANT.get('ROW')
-        * checkersLogicService.CONSTANT.get('COLUMN');
-      i  += 1
-    ) {
+        i = (CONSTANT.ROW / 2 + 1)
+            * CONSTANT.COLUMN;
+        i < CONSTANT.ROW
+            * CONSTANT.COLUMN;
+        i += 1
+        ) {
       initialState[i] = 'WMAN';
     }
   });
@@ -94,15 +103,15 @@ describe('checkersLogicService unit tests:', function () {
         .toBe(true);
     expect(angular.isFunction(checkersLogicService.hasMandatoryJumps))
         .toBe(true);
-    expect(angular.isFunction(checkersLogicService.calculateJumpedIndex))
-        .toBe(true);
+    expect(angular.isFunction(checkersLogicService.getJumpedIndex)).toBe(true);
     expect(angular.isFunction(
         checkersLogicService.convertGameApiStateToLogicState
     )).toBe(true);
-    expect(angular.isFunction(
-        checkersLogicService.checkTurnIndexMatchesPieceColor
-    )).toBe(true);
+    expect(angular.isFunction(checkersLogicService.isOwnColor)).toBe(true);
+    expect(angular.isFunction(checkersLogicService.getIllegalEmailObj)).toBe(true);
     expect(angular.isFunction(checkersLogicService.getWinner)).toBe(true);
+    expect(angular.isFunction(checkersLogicService.getColor)).toBe(true);
+    expect(angular.isFunction(checkersLogicService.getKind)).toBe(true);
     expect(angular.isFunction(checkersLogicService.cloneObj)).toBe(true);
     expect(angular.isFunction(checkersLogicService.isEmptyObj)).toBe(true);
   });
@@ -129,7 +138,8 @@ describe('checkersLogicService unit tests:', function () {
             match.stateAfterMove = initialState;
             match.move = checkersLogicService.getFirstMove();
 
-            expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_MOVE'));
+            expectIllegalOperation(checkersLogicService, match,
+                ILLEGAL_CODE.ILLEGAL_MOVE);
           });
 
       it("White illegally makes the initialize move", function () {
@@ -140,7 +150,8 @@ describe('checkersLogicService unit tests:', function () {
         match.stateAfterMove = initialState;
         match.move = checkersLogicService.getFirstMove();
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_MOVE'));
+        expectIllegalOperation(checkersLogicService, match,
+            ILLEGAL_CODE.ILLEGAL_MOVE);
       });
     });
 
@@ -184,7 +195,7 @@ describe('checkersLogicService unit tests:', function () {
       });
 
       it("8 -> 14: Illegal because it can only move one square diagonally to" +
-              "an adjacent unoccupied dark square.", function () {
+          "an adjacent unoccupied dark square.", function () {
         var match = {};
         match.turnIndexBeforeMove = BLACK_TURN_INDEX;
         match.turnIndexAfterMove = WHITE_TURN_INDEX;
@@ -198,7 +209,8 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 8, value: "EMPTY"}});
         match.move.push({set: {key: 14, value: "BMAN"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_SIMPLE_MOVE'));
+        expectIllegalOperation(checkersLogicService, match,
+            ILLEGAL_CODE.ILLEGAL_SIMPLE_MOVE);
       });
 
       it("8 -> 16: Illegal because it can only move one square diagonally to" +
@@ -216,7 +228,8 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 8, value: "EMPTY"}});
         match.move.push({set: {key: 16, value: "BMAN"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_SIMPLE_MOVE'));
+        expectIllegalOperation(checkersLogicService, match,
+            ILLEGAL_CODE.ILLEGAL_SIMPLE_MOVE);
       });
 
       it("8 -> 4: Illegal because MAN can not move backward", function () {
@@ -235,7 +248,8 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 8, value: "EMPTY"}});
         match.move.push({set: {key: 4, value: "BMAN"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_SIMPLE_MOVE'));
+        expectIllegalOperation(checkersLogicService, match,
+            ILLEGAL_CODE.ILLEGAL_SIMPLE_MOVE);
       });
 
       it("8 -> 4: Illegal because 4 is occupied", function () {
@@ -252,7 +266,8 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 8, value: "EMPTY"}});
         match.move.push({set: {key: 4, value: "BMAN"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_SIMPLE_MOVE'));
+        expectIllegalOperation(checkersLogicService, match,
+            ILLEGAL_CODE.ILLEGAL_SIMPLE_MOVE);
       });
 
       it("20 -> 16: Illegal because the player can only move his/her own" +
@@ -270,7 +285,8 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 20, value: "EMPTY"}});
         match.move.push({set: {key: 16, value: "WMAN"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_SIMPLE_MOVE'));
+        expectIllegalOperation(checkersLogicService, match,
+            ILLEGAL_CODE.ILLEGAL_SIMPLE_MOVE);
       });
 
       it("? -> 15: Illegal because the piece does not exist", function () {
@@ -287,10 +303,11 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 33, value: "EMPTY"}});
         match.move.push({set: {key: 15, value: "BMAN"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_INDEX'));
+        expectIllegalOperation(checkersLogicService, match,
+            ILLEGAL_CODE.ILLEGAL_INDEX);
       });
 
-      it("8 -> ?: Illegal because it moves to a non exist square", function () {
+      it("8 -> ?: Illegal because it moves to non exist square", function () {
         var match = {};
         match.turnIndexBeforeMove = BLACK_TURN_INDEX;
         match.turnIndexAfterMove = BLACK_TURN_INDEX;
@@ -304,7 +321,8 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 8, value: "EMPTY"}});
         match.move.push({set: {key: 33, value: "BMAN"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_INDEX'));
+        expectIllegalOperation(checkersLogicService, match,
+            ILLEGAL_CODE.ILLEGAL_INDEX);
       });
     });
 
@@ -369,7 +387,8 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 20, value: "EMPTY"}});
         match.move.push({set: {key: 17, value: "WMAN"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_SIMPLE_MOVE'));
+        expectIllegalOperation(checkersLogicService, match,
+            ILLEGAL_CODE.ILLEGAL_SIMPLE_MOVE);
       });
 
       it("21 -> 13: Illegal because it can only move one square diagonally to" +
@@ -387,7 +406,8 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 21, value: "EMPTY"}});
         match.move.push({set: {key: 13, value: "WMAN"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_SIMPLE_MOVE'));
+        expectIllegalOperation(checkersLogicService, match,
+            ILLEGAL_CODE.ILLEGAL_SIMPLE_MOVE);
       });
 
       it("20 -> 24: Illegal because MAN can not move backward", function () {
@@ -406,7 +426,9 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 20, value: "EMPTY"}});
         match.move.push({set: {key: 24, value: "WMAN"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_SIMPLE_MOVE'));
+        expectIllegalOperation(checkersLogicService, match,
+
+            ILLEGAL_CODE.ILLEGAL_SIMPLE_MOVE);
       });
 
       it("20 -> 24: Illegal because 4 is occupied", function () {
@@ -423,7 +445,9 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 20, value: "EMPTY"}});
         match.move.push({set: {key: 24, value: "WMAN"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_SIMPLE_MOVE'));
+        expectIllegalOperation(checkersLogicService, match,
+
+            ILLEGAL_CODE.ILLEGAL_SIMPLE_MOVE);
       });
 
       it("12 -> 16: Illegal because the player can only move his/her own" +
@@ -441,7 +465,9 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 12, value: "EMPTY"}});
         match.move.push({set: {key: 16, value: "BMAN"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_SIMPLE_MOVE'));
+        expectIllegalOperation(checkersLogicService, match,
+
+            ILLEGAL_CODE.ILLEGAL_SIMPLE_MOVE);
       });
 
       it("? -> 16: Illegal because the piece does not exist", function () {
@@ -458,10 +484,12 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 33, value: "EMPTY"}});
         match.move.push({set: {key: 16, value: "WMAN"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_INDEX'));
+        expectIllegalOperation(checkersLogicService, match,
+
+            ILLEGAL_CODE.ILLEGAL_INDEX);
       });
 
-      it("20 -> ?: Illegal because it moves to a non exist square", function () {
+      it("20 -> ?: Illegal because it moves to non exist square", function () {
         var match = {};
         match.turnIndexBeforeMove = WHITE_TURN_INDEX;
         match.turnIndexAfterMove = BLACK_TURN_INDEX;
@@ -475,7 +503,9 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 20, value: "EMPTY"}});
         match.move.push({set: {key: 33, value: "WMAN"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_INDEX'));
+        expectIllegalOperation(checkersLogicService, match,
+
+            ILLEGAL_CODE.ILLEGAL_INDEX);
       });
     });
 
@@ -562,7 +592,9 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 13, value: "EMPTY"}});
         match.move.push({set: {key: 8, value: "BCRO"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_IGNORE_MANDATORY_JUMP'));
+        expectIllegalOperation(checkersLogicService, match,
+
+            ILLEGAL_CODE.ILLEGAL_IGNORE_MANDATORY_JUMP);
       });
 
       it("18 - 23: Illegal because 18 ignores the mandatory jump", function () {
@@ -579,7 +611,9 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 18, value: "EMPTY"}});
         match.move.push({set: {key: 23, value: "BMAN"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_IGNORE_MANDATORY_JUMP'));
+        expectIllegalOperation(checkersLogicService, match,
+
+            ILLEGAL_CODE.ILLEGAL_IGNORE_MANDATORY_JUMP);
       });
     });
 
@@ -666,7 +700,9 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 13, value: "EMPTY"}});
         match.move.push({set: {key: 8, value: "WMAN"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_IGNORE_MANDATORY_JUMP'));
+        expectIllegalOperation(checkersLogicService, match,
+
+            ILLEGAL_CODE.ILLEGAL_IGNORE_MANDATORY_JUMP);
       });
 
       it("18 - 23: Illegal because 18 ignores the mandatory jump", function () {
@@ -683,7 +719,9 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 18, value: "EMPTY"}});
         match.move.push({set: {key: 23, value: "WCRO"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_IGNORE_MANDATORY_JUMP'));
+        expectIllegalOperation(checkersLogicService, match,
+
+            ILLEGAL_CODE.ILLEGAL_IGNORE_MANDATORY_JUMP);
       });
     });
 
@@ -772,7 +810,9 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 13, value: "EMPTY"}});
         match.move.push({set: {key: 16, value: "BCRO"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_CROWNED'));
+        expectIllegalOperation(checkersLogicService, match,
+
+            ILLEGAL_CODE.ILLEGAL_CROWNED);
       });
 
       it("13 -> 17 -> 22*: Illegal because it does not move to the final row" +
@@ -793,7 +833,9 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 17, value: "EMPTY"}});
         match.move.push({set: {key: 22, value: "BCRO"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_CROWNED'));
+        expectIllegalOperation(checkersLogicService, match,
+
+            ILLEGAL_CODE.ILLEGAL_CROWNED);
       });
     });
 
@@ -882,7 +924,9 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 17, value: "EMPTY"}});
         match.move.push({set: {key: 13, value: "WCRO"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_CROWNED'));
+        expectIllegalOperation(checkersLogicService, match,
+
+            ILLEGAL_CODE.ILLEGAL_CROWNED);
       });
 
       it("17 -> 14 -> 10*: Illegal because it does not move to the final row" +
@@ -903,7 +947,8 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 14, value: "EMPTY"}});
         match.move.push({set: {key: 10, value: "WCRO"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_CROWNED'));
+        expectIllegalOperation(checkersLogicService, match,
+            ILLEGAL_CODE.ILLEGAL_CROWNED);
       });
     });
 
@@ -972,7 +1017,8 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 24, value: "EMPTY"}});
         match.move.push({set: {key: 29, value: "BCRO"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_SET_TURN'));
+        expectIllegalOperation(checkersLogicService, match,
+            ILLEGAL_CODE.ILLEGAL_SET_TURN);
       });
 
       it("24 -> 29*: Test for CRO", function () {
@@ -1009,7 +1055,8 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 24, value: "EMPTY"}});
         match.move.push({set: {key: 29, value: "BCRO"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_SET_TURN'));
+        expectIllegalOperation(checkersLogicService, match,
+            ILLEGAL_CODE.ILLEGAL_SET_TURN);
       });
     });
 
@@ -1078,7 +1125,8 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 5, value: "EMPTY"}});
         match.move.push({set: {key: 1, value: "WCRO"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_SET_TURN'));
+        expectIllegalOperation(checkersLogicService, match,
+            ILLEGAL_CODE.ILLEGAL_SET_TURN);
       });
 
       it("24 -> 29*: Test for CRO", function () {
@@ -1115,7 +1163,8 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 5, value: "EMPTY"}});
         match.move.push({set: {key: 1, value: "WCRO"}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_SET_TURN'));
+        expectIllegalOperation(checkersLogicService, match,
+            ILLEGAL_CODE.ILLEGAL_SET_TURN);
       });
     });
 
@@ -1245,7 +1294,8 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 13, value: "BMAN"}});
         match.move.push({endMatch: {endMatchScores: [1, 0]}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_END_MATCH_SCORE'));
+        expectIllegalOperation(checkersLogicService, match,
+            ILLEGAL_CODE.ILLEGAL_END_MATCH_SCORE);
       });
     });
 
@@ -1374,7 +1424,8 @@ describe('checkersLogicService unit tests:', function () {
         match.move.push({set: {key: 13, value: "WMAN"}});
         match.move.push({endMatch: {endMatchScores: [0, 1]}});
 
-        expectIllegalOperation(checkersLogicService, match, ILLEGAL_CODE.get('ILLEGAL_END_MATCH_SCORE'));
+        expectIllegalOperation(checkersLogicService, match,
+            ILLEGAL_CODE.ILLEGAL_END_MATCH_SCORE);
       });
     });
   });
@@ -1382,7 +1433,7 @@ describe('checkersLogicService unit tests:', function () {
   describe('Test getExpectedOperations:', function () {
     var setBlackTurn = {setTurn: {turnIndex: 0}};
     var setWhiteTurn = {setTurn: {turnIndex: 1}};
-    var setBlackWin= {endMatch: {endMatchScores: [1, 0]}};
+    var setBlackWin = {endMatch: {endMatchScores: [1, 0]}};
     var setWhiteWin = {endMatch: {endMatchScores: [0, 1]}};
 
     /*

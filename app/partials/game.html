@@ -14,7 +14,8 @@
         <div ng-class="{isDarkSquare: uiState[$index].isDark,
              isLightSquare: uiState[$index].isLight}">
           <img ng-src="{{square.bgSrc}}" class="background_image">
-          <img ng-show="uiState[$index].isDark" ng-src="{{square.pieceSrc + (!square.isSelected ? '':'_selected') + '.png'}}" alt=""
+          <!--The image of the piece, if it's in a light square, then the src of the image will be empty-->
+          <img ng-show="uiState[$index].isDark" ng-src="{{square.pieceSrc === '' ? '' : (square.pieceSrc + (!square.isSelected ? '':'_selected') + '.png')}}" alt=""
                id="{{$index}}" dd-draggable = {{square.canSelect}} dd-drop-target = {{square.canSelect}}
                ng-click="pieceSelected($index, false)"
                ng-class="{

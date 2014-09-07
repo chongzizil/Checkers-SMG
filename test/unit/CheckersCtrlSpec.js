@@ -49,8 +49,4 @@ describe('checkersCtrl unit tests:', function () {
       initialState[i] = 'WMAN';
     }
   });
-
-  it('Test', function () {
-
-  });
 });

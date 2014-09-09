@@ -503,10 +503,16 @@
           // Update the board
           updateUiState();
 
+          // In case the board is not updated
+          if (!$scope.$$phase) {
+            $scope.$apply();
+          }
+
           // Remove the animation classes, whether the animation class is added
           // or not (is Dnd or not) before is not important. Otherwise the
           // square image with the unmoved animation class will not be placed
           // in the right position even if the image is correct.
+
           removeAnimationClass();
 
           // Initialize the selectedSquares after the animation class is removed
@@ -741,11 +747,6 @@
 
               // Update the graphics
               updateCheckersGraphics(isAiMode);
-
-              // In case the board is not updated
-              if (!$scope.$$phase) {
-                $scope.$apply();
-              }
 
               // If it's the AI mode and it's the AI turn, then let the AI makes
               // the move.

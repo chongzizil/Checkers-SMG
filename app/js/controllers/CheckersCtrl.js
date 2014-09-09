@@ -87,15 +87,158 @@
         }
 
         /**
+         * Get the indexes necessary for the animation.
+         *
+         * @returns {{
+         *             fromUiIndex: number,
+         *             toUiIndex: number,
+         *             jumpedUiIndex: number,
+         *             column: number
+         *          }}
+         */
+        function getAnimationIndexes() {
+          var fromUiIndex = selectedSquares[0],
+            toUiIndex = selectedSquares[1],
+            jumpedUiIndex = -1,
+            jumpedIndex = checkersLogicService.getJumpedIndex(
+              convertUiIndexToGameApiIndex(fromUiIndex),
+              convertUiIndexToGameApiIndex(toUiIndex)
+            );
+
+          // Get the jumped square's index. If it's a simple move, then this
+          // index is illegal yet will not be used.
+          if (Math.floor(jumpedIndex / CONSTANT.COLUMN) % 2 === 0) {
+            // EVEN
+            jumpedUiIndex = jumpedIndex * 2 + 1;
+          } else {
+            // ODD
+            jumpedUiIndex = jumpedIndex * 2;
+          }
+
+          return {
+            fromUiIndex: fromUiIndex,
+            toUiIndex: toUiIndex,
+            jumpedUiIndex: jumpedUiIndex,
+            // The column is based on 8 x 8 UI state
+            column: CONSTANT.COLUMN * 2
+          };
+        }
+
+        /**
+         * Add animation class so the animation may be performed accordingly
+         *
+         * @param callback makeMove function which will be called after the
+         *                 animation is completed.
+         */
+        function addAnimationClass(callback) {
+          var animationIndexes = getAnimationIndexes(),
+            column = animationIndexes.column,
+            fromUiIndex = animationIndexes.fromUiIndex,
+            toUiIndex = animationIndexes.toUiIndex,
+            jumpedUiIndex = animationIndexes.jumpedUiIndex;
+
+          // Add the corresponding animation class
+          switch (toUiIndex - fromUiIndex) {
+          case -column - 1:
+            // Simple move up left
+            $animate.addClass(('#' + fromUiIndex), 'move_up_left', callback);
+            break;
+          case -column + 1:
+            // Simple move up right
+            $animate.addClass(('#' + fromUiIndex), 'move_up_right', callback);
+            break;
+          case column - 1:
+            // Simple move down left
+            $animate.addClass(('#' + fromUiIndex), 'move_down_left', callback);
+            break;
+          case column + 1:
+            // Simple move down right
+            $animate.addClass(('#' + fromUiIndex), 'move_down_right', callback);
+            break;
+          case -(2 * column) - 2:
+            // Jump move up left
+            $animate.addClass(('#' + jumpedUiIndex), 'jumped');
+            $animate.addClass(('#' + fromUiIndex), 'jump_up_left', callback);
+            break;
+          case -(2 * column) + 2:
+            // Jump move up right
+            $animate.addClass(('#' + jumpedUiIndex), 'jumped');
+            $animate.addClass(('#' + fromUiIndex), 'jump_up_right', callback);
+            break;
+          case (2 * column) - 2:
+            // Jump move down left
+            $animate.addClass(('#' + jumpedUiIndex), 'jumped');
+            $animate.addClass(('#' + fromUiIndex), 'jump_down_left', callback);
+            break;
+          case (2 * column) + 2:
+            // Jump move down right
+            $animate.addClass(('#' + jumpedUiIndex), 'jumped');
+            $animate.addClass(('#' + fromUiIndex), 'jump_down_right', callback);
+            break;
+          }
+        }
+
+        /**
+         * remove animation class when the animation finishes.
+         */
+        function removeAnimationClass() {
+          var animationIndexes = getAnimationIndexes(),
+            column = animationIndexes.column,
+            fromUiIndex = animationIndexes.fromUiIndex,
+            toUiIndex = animationIndexes.toUiIndex,
+            jumpedUiIndex = animationIndexes.jumpedUiIndex;
+
+          // remove the corresponding animation class
+          switch (toUiIndex - fromUiIndex) {
+          case -column - 1:
+            // Simple move up left
+            $animate.removeClass(('#' + fromUiIndex), 'move_up_left');
+            break;
+          case -column + 1:
+            // Simple move up right
+            $animate.removeClass(('#' + fromUiIndex), 'move_up_right');
+            break;
+          case column - 1:
+            // Simple move down left
+            $animate.removeClass(('#' + fromUiIndex), 'move_down_left');
+            break;
+          case column + 1:
+            // Simple move down right
+            $animate.removeClass(('#' + fromUiIndex), 'move_down_right');
+            break;
+          case -(2 * column) - 2:
+            // Jump move up left
+            $animate.removeClass(('#' + jumpedUiIndex), 'jumped');
+            $animate.removeClass(('#' + fromUiIndex), 'jump_up_left');
+            break;
+          case -(2 * column) + 2:
+            // Jump move up right
+            $animate.removeClass(('#' + jumpedUiIndex), 'jumped');
+            $animate.removeClass(('#' + fromUiIndex), 'jump_up_right');
+            break;
+          case (2 * column) - 2:
+            // Jump move down left
+            $animate.removeClass(('#' + jumpedUiIndex), 'jumped');
+            $animate.removeClass(('#' + fromUiIndex), 'jump_down_left');
+            break;
+          case (2 * column) + 2:
+            // Jump move down right
+            $animate.removeClass(('#' + jumpedUiIndex), 'jumped');
+            $animate.removeClass(('#' + fromUiIndex), 'jump_down_right');
+            break;
+          }
+        }
+
+        /**
          * For each piece, set its property 'canSelect' to true only if it can
          * makes a jump move or a simple move if there's no mandatory jumps.
          */
         function setInitialSelectableSquares() {
-          var darkUiSquare,
+          var i,
+            darkUiSquare,
             possibleMoves,
             hasMandatoryJump = checkersLogicService.hasMandatoryJumps(state,
-                $scope.yourPlayerIndex),
-            i;
+                $scope.yourPlayerIndex);
 
           // First reset all squares to unselectable.
           setAllSquareUnselectable();
@@ -356,11 +499,18 @@
          * @param isAiMode true if it's in ai mode
          */
         function updateCheckersGraphics(isAiMode) {
-          // Initialize the selectedSquares first
-          selectedSquares = [];
 
           // Update the board
           updateUiState();
+
+          // Remove the animation classes, whether the animation class is added
+          // or not (is Dnd or not) before is not important. Otherwise the
+          // square image with the unmoved animation class will not be placed
+          // in the right position even if the image is correct.
+          removeAnimationClass();
+
+          // Initialize the selectedSquares after the animation class is removed
+          selectedSquares = [];
 
           // If the state is not empty, then set the the selectablility for each
           // square.
@@ -373,139 +523,6 @@
               // squares according to the player index.
               setInitialSelectableSquares($scope.yourPlayerIndex);
             }
-          }
-        }
-
-        function getAnimationIndexes() {
-          var fromUiIndex = selectedSquares[0],
-            toUiIndex = selectedSquares[1],
-            jumpedUiIndex = -1,
-            jumpedIndex = checkersLogicService.getJumpedIndex(
-              convertUiIndexToGameApiIndex(fromUiIndex),
-              convertUiIndexToGameApiIndex(toUiIndex)
-            );
-
-          // Get the jumped square's index. If it's a simple move, then this
-          // index is illegal yet will not be used.
-          if (Math.floor(jumpedIndex / CONSTANT.COLUMN) % 2 === 0) {
-            // EVEN
-            jumpedUiIndex = jumpedIndex * 2 + 1;
-          } else {
-            // ODD
-            jumpedUiIndex = jumpedIndex * 2;
-          }
-
-          return {
-            fromUiIndex: fromUiIndex,
-            toUiIndex: toUiIndex,
-            jumpedUiIndex: jumpedUiIndex,
-            // The column is based on 8 x 8 UI state
-            column: CONSTANT.COLUMN * 2
-          };
-        }
-
-        /**
-         * Add animation class so the animation may be performed accordingly
-         *
-         * @param callback makeMove function which will be called after the
-         *                 animation is completed.
-         */
-        function addAnimationClass(callback) {
-          var animationIndexes = getAnimationIndexes(),
-            column = animationIndexes.column,
-            fromUiIndex = animationIndexes.fromUiIndex,
-            toUiIndex = animationIndexes.toUiIndex,
-            jumpedUiIndex = animationIndexes.jumpedUiIndex;
-
-          // Add the corresponding animation class
-          switch (toUiIndex - fromUiIndex) {
-          case -column - 1:
-            // Simple move up left
-            $animate.addClass(('#' + fromUiIndex), 'move_up_left', callback);
-            break;
-          case -column + 1:
-            // Simple move up right
-            $animate.addClass(('#' + fromUiIndex), 'move_up_right', callback);
-            break;
-          case column - 1:
-            // Simple move down left
-            $animate.addClass(('#' + fromUiIndex), 'move_down_left', callback);
-            break;
-          case column + 1:
-            // Simple move down right
-            $animate.addClass(('#' + fromUiIndex), 'move_down_right', callback);
-            break;
-          case -(2 * column) - 2:
-            // Jump move up left
-            $animate.addClass(('#' + jumpedUiIndex), 'jumped');
-            $animate.addClass(('#' + fromUiIndex), 'jump_up_left', callback);
-            break;
-          case -(2 * column) + 2:
-            // Jump move up right
-            $animate.addClass(('#' + jumpedUiIndex), 'jumped');
-            $animate.addClass(('#' + fromUiIndex), 'jump_up_right', callback);
-            break;
-          case (2 * column) - 2:
-            // Jump move down left
-            $animate.addClass(('#' + jumpedUiIndex), 'jumped');
-            $animate.addClass(('#' + fromUiIndex), 'jump_down_left', callback);
-            break;
-          case (2 * column) + 2:
-            // Jump move down right
-            $animate.addClass(('#' + jumpedUiIndex), 'jumped');
-            $animate.addClass(('#' + fromUiIndex), 'jump_down_right', callback);
-            break;
-          }
-        }
-
-        /**
-         * remove animation class when the animation finishes.
-         */
-        function removeAnimationClass() {
-          var animationIndexes = getAnimationIndexes(),
-            column = animationIndexes.column,
-            fromUiIndex = animationIndexes.fromUiIndex,
-            toUiIndex = animationIndexes.toUiIndex,
-            jumpedUiIndex = animationIndexes.jumpedUiIndex;
-
-          // remove the corresponding animation class
-          switch (toUiIndex - fromUiIndex) {
-          case -column - 1:
-            // Simple move up left
-            $animate.removeClass(('#' + fromUiIndex), 'move_up_left');
-            break;
-          case -column + 1:
-            // Simple move up right
-            $animate.removeClass(('#' + fromUiIndex), 'move_up_right');
-            break;
-          case column - 1:
-            // Simple move down left
-            $animate.removeClass(('#' + fromUiIndex), 'move_down_left');
-            break;
-          case column + 1:
-            // Simple move down right
-            $animate.removeClass(('#' + fromUiIndex), 'move_down_right');
-            break;
-          case -(2 * column) - 2:
-            // Jump move up left
-            $animate.removeClass(('#' + jumpedUiIndex), 'jumped');
-            $animate.removeClass(('#' + fromUiIndex), 'jump_up_left');
-            break;
-          case -(2 * column) + 2:
-            // Jump move up right
-            $animate.removeClass(('#' + jumpedUiIndex), 'jumped');
-            $animate.removeClass(('#' + fromUiIndex), 'jump_up_right');
-            break;
-          case (2 * column) - 2:
-            // Jump move down left
-            $animate.removeClass(('#' + jumpedUiIndex), 'jumped');
-            $animate.removeClass(('#' + fromUiIndex), 'jump_down_left');
-            break;
-          case (2 * column) + 2:
-            // Jump move down right
-            $animate.removeClass(('#' + jumpedUiIndex), 'jumped');
-            $animate.removeClass(('#' + fromUiIndex), 'jump_down_right');
-            break;
           }
         }
 
@@ -572,14 +589,6 @@
               // Jump move
               jumpAudio = new Audio('audio/jump.mp3');
               jumpAudio.play();
-            }
-
-            // If the move is not made by drag and drop, then we need to remove
-            // the animation class, otherwise the square image will stayed at
-            // the same position after the animation.
-            if (!isDnD) {
-              // Remove the animation class first,
-              removeAnimationClass();
             }
 
             makeMoveCallback(operations);

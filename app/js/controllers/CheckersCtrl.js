@@ -227,6 +227,9 @@
             $animate.removeClass(('#' + fromUiIndex), 'jump_down_right');
             break;
           }
+
+          // Initialize the selectedSquares after the animation class is removed
+          selectedSquares = [];
         }
 
         /**
@@ -499,7 +502,6 @@
          * @param isAiMode true if it's in ai mode
          */
         function updateCheckersGraphics(isAiMode) {
-
           // Update the board
           updateUiState();
 
@@ -512,11 +514,7 @@
           // or not (is Dnd or not) before is not important. Otherwise the
           // square image with the unmoved animation class will not be placed
           // in the right position even if the image is correct.
-
-          removeAnimationClass();
-
-          // Initialize the selectedSquares after the animation class is removed
-          selectedSquares = [];
+          $timeout(removeAnimationClass, 20);
 
           // If the state is not empty, then set the the selectablility for each
           // square.

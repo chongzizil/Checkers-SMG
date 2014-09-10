@@ -35,10 +35,10 @@
    *    e.g. {0: "BMAN, ..., 12: "EMPTY", 20: "WMAN", ...}
    */
   angular.module('checkers').controller('CheckersCtrl',
-      ['$scope', '$animate', '$timeout', '$location', 'checkersLogicService',
-        'checkersAiService', 'constantService',
-        function ($scope, $animate, $timeout, $location, checkersLogicService,
-                  checkersAiService, constantService) {
+      ['$scope', '$animate', '$timeout', '$location', '$q',
+        'checkersLogicService', 'checkersAiService', 'constantService',
+        function ($scope, $animate, $timeout, $location, $q,
+                  checkersLogicService, checkersAiService, constantService) {
         var CONSTANT = constantService,
           game,
           makeMoveCallback,
@@ -439,7 +439,8 @@
          * Update the UI state after the last move.
          */
         function updateUiState() {
-          var gameApiSquare,
+          var deferred = $q.defer(),
+            gameApiSquare,
             darkUiSquare,
             fromUiIndex,
             toUiIndex,
@@ -493,6 +494,16 @@
               updateUiSquare(state[jumpedIndex], $scope.uiState[jumpedUiIndex]);
             }
           }
+
+          // In case the board is not updated
+          if (!$scope.$$phase) {
+            $scope.$apply();
+          }
+
+          deferred.resolve('Success');
+
+          // Return the best move.
+          return deferred.promise;
         }
 
         /**
@@ -502,32 +513,27 @@
          * @param isAiMode true if it's in ai mode
          */
         function updateCheckersGraphics(isAiMode) {
-          // Update the board
-          updateUiState();
+          // Update the board first, when the graphics is updated then move on
+          updateUiState().then(function () {
+            // Remove the animation classes, whether the animation class is
+            // added or not (is Dnd or not) before is not important. Otherwise
+            // the square image with the unmoved animation class will not be
+            // placed in the right position even if the image is correct.
+            removeAnimationClass();
 
-          // In case the board is not updated
-          if (!$scope.$$phase) {
-            $scope.$apply();
-          }
-
-          // Remove the animation classes, whether the animation class is added
-          // or not (is Dnd or not) before is not important. Otherwise the
-          // square image with the unmoved animation class will not be placed
-          // in the right position even if the image is correct.
-          $timeout(removeAnimationClass, 20);
-
-          // If the state is not empty, then set the the selectablility for each
-          // square.
-          if (!checkersLogicService.isEmptyObj(state)) {
-            if (isAiMode && $scope.yourPlayerIndex === 1) {
-              // It's ai's turn, the player can not select any squares
-              setAllSquareUnselectable();
-            } else {
-              // It's not in ai's mode or ai's turn, so set selectable
-              // squares according to the player index.
-              setInitialSelectableSquares($scope.yourPlayerIndex);
+            // If the state is not empty, then set the the selectablility for
+            // each square.
+            if (!checkersLogicService.isEmptyObj(state)) {
+              if (isAiMode && $scope.yourPlayerIndex === 1) {
+                // It's ai's turn, the player can not select any squares
+                setAllSquareUnselectable();
+              } else {
+                // It's not in ai's mode or ai's turn, so set selectable
+                // squares according to the player index.
+                setInitialSelectableSquares($scope.yourPlayerIndex);
+              }
             }
-          }
+          });
         }
 
         /**
@@ -568,10 +574,8 @@
           playAnimation(isDnD, function () {
             // Callback function. It's called when the animation is completed.
 
-            var moveAudio,
-              jumpAudio,
+            var audio,
               operations,
-              column = CONSTANT.COLUMN,
               fromIndex = convertUiIndexToGameApiIndex(selectedSquares[0]),
               toIndex = convertUiIndexToGameApiIndex(selectedSquares[1]);
 
@@ -584,16 +588,8 @@
                 fromIndex, toIndex, $scope.yourPlayerIndex);
 
             // Play the sound effect
-            if ([column - 1, column, column + 1].
-                indexOf(Math.abs(toIndex - fromIndex)) !== -1) {
-              // Simple move
-              moveAudio = new Audio('audio/move.mp3');
-              moveAudio.play();
-            } else {
-              // Jump move
-              jumpAudio = new Audio('audio/jump.mp3');
-              jumpAudio.play();
-            }
+            audio = new Audio('audio/audio.mp3');
+            audio.play();
 
             makeMoveCallback(operations);
           });
@@ -696,6 +692,7 @@
           checkersAiService.
               findBestMove(state, $scope.yourPlayerIndex, depth, timer)
               .then(function (data) {
+
               bestMove = data;
               // Set the selected squares according to the best move.
               selectedSquares = [

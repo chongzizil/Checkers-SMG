@@ -512,7 +512,7 @@
          *
          * @param isAiMode true if it's in ai mode
          */
-        function updateCheckersGraphics(isAiMode) {
+        function updateCheckersGraphics(isAiMode, callback) {
           // Update the board first, when the graphics is updated then move on
           updateUiState().then(function () {
             // Remove the animation classes, whether the animation class is
@@ -533,6 +533,8 @@
                 setInitialSelectableSquares($scope.yourPlayerIndex);
               }
             }
+
+            callback();
           });
         }
 
@@ -741,15 +743,15 @@
               state = stateAfterMove;
 
               // Update the graphics
-              updateCheckersGraphics(isAiMode);
-
-              // If it's the AI mode and it's the AI turn, then let the AI makes
-              // the move.
-              if (isAiMode && $scope.yourPlayerIndex === 1) {
-                // Give it a little time for completing the sound effect of
-                // the player's move
-                $timeout(aiMakeMove, 50);
-              }
+              updateCheckersGraphics(isAiMode, function () {
+                // If it's the AI mode and it's the AI turn, then let the AI makes
+                // the move.
+                if (isAiMode && $scope.yourPlayerIndex === 1) {
+                  // Give it a little time for completing the sound effect of
+                  // the player's move
+                  $timeout(aiMakeMove, 50);
+                }
+              });
             }
           }
 

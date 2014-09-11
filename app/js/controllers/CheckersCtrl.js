@@ -40,13 +40,10 @@
         function ($scope, $animate, $timeout, $location, $q,
                   checkersLogicService, checkersAiService, constantService) {
         var CONSTANT = constantService,
+          moveAudio,
           game,
           makeMoveCallback,
-//          turnIndexAfterMove,
-//          stateBeforeMove,
-//          endMatchScores,
-//          endMatchReason,
-          state = {},
+          gameApiState = {},
           selectedSquares = [];
 
         /**
@@ -240,8 +237,8 @@
           var i,
             darkUiSquare,
             possibleMoves,
-            hasMandatoryJump = checkersLogicService.hasMandatoryJumps(state,
-                $scope.yourPlayerIndex);
+            hasMandatoryJump = checkersLogicService
+                .hasMandatoryJumps(gameApiState, $scope.yourPlayerIndex);
 
           // First reset all squares to unselectable.
           setAllSquareUnselectable();
@@ -260,15 +257,15 @@
             // current player's color, then check if it can make a move,
             // otherwise set it's 'canSelect' property to false.
             if (checkersLogicService.isOwnColor($scope.yourPlayerIndex,
-                state[i].substr(0, 1))) {
+                gameApiState[i].substr(0, 1))) {
               // If there's at least one mandatory jump, then only check the
               // possible jump moves.
               if (hasMandatoryJump) {
-                possibleMoves = checkersLogicService.getJumpMoves(state,
-                    i, $scope.yourPlayerIndex);
+                possibleMoves = checkersLogicService
+                    .getJumpMoves(gameApiState, i, $scope.yourPlayerIndex);
               } else {
-                possibleMoves = checkersLogicService.getSimpleMoves(state,
-                    i, $scope.yourPlayerIndex);
+                possibleMoves = checkersLogicService
+                    .getSimpleMoves(gameApiState, i, $scope.yourPlayerIndex);
               }
 
               // If there's at least one possible move, then the darkUiSquare
@@ -293,8 +290,8 @@
          */
         function setSelectableSquares(squareUiIndex) {
           var i,
-            logicState =
-                checkersLogicService.convertGameApiStateToLogicState(state),
+            logicState = checkersLogicService
+                .convertGameApiStateToLogicState(gameApiState),
             possibleMoves =
                 checkersLogicService.getAllPossibleMoves(logicState,
                   convertUiIndexToGameApiIndex(squareUiIndex),
@@ -457,7 +454,7 @@
 
             for (i = 0; i < CONSTANT.ROW * CONSTANT.COLUMN; i += 1) {
 
-              gameApiSquare = state[i];
+              gameApiSquare = gameApiState[i];
 
               if (Math.floor(i / CONSTANT.COLUMN) % 2 === 0) {
                 // EVEN
@@ -487,11 +484,15 @@
             jumpedIndex =
                 checkersLogicService.getJumpedIndex(fromIndex, toIndex);
 
-            updateUiSquare(state[fromIndex], $scope.uiState[fromUiIndex]);
-            updateUiSquare(state[toIndex], $scope.uiState[toUiIndex]);
+            // Update those squares
+            updateUiSquare(gameApiState[fromIndex],
+                $scope.uiState[fromUiIndex]);
+            updateUiSquare(gameApiState[toIndex],
+                $scope.uiState[toUiIndex]);
             if (jumpedIndex !== -1) {
               jumpedUiIndex = convertGameApiIndexToUiIndex(jumpedIndex);
-              updateUiSquare(state[jumpedIndex], $scope.uiState[jumpedUiIndex]);
+              updateUiSquare(gameApiState[jumpedIndex],
+                  $scope.uiState[jumpedUiIndex]);
             }
           }
 
@@ -502,7 +503,6 @@
 
           deferred.resolve('Success');
 
-          // Return the best move.
           return deferred.promise;
         }
 
@@ -511,6 +511,7 @@
          * and set initial selectable squares.
          *
          * @param isAiMode true if it's in ai mode
+         * @param callback callback function
          */
         function updateCheckersGraphics(isAiMode, callback) {
           // Update the board first, when the graphics is updated then move on
@@ -523,7 +524,7 @@
 
             // If the state is not empty, then set the the selectablility for
             // each square.
-            if (!checkersLogicService.isEmptyObj(state)) {
+            if (!checkersLogicService.isEmptyObj(gameApiState)) {
               if (isAiMode && $scope.yourPlayerIndex === 1) {
                 // It's ai's turn, the player can not select any squares
                 setAllSquareUnselectable();
@@ -533,7 +534,7 @@
                 setInitialSelectableSquares($scope.yourPlayerIndex);
               }
             }
-
+            // Call the callback function
             callback();
           });
         }
@@ -575,9 +576,7 @@
           // Play the animation first!!!
           playAnimation(isDnD, function () {
             // Callback function. It's called when the animation is completed.
-
-            var audio,
-              operations,
+            var operations,
               fromIndex = convertUiIndexToGameApiIndex(selectedSquares[0]),
               toIndex = convertUiIndexToGameApiIndex(selectedSquares[1]);
 
@@ -586,12 +585,12 @@
 //                + ' Move from ' + (fromIndex + 1) + ' to ' + (toIndex + 1));
 
             // Get the operations
-            operations = checkersLogicService.getExpectedOperations(state,
-                fromIndex, toIndex, $scope.yourPlayerIndex);
+            operations = checkersLogicService
+                .getExpectedOperations(gameApiState, fromIndex, toIndex,
+                $scope.yourPlayerIndex);
 
-            // Play the sound effect
-            audio = new Audio('audio/audio.mp3');
-            audio.play();
+            // Now play the audio.
+            moveAudio.play();
 
             makeMoveCallback(operations);
           });
@@ -617,8 +616,13 @@
               setSelectableSquares(index);
             } else if (selectedSquares.length === 1) {
               // One square is already selected
-              if (state[Math.floor(index / 2)].substr(0, 1) ===
-                  state[Math.floor(selectedSquares[0] / 2)].substr(0, 1)) {
+              if (checkersLogicService
+                  .getColor(gameApiState[convertUiIndexToGameApiIndex(index)])
+                  === checkersLogicService.getColor(
+                    gameApiState[convertUiIndexToGameApiIndex(
+                      selectedSquares[0]
+                    )]
+                  )) {
                 // It the second selected piece is still the player's, no matter
                 // it's the same one or a different one, just change the first
                 // selected square to the new one.
@@ -692,9 +696,8 @@
 
           // Move on only after the best move is calculated.
           checkersAiService.
-              findBestMove(state, $scope.yourPlayerIndex, depth, timer)
+              findBestMove(gameApiState, $scope.yourPlayerIndex, depth, timer)
               .then(function (data) {
-
               bestMove = data;
               // Set the selected squares according to the best move.
               selectedSquares = [
@@ -717,19 +720,16 @@
            */
           function updateUI(match) {
             var isAiMode = $location.url() === '/PlayAgainstTheComputer',
-              turnIndexBeforeMove = match.turnIndexBeforeMove,
-              stateAfterMove = match.stateAfterMove;
+              turnIndexBeforeMove = match.turnIndexBeforeMove;
 
+            // Get the new state
+            gameApiState = match.stateAfterMove;
+
+            makeMoveCallback = match.makeMoveCallback;
             $scope.yourPlayerIndex = match.yourPlayerIndex;
             $scope.playersInfo = match.playersInfo;
-            makeMoveCallback = match.makeMoveCallback;
 
-//            turnIndexAfterMove = match.turnIndexAfterMove;
-//            stateBeforeMove = match.stateBeforeMove;
-//            endMatchScores = match.endMatchScores;
-//            endMatchReason = match.endMatchReason;
-
-            if (checkersLogicService.isEmptyObj(stateAfterMove)
+            if (checkersLogicService.isEmptyObj(gameApiState)
                 && turnIndexBeforeMove === 0) {
               // If the state is empty and the player is black, the first player
               // with turn index 0 will make the first move to initialize the
@@ -738,18 +738,16 @@
               makeMoveCallback(checkersLogicService.getFirstMove());
             } else {
               // The game is properly initialized, let's make a move :)
-
-              // Get the new state
-              state = stateAfterMove;
-
-              // Update the graphics
+              // But first update the graphics
               updateCheckersGraphics(isAiMode, function () {
-                // If it's the AI mode and it's the AI turn, then let the AI makes
-                // the move.
+                // If it's the AI mode and it's the AI turn, then let the AI
+                // makes the move.
                 if (isAiMode && $scope.yourPlayerIndex === 1) {
-                  // Give it a little time for completing the sound effect of
-                  // the player's move
-                  $timeout(aiMakeMove, 50);
+                  // Since the events of the Audio API are not well supported,
+                  // for ai, there'll be a delay for the audio to end. Otherwise
+                  // once the ai starts to compute the best move, things weird
+                  // may happen...
+                  $timeout(aiMakeMove, 250);
                 }
               });
             }
@@ -766,8 +764,13 @@
          * A function to start a new game.
          */
         $scope.newGame = function () {
+          // Load the necessary audio.
+          moveAudio = new Audio('audio/move.wav');
+          moveAudio.load();
+
           // Initialize the empty game board first
           initializeUiState();
+
           // Set the game
           platform.setGame(game);
           platform.showUI({minNumberOfPlayers: 2, maxNumberOfPlayers: 2});

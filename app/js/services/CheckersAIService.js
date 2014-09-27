@@ -138,7 +138,7 @@
           var allPossibleMoves = [],
             hasMandatoryJump,
             possibleMoves,
-            coord,
+            delta,
             row,
             col,
             i;
@@ -151,22 +151,22 @@
             for (col = 0; col < CONSTANT.COLUMN; col += 1) {
               if (checkersLogicService.isOwnColor(turnIndex,
                   board[row][col].substr(0, 1))) {
-                coord = {row: row, col: col};
+                delta = {row: row, col: col};
 //                squareIndex = parseInt(squareIndex, 10);
 
                 if (hasMandatoryJump) {
                   // If there's any mandatory jumps
                   possibleMoves = checkersLogicService
-                      .getJumpMoves(board, coord, turnIndex);
+                      .getJumpMoves(board, delta, turnIndex);
                 } else {
                   // If there's no mandatory jump,
                   // then check the possible simple move
                   possibleMoves = checkersLogicService
-                      .getSimpleMoves(board, coord, turnIndex);
+                      .getSimpleMoves(board, delta, turnIndex);
                 }
 
                 for (i = 0; i < possibleMoves.length; i += 1) {
-                  allPossibleMoves.push([coord, possibleMoves[i]]);
+                  allPossibleMoves.push([delta, possibleMoves[i]]);
                 }
               }
             }
@@ -220,15 +220,10 @@
           }
 
           possibleMoves = getAllMoves(board, turnIndex);
-//          console.log(board);
-//          console.log(possibleMoves);
           for (index = 0; index < possibleMoves.length; index += 1) {
             move = checkersLogicService.createMove(angular.copy(board),
                 possibleMoves[index][0], possibleMoves[index][1],
                 turnIndex);
-//            console.log(move);
-//            console.log(move[1].set.value);
-//            console.log("++++++++");
             childScore = findMoveScore(angular.copy(move[1].set.value),
                     1 - turnIndex, depth - 1, alpha, beta, timer);
 
@@ -279,10 +274,9 @@
 
           try {
             for (i = 0; i < depth; i += 1) {
-        console.log(Date.now());
-        console.log('Total depth: ' + depth + ' depth start: ' + i);
+//        console.log(Date.now());
+//        console.log('Total depth: ' + depth + ' depth start: ' + i);
               for (j = 0; j < scores.length; j += 1) {
-//                console.log('depth: ' + i + ' j start: ' + j);
                 moveScore = scores[j];
                 move = checkersLogicService.createMove(angular.copy(board),
                     moveScore.move[0], moveScore.move[1], turnIndex);
@@ -295,7 +289,6 @@
                 }
                 moveScore.score = score;
               }
-//              console.log('Total depth: ' + depth + ' depth finish: ' + i);
               // Sort the scores decreasingly.
               scores.sort(sortScore);
             }

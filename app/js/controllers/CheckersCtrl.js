@@ -13,26 +13,34 @@
    *             element is a square which contains all its information such as
    *             is it a white crown (king) or black crown (king).
    *             Unlike the game API state, All light squares are also stored.
-   *    e.g. [{
-   *            isBlackMan: boolean,
-   *            isBlackCro: boolean,
-   *            isWhiteMan: boolean,
-   *            isWhiteCro: boolean,
-   *            isEmpty: boolean,
-   *            isDark: boolean,
-   *            isLight: boolean,
-   *            canSelect: boolean,
-   *            isSelected: boolean,
-   *            // Background image path
-   *            bgSrc: string,
-   *            // Piece image path
-   *            pieceSrc: string
-   *         }...]
+   * e.g. [{
+   *         isBlackMan: boolean,
+   *         isBlackCro: boolean,
+   *         isWhiteMan: boolean,
+   *         isWhiteCro: boolean,
+   *         isEmpty: boolean,
+   *         isDark: boolean,
+   *         isLight: boolean,
+   *         canSelect: boolean,
+   *         isSelected: boolean,
+   *         // Background image path
+   *         bgSrc: string,
+   *         // Piece image path
+   *         pieceSrc: string
+   *      }...]
    *
-   * 2. GameApiState: It's represented as an object with size equals to 32. Each
-   *                  key and value pair represents a dark square index (0 - 31)
-   *                  and the content within it.
-   *    e.g. {0: "BMAN, ..., 12: "EMPTY", 20: "WMAN", ...}
+   * 2. GameApiState: It's represented as an object. The game board within is a
+   *                  two dimensional array (8*8).
+   *
+   *             0     1     2     3     4     5     6     7
+   * 0:even  [['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+   * 1:odd    ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+   * 2:even   ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+   * 3:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+   * 4:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+   * 5:odd    ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+   * 6:even   ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+   * 7:odd    ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']]
    */
   angular.module('checkers').controller('CheckersCtrl',
       ['$scope', '$animate', '$timeout', '$location', '$q',
@@ -47,6 +55,12 @@
           selectedSquares = [];
 
 
+        /**
+         * Check if the square of the delta is dark square
+         * @param row
+         * @param col
+         * @returns {boolean}
+         */
         function isDarkSquare(row, col) {
           var isEvenRow = false,
             isEvenCol = false;
@@ -57,17 +71,28 @@
           return ((!isEvenRow && isEvenCol) || (isEvenRow && !isEvenCol));
         }
 
-        function convertCoordinateToUiIndex(row, col) {
+        /**
+         * Convert the delta to UI state index
+         * @param row
+         * @param col
+         * @returns {*}
+         */
+        function convertDeltaToUiIndex(row, col) {
           return row * CONSTANT.COLUMN + col;
         }
 
-        function converUiIndexToCoordinate(uiIndex) {
-          var coord = {row: -1, col: -1};
+        /**
+         * Convert the UI state index to delta object
+         * @param uiIndex
+         * @returns {{row: number, col: number}}
+         */
+        function converUiIndexToDelta(uiIndex) {
+          var delta = {row: -1, col: -1};
 
-          coord.row = Math.floor(uiIndex / CONSTANT.ROW);
-          coord.col = uiIndex % CONSTANT.COLUMN;
+          delta.row = Math.floor(uiIndex / CONSTANT.ROW);
+          delta.col = uiIndex % CONSTANT.COLUMN;
 
-          return coord;
+          return delta;
         }
 
         /**
@@ -96,15 +121,15 @@
           var fromUiIndex = selectedSquares[0],
             toUiIndex = selectedSquares[1],
             jumpedUiIndex = -1,
-            fromCoord = converUiIndexToCoordinate(fromUiIndex),
-            toCoord = converUiIndexToCoordinate(toUiIndex),
-            jumpCoord = checkersLogicService.getJumpedCoordinate(
-              fromCoord,
-              toCoord
+            fromDelta = converUiIndexToDelta(fromUiIndex),
+            toDelta = converUiIndexToDelta(toUiIndex),
+            jumpDelta = checkersLogicService.getJumpedDelta(
+              fromDelta,
+              toDelta
             );
 
           jumpedUiIndex =
-              convertCoordinateToUiIndex(jumpCoord.row, jumpCoord.col);
+              convertDeltaToUiIndex(jumpDelta.row, jumpDelta.col);
 
           return {
             fromUiIndex: fromUiIndex,
@@ -231,7 +256,7 @@
             col,
             darkUiSquare,
             possibleMoves,
-            coord,
+            delta,
             hasMandatoryJump = checkersLogicService
                 .hasMandatoryJumps(board, $scope.yourPlayerIndex);
 
@@ -242,9 +267,9 @@
             for (col = 0; col < CONSTANT.COLUMN; col += 1) {
               // Check all dark squares
               if (isDarkSquare(row, col)) {
-                uiIndex = convertCoordinateToUiIndex(row, col);
+                uiIndex = convertDeltaToUiIndex(row, col);
                 darkUiSquare = $scope.uiState[uiIndex];
-                coord = {row: row, col: col};
+                delta = {row: row, col: col};
                 // If there exists a piece within the darkUiSquare and is the
                 // current player's color, then check if it can make a move,
                 // otherwise set it's 'canSelect' property to false.
@@ -255,10 +280,10 @@
                   // possible jump moves.
                   if (hasMandatoryJump) {
                     possibleMoves = checkersLogicService
-                        .getJumpMoves(board, coord, $scope.yourPlayerIndex);
+                        .getJumpMoves(board, delta, $scope.yourPlayerIndex);
                   } else {
                     possibleMoves = checkersLogicService
-                        .getSimpleMoves(board, coord, $scope.yourPlayerIndex);
+                        .getSimpleMoves(board, delta, $scope.yourPlayerIndex);
                   }
 
                   // If there's at least one possible move, then the
@@ -285,15 +310,15 @@
          */
         function setSelectableSquares(squareUiIndex) {
           var i,
-            fromCoord,
+            fromDelta,
             row,
             col,
             uiIndex,
             possibleMoves;
 
-          fromCoord = converUiIndexToCoordinate(squareUiIndex);
+          fromDelta = converUiIndexToDelta(squareUiIndex);
           possibleMoves =
-              checkersLogicService.getAllPossibleMoves(board, fromCoord,
+              checkersLogicService.getAllPossibleMoves(board, fromDelta,
                     $scope.yourPlayerIndex);
 
           if (possibleMoves.length > 0) {
@@ -302,7 +327,7 @@
             for (i = 0; i < possibleMoves.length; i += 1) {
               row = possibleMoves[i].row;
               col = possibleMoves[i].col;
-              uiIndex = convertCoordinateToUiIndex(row, col);
+              uiIndex = convertDeltaToUiIndex(row, col);
               $scope.uiState[uiIndex].canSelect = true;
             }
           }
@@ -401,7 +426,7 @@
                 darkUiSquare.isDark = true;
                 darkUiSquare.bgSrc = 'img/dark_square.png';
 
-                uiSquareIndex = convertCoordinateToUiIndex(row, col);
+                uiSquareIndex = convertDeltaToUiIndex(row, col);
                 $scope.uiState[uiSquareIndex] = darkUiSquare;
               } else {
                 // Light square
@@ -414,7 +439,7 @@
                 lightUiSquare.isEmpty = false;
                 lightUiSquare.pieceSrc = '';
 
-                uiSquareIndex = convertCoordinateToUiIndex(row, col);
+                uiSquareIndex = convertDeltaToUiIndex(row, col);
                 $scope.uiState[uiSquareIndex] = lightUiSquare;
               }
             }
@@ -432,9 +457,9 @@
             fromUiIndex,
             toUiIndex,
             jumpedUiIndex,
-            fromCoord,
-            toCoord,
-            jumpedCoord,
+            fromDelta,
+            toDelta,
+            jumpedDelta,
             row,
             col;
 
@@ -447,7 +472,7 @@
               for (col = 0; col < CONSTANT.COLUMN; col += 1) {
                 gameApiSquare = board[row][col];
                 if (isDarkSquare(row, col)) {
-                  darkUiSquareIndex = convertCoordinateToUiIndex(row, col);
+                  darkUiSquareIndex = convertDeltaToUiIndex(row, col);
                   darkUiSquare = $scope.uiState[darkUiSquareIndex];
                   updateUiSquare(gameApiSquare, darkUiSquare);
                 }
@@ -463,24 +488,24 @@
             jumpedUiIndex = -1;
 
             // Game API state index
-            fromCoord = converUiIndexToCoordinate(fromUiIndex);
-            toCoord = converUiIndexToCoordinate(toUiIndex);
+            fromDelta = converUiIndexToDelta(fromUiIndex);
+            toDelta = converUiIndexToDelta(toUiIndex);
 
             // Get the jumped square's index. If it's a simple move, then this
             // index is illegal, yet will not be used.
-            jumpedCoord =
-                checkersLogicService.getJumpedCoordinate(fromCoord, toCoord);
+            jumpedDelta =
+                checkersLogicService.getJumpedDelta(fromDelta, toDelta);
 
             // Update those squares
-            updateUiSquare(board[fromCoord.row][fromCoord.col],
+            updateUiSquare(board[fromDelta.row][fromDelta.col],
                 $scope.uiState[fromUiIndex]);
-            updateUiSquare(board[toCoord.row][toCoord.col],
+            updateUiSquare(board[toDelta.row][toDelta.col],
                 $scope.uiState[toUiIndex]);
-            if (jumpedCoord.row !== -1) {
-              jumpedUiIndex = convertCoordinateToUiIndex(jumpedCoord.row,
-                  jumpedCoord.col);
+            if (jumpedDelta.row !== -1) {
+              jumpedUiIndex = convertDeltaToUiIndex(jumpedDelta.row,
+                  jumpedDelta.col);
 
-              updateUiSquare(board[jumpedCoord.row][jumpedCoord.col],
+              updateUiSquare(board[jumpedDelta.row][jumpedDelta.col],
                   $scope.uiState[jumpedUiIndex]);
             }
           }
@@ -568,18 +593,18 @@
           playAnimation(isDnD, function () {
             // Callback function. It's called when the animation is completed.
             var operations,
-              fromCoord = converUiIndexToCoordinate(selectedSquares[0]),
-              toCoord = converUiIndexToCoordinate(selectedSquares[1]);
+              fromDelta = converUiIndexToDelta(selectedSquares[0]),
+              toDelta = converUiIndexToDelta(selectedSquares[1]);
 
-//            console.log('Move coordinate: '
+//            console.log('Move delta: '
 //                + ($scope.yourPlayerIndex === 0 ? 'Black' : 'White')
-//                + ' Move from [' + fromCoord.row + ', ' + fromCoord.col
-//                + '] to [' + toCoord.row + ', ' + toCoord.col + ']');
+//                + ' Move from [' + fromDelta.row + ', ' + fromDelta.col
+//                + '] to [' + toDelta.row + ', ' + toDelta.col + ']');
 
             // Get the operations
             operations = checkersLogicService
                 .createMove(angular.copy(board),
-                fromCoord, toCoord, $scope.yourPlayerIndex);
+                fromDelta, toDelta, $scope.yourPlayerIndex);
 
             // Now play the audio.
             moveAudio.play();
@@ -595,8 +620,8 @@
          */
         $scope.pieceSelected = function (index, isDnD) {
           var square = $scope.uiState[index],
-            currSelectedCoord = converUiIndexToCoordinate(index),
-            prevSelectedCoord;
+            currSelectedDelta = converUiIndexToDelta(index),
+            prevSelectedDelta;
 
           // Proceed only if it's dark square and it's selectable.
           if (square.isDark && square.canSelect) {
@@ -608,11 +633,11 @@
               setSelectableSquares(index);
             } else if (selectedSquares.length === 1) {
               // One square is already selected
-              prevSelectedCoord = converUiIndexToCoordinate(selectedSquares[0]);
+              prevSelectedDelta = converUiIndexToDelta(selectedSquares[0]);
               if (checkersLogicService
-                  .getColor(board[currSelectedCoord.row][currSelectedCoord.col])
+                  .getColor(board[currSelectedDelta.row][currSelectedDelta.col])
                   === checkersLogicService.getColor(
-                    board[prevSelectedCoord.row][prevSelectedCoord.col]
+                    board[prevSelectedDelta.row][prevSelectedDelta.col]
                   )) {
                 // It the second selected piece is still the player's, no matter
                 // it's the same one or a different one, just change the first
@@ -693,8 +718,8 @@
               bestMove = data;
               // Set the selected squares according to the best move.
               selectedSquares = [
-                convertCoordinateToUiIndex(bestMove[0].row, bestMove[0].col),
-                convertCoordinateToUiIndex(bestMove[1].row, bestMove[1].col)
+                convertDeltaToUiIndex(bestMove[0].row, bestMove[0].col),
+                convertDeltaToUiIndex(bestMove[1].row, bestMove[1].col)
               ];
               makeMove(isDnD);
             });

@@ -3,11 +3,12 @@
   /*global angular */
 
   /**
-   * This is the logic service for Checkers.
+   * This is the logic service for Checkers. The game board is represented as a
+   * two dimensional array (8*8). All elements are listed below:
    *
-   * For squares of the board:
-   *   : Light square (Can not place piece within)
-   * DS: Dark square (Can place piece within)
+   * For empty squares of the board:
+   * --: Light square (Can not hold any piece)
+   * DS: Dark square (Can hold a piece)
    *
    * For 4 kinds of piece of the game:
    * BM: Black MAN
@@ -15,26 +16,22 @@
    * WM: White MAN
    * WK: White KING
    *
-   * //////////////////////////////////////////////////////////////////////////
+   * Example - The initial state:
    *
-   * The state is represented as a two dimensional array with length 64.
-   * Each has a corresponding index.
-   *
-   * e.g. state[0][0]'s index = 0,
-   *      state[1][2]'s index = 9
-   *
-   * State:
    *             0     1     2     3     4     5     6     7
-   * 0:even  [['  ', 'BM', '  ', 'BM', '  ', 'BM', '  ', 'BM'],
-   * 1:odd    ['BM', '  ', 'BM', '  ', 'BM', '  ', 'BM', '  '],
-   * 2:even   ['  ', 'BM', '  ', 'BM', '  ', 'BM', '  ', 'BM'],
-   * 3:odd    ['DS', '  ', 'DS', '  ', 'DS', '  ', 'DS', '  '],
-   * 4:even   ['  ', 'DS', '  ', 'DS', '  ', 'DS', '  ', 'DS'],
-   * 5:odd    ['WM', '  ', 'WM', '  ', 'WM', '  ', 'WM', '  '],
-   * 6:even   ['  ', 'WM', '  ', 'WM', '  ', 'WM', '  ', 'WM'],
-   * 7:odd    ['WM', '  ', 'WM', '  ', 'WM', '  ', 'WM', '  ']]
+   * 0:even  [['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+   * 1:odd    ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+   * 2:even   ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+   * 3:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+   * 4:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+   * 5:odd    ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+   * 6:even   ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+   * 7:odd    ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']]
    *
-   * //////////////////////////////////////////////////////////////////////////
+   * Note: The number of row and col are both zero based, so the first row
+   *       and column are both even.
+   *
+   * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
    *
    * The move operation is an array consist of several parts:
    *
@@ -44,22 +41,24 @@
    * 2 - setDeltaFrom: {set: {key: 'deltaFrom', value: {row: row, col: col}}}
    * 3 - setDeltaTo: {set: {key: 'deltaTo', value: {row: row, col: col}}}
    *
+   * Notes: move[0] can be either setTurn or endMatch
+   *
    * e.g. [
    *       {setTurn: {turnIndex: 1}},
    *       {set: {key: 'board', value:
    *         [
-   *          ['  ', 'BM', '  ', 'BM', '  ', 'BM', '  ', 'BM'],
-   *          ['BM', '  ', 'BM', '  ', 'BM', '  ', 'BM', '  '],
-   *          ['  ', 'BM', '  ', 'BM', '  ', 'BM', '  ', 'BM'],
-   *          ['DS', '  ', 'DS', '  ', 'DS', '  ', 'DS', '  '],
-   *          ['  ', 'DS', '  ', 'DS', '  ', 'DS', '  ', 'DS'],
-   *          ['WM', '  ', 'WM', '  ', 'WM', '  ', 'WM', '  '],
-   *          ['  ', 'WM', '  ', 'WM', '  ', 'WM', '  ', 'WM'],
-   *          ['WM', '  ', 'WM', '  ', 'WM', '  ', 'WM', '  ']
+   *          ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+   *          ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+   *          ['--', 'DS', '--', 'BM', '--', 'BM', '--', 'BM'],
+   *          ['BM', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+   *          ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+   *          ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+   *          ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+   *          ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']
    *         ]
    *       }}
-   *       {set: {key: 'deltaFrom', value: {row: 2, col: 0}}}
-   *       {set: {key: 'deltaTo', value: {row: 3, col: 1}}}
+   *       {set: {key: 'fromDelta', value: {row: 2, col: 1}}}
+   *       {set: {key: 'toDelta', value: {row: 3, col: 0}}}
    *      ]
    */
   angular.module('checkers').factory('checkersLogicService',
@@ -73,22 +72,6 @@
           DIRECTION = enumService.DIRECTION,
           MOVE_TYPE = enumService.MOVE_TYPE,
           CONSTANT = constantService;
-
-        /**
-         * 8x8 board for reference.
-         * The row number is zero based, so the first row is considered even
-         * row.
-         *
-         *             0     1     2     3     4     5     6     7
-         * 0:even  [['  ', 'BM', '  ', 'BM', '  ', 'BM', '  ', 'BM'],
-         * 1:odd    ['BM', '  ', 'BM', '  ', 'BM', '  ', 'BM', '  '],
-         * 2:even   ['  ', 'BM', '  ', 'BM', '  ', 'BM', '  ', 'BM'],
-         * 3:odd    ['DS', '  ', 'DS', '  ', 'DS', '  ', 'DS', '  '],
-         * 4:even   ['  ', 'DS', '  ', 'DS', '  ', 'DS', '  ', 'DS'],
-         * 5:odd    ['WM', '  ', 'WM', '  ', 'WM', '  ', 'WM', '  '],
-         * 6:even   ['  ', 'WM', '  ', 'WM', '  ', 'WM', '  ', 'WM'],
-         * 7:odd    ['WM', '  ', 'WM', '  ', 'WM', '  ', 'WM', '  ']]
-         */
 
         /**
          * Check if the object is empty
@@ -113,7 +96,7 @@
          *
          * @param square the square of the board.
          * @returns string "B" if the piece is black, "W" if the piece is white,
-         *          otherwise it's empty.
+         *          otherwise the square is empty.
          */
         function getColor(square) {
           return square.substr(0, 1);
@@ -123,7 +106,7 @@
          * Get the kind of the piece within the square.
          *
          * @param square the square of the board.
-         * @returns string "MAN" if the piece is man, "CRO" if the piece king or
+         * @returns string "M" if the piece is man, "K" if the piece is king or
          *                 crowned
          */
         function getKind(square) {
@@ -131,18 +114,18 @@
         }
 
         /**
-         * Check if the two coordinates are the same.
+         * Check if the two deltas are the same.
          *
-         * @param coordA
-         * @param coordB
+         * @param delta1
+         * @param delta2
          * @returns {boolean}
          */
-        function isCoordinateEqual(coordA, coordB) {
-          if (coordA.row !== coordB.row) {
+        function isDeltaEqual(delta1, delta2) {
+          if (delta1.row !== delta2.row) {
             return false;
           }
 
-          if (coordA.col !== coordB.col) {
+          if (delta1.col !== delta2.col) {
             return false;
           }
 
@@ -150,15 +133,16 @@
         }
 
         /**
-         * Check if the move exists in the mvoes array
-         * @param moves
-         * @param move
-         * @returns {boolean}
+         * Check if the move exists in the moves array
+         *
+         * @param moves all possible moves
+         * @param move the move need to be checked
+         * @returns {boolean} true if the move exists, otherwise false
          */
         function doesContainMove(moves, move) {
           var i;
           for (i = 0; i < moves.length; i += 1) {
-            if (isCoordinateEqual(moves[i], move)) {
+            if (isDeltaEqual(moves[i], move)) {
               return true;
             }
           }
@@ -191,13 +175,14 @@
          * @param squareIndex the squareIndex need to be check
          * @returns true if legal, otherwise false
          */
-        function isLegalCoordinate(coord) {
-          var row = coord.row,
-            col = coord.col,
+        function isDarkSquare(delta) {
+          var row = delta.row,
+            col = delta.col,
             isEvenRow,
             isEvenCol;
 
-          if (!(coord.hasOwnProperty('row') && coord.hasOwnProperty('col'))) {
+          // Make sure the delta has the row and col property
+          if (!(delta.hasOwnProperty('row') && delta.hasOwnProperty('col'))) {
             return false;
           }
 
@@ -220,31 +205,31 @@
         }
 
         /**
-         * Check if it's a simple move according to the from and to coordinate.
+         * Check if it's a simple move according to the from and to delta.
          *
-         * @param fromCoord from coordinate
-         * @param toCoord to coordinate
+         * @param fromDelta from delta
+         * @param toDelta to delta
          * @returns {boolean} true if it's simple move, otherwise false
          */
-        function isSimpleMove(board, fromCoord, toCoord) {
-          var square = board[fromCoord.row][fromCoord.col];
+        function isSimpleMove(board, fromDelta, toDelta) {
+          var square = board[fromDelta.row][fromDelta.col];
 
           if (getKind(square) === CONSTANT.KING) {
             // If it's a king, it can move both forward and backward
-            if ((Math.abs(fromCoord.row - toCoord.row) === 1)
-                && (Math.abs(fromCoord.col - toCoord.col) === 1)) {
+            if ((Math.abs(fromDelta.row - toDelta.row) === 1)
+                && (Math.abs(fromDelta.col - toDelta.col) === 1)) {
               return true;
             }
           } else if (getColor(square) === CONSTANT.BLACK) {
             // If it's not a black king, it can only move downwards.
-            if ((fromCoord.row - toCoord.row === -1)
-                && (Math.abs(fromCoord.col - toCoord.col) === 1)) {
+            if ((fromDelta.row - toDelta.row === -1)
+                && (Math.abs(fromDelta.col - toDelta.col) === 1)) {
               return true;
             }
           } else if (getColor(square) === CONSTANT.WHITE) {
             // If it's not a white king, it can only move upwards.
-            if ((fromCoord.row - toCoord.row === 1)
-                && (Math.abs(fromCoord.col - toCoord.col) === 1)) {
+            if ((fromDelta.row - toDelta.row === 1)
+                && (Math.abs(fromDelta.col - toDelta.col) === 1)) {
               return true;
             }
           }
@@ -255,28 +240,29 @@
         /**
          * Check if it's a jump move according to the from and to coordinate.
          *
-         * @param fromCoord from coordinate
-         * @param toCoord to coordinate
+         * @param fromDelta from delta
+         * @param toDelta to delta
          * @returns {boolean} true if it's jump move, otherwise false
          */
-        function isJumpMove(board, fromCoord, toCoord) {
-          var square = board[fromCoord.row][fromCoord.col];
+        function isJumpMove(board, fromDelta, toDelta) {
+          var square = board[fromDelta.row][fromDelta.col];
+
           if (getKind(square) === CONSTANT.KING) {
-            // If it's a king, it can move both forward and backward
-            if ((Math.abs(fromCoord.row - toCoord.row) === 2)
-                && (Math.abs(fromCoord.col - toCoord.col) === 2)) {
+            // If it's a king, it can jump both forward and backward
+            if ((Math.abs(fromDelta.row - toDelta.row) === 2)
+                && (Math.abs(fromDelta.col - toDelta.col) === 2)) {
               return true;
             }
           } else if (getColor(square) === CONSTANT.BLACK) {
-            // If it's not a black king, it can only move downwards.
-            if ((fromCoord.row - toCoord.row === -2)
-                && (Math.abs(fromCoord.col - toCoord.col) === 2)) {
+            // If it's not a black king, it can only jump downwards.
+            if ((fromDelta.row - toDelta.row === -2)
+                && (Math.abs(fromDelta.col - toDelta.col) === 2)) {
               return true;
             }
           } else if (getColor(square) === CONSTANT.WHITE) {
-            // If it's not a white king, it can only move upwards.
-            if ((fromCoord.row - toCoord.row === 2)
-                && (Math.abs(fromCoord.col - toCoord.col) === 2)) {
+            // If it's not a white king, it can only jump upwards.
+            if ((fromDelta.row - toDelta.row === 2)
+                && (Math.abs(fromDelta.col - toDelta.col) === 2)) {
               return true;
             }
           }
@@ -303,17 +289,17 @@
         /**
          * Check if the square is moving or jumping to the kings row
          *
-         * @param toCoord the index of the square moving to or jumping to
+         * @param toDelta the delta of the square moving to or jumping to
          * @param playerTurnIndex the player's turn index
          * @returns true if it enters the kings row, otherwise false.
          */
-        function hasMoveOrJumpToKingsRow(toCoord, playerTurnIndex) {
+        function hasMoveOrJumpToKingsRow(toDelta, playerTurnIndex) {
           // Check if the square can be crowned
           if (
             // For white square, it's moving or jumping to the first row
-            (playerTurnIndex === 1 && toCoord.row === 0)
+            (playerTurnIndex === 1 && toDelta.row === 0)
             // For black square, it's moving or jumping to the last row
-              || (playerTurnIndex === 0 && toCoord.row === CONSTANT.ROW - 1)
+              || (playerTurnIndex === 0 && toDelta.row === CONSTANT.ROW - 1)
           ) {
             return true;
           }
@@ -340,8 +326,8 @@
           case ILLEGAL_CODE.ILLEGAL_JUMP_MOVE:
             emailBody = 'ILLEGAL_JUMP_MOVE';
             break;
-          case ILLEGAL_CODE.ILLEGAL_COORDINATE:
-            emailBody = 'ILLEGAL_COORDINATE';
+          case ILLEGAL_CODE.ILLEGAL_DELTA:
+            emailBody = 'ILLEGAL_DELTA';
             break;
           case ILLEGAL_CODE.ILLEGAL_COLOR_CHANGED:
             emailBody = 'ILLEGAL_COLOR_CHANGED';
@@ -383,21 +369,21 @@
         }
 
         /**
-         * Get the to square index (the destination of the move) according to
+         * Get the to square delta (the destination of the move) according to
          * the move type and direction.
          *
-         * @param fromCoordinate the from square (the square contains the piece
-         *                        moved or jumped) coordinate.
+         * @param fromDelta the from square (the square contains the piece
+         *                        moved or jumped) delta.
          * @param moveType the move type of the move, either simple move or jump
          *                 move
          * @param direction the direction of the move, up-left, up-right,
          *                  down-left and down-right.
-         * @returns {number} the to square index.
+         * @returns {number} the to square delta.
          */
-        function getToCoordinate(fromCoordinate, moveType, direction) {
-          var toCoordinate = {row: -1, col: -1};
+        function getToDelta(fromDelta, moveType, direction) {
+          var toDelta = {row: -1, col: -1};
 
-          if (!isLegalCoordinate(fromCoordinate)) {
+          if (!isDarkSquare(fromDelta)) {
             throw new Error("Illegal from coordinate!!!");
           }
 
@@ -405,20 +391,20 @@
           case MOVE_TYPE.SIMPLE_MOVE:
             switch (direction) {
             case DIRECTION.UP_LEFT:
-              toCoordinate.row = fromCoordinate.row - 1;
-              toCoordinate.col = fromCoordinate.col - 1;
+              toDelta.row = fromDelta.row - 1;
+              toDelta.col = fromDelta.col - 1;
               break;
             case DIRECTION.UP_RIGHT:
-              toCoordinate.row = fromCoordinate.row - 1;
-              toCoordinate.col = fromCoordinate.col + 1;
+              toDelta.row = fromDelta.row - 1;
+              toDelta.col = fromDelta.col + 1;
               break;
             case DIRECTION.DOWN_LEFT:
-              toCoordinate.row = fromCoordinate.row + 1;
-              toCoordinate.col = fromCoordinate.col - 1;
+              toDelta.row = fromDelta.row + 1;
+              toDelta.col = fromDelta.col - 1;
               break;
             case DIRECTION.DOWN_RIGHT:
-              toCoordinate.row = fromCoordinate.row + 1;
-              toCoordinate.col = fromCoordinate.col + 1;
+              toDelta.row = fromDelta.row + 1;
+              toDelta.col = fromDelta.col + 1;
               break;
             default:
               throw new Error("Illegal direction!");
@@ -427,36 +413,34 @@
           case MOVE_TYPE.JUMP_MOVE:
             switch (direction) {
             case DIRECTION.UP_LEFT:
-              toCoordinate.row = fromCoordinate.row - 2;
-              toCoordinate.col = fromCoordinate.col - 2;
+              toDelta.row = fromDelta.row - 2;
+              toDelta.col = fromDelta.col - 2;
               break;
             case DIRECTION.UP_RIGHT:
-              toCoordinate.row = fromCoordinate.row - 2;
-              toCoordinate.col = fromCoordinate.col + 2;
+              toDelta.row = fromDelta.row - 2;
+              toDelta.col = fromDelta.col + 2;
               break;
             case DIRECTION.DOWN_LEFT:
-              toCoordinate.row = fromCoordinate.row + 2;
-              toCoordinate.col = fromCoordinate.col - 2;
+              toDelta.row = fromDelta.row + 2;
+              toDelta.col = fromDelta.col - 2;
               break;
             case DIRECTION.DOWN_RIGHT:
-              toCoordinate.row = fromCoordinate.row + 2;
-              toCoordinate.col = fromCoordinate.col + 2;
+              toDelta.row = fromDelta.row + 2;
+              toDelta.col = fromDelta.col + 2;
               break;
             default:
-              throw new Error("Illegal direction!");
+              throw new Error(ILLEGAL_CODE.ILLEGAL_MOVE);
             }
             break;
           default:
-            throw new Error("Illegal move type!");
+            throw new Error(ILLEGAL_CODE.ILLEGAL_MOVE);
           }
 
-          if (!isLegalCoordinate(toCoordinate)) {
-            throw new Error("Illegal to coordinate!!!");
+          if (!isDarkSquare(toDelta)) {
+            throw new Error(ILLEGAL_CODE.ILLEGAL_DELTA);
           }
 
-
-
-          return toCoordinate;
+          return toDelta;
         }
 
         /**
@@ -470,14 +454,14 @@
 
           operations.push({setTurn: {turnIndex: 0}});
 
-          board =  [['  ', 'BM', '  ', 'BM', '  ', 'BM', '  ', 'BM'],
-                    ['BM', '  ', 'BM', '  ', 'BM', '  ', 'BM', '  '],
-                    ['  ', 'BM', '  ', 'BM', '  ', 'BM', '  ', 'BM'],
-                    ['DS', '  ', 'DS', '  ', 'DS', '  ', 'DS', '  '],
-                    ['  ', 'DS', '  ', 'DS', '  ', 'DS', '  ', 'DS'],
-                    ['WM', '  ', 'WM', '  ', 'WM', '  ', 'WM', '  '],
-                    ['  ', 'WM', '  ', 'WM', '  ', 'WM', '  ', 'WM'],
-                    ['WM', '  ', 'WM', '  ', 'WM', '  ', 'WM', '  ']];
+          board =  [['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+                    ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+                    ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+                    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+                    ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+                    ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+                    ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+                    ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']];
 
           operations.push({set: {key: 'board', value: board}});
 
@@ -486,45 +470,43 @@
 
         /**
          * Get all possible upwards simple moves for a specific piece by its
-         * square index.
+         * square delta.
          *
-         * @param state the game state
-         * @param coordinate the coordinate of the square holds the piece
+         * @param board the game board
+         * @param delta the delta of the square holds the piece
          * @return an array of all possible moves
          */
-        function getSimpleUpMoves(state, coordinate) {
+        function getSimpleUpMoves(board, delta) {
           var moves = [],
-            leftUpCoordinate,
-            rightUpCoordinate;
+            leftUpDelta,
+            rightUpDelta;
 
           // If the piece is in the first row, then there's no way to move
           // upwards.
-          if (coordinate.row === 0) {
+          if (delta.row === 0) {
             return moves;
           }
 
-          // In even row, the leftmost piece can only move right up.
-          // In odd row, the rightmost piece can only move left up.
-          if (coordinate.row % 2 === 0) {
+          if (delta.row % 2 === 0) {
             // Even row
 
             // Check left up
-            leftUpCoordinate = getToCoordinate(coordinate,
+            leftUpDelta = getToDelta(delta,
                 MOVE_TYPE.SIMPLE_MOVE, DIRECTION.UP_LEFT);
 
-            if (state[leftUpCoordinate.row][leftUpCoordinate.col]
+            if (board[leftUpDelta.row][leftUpDelta.col]
                 === CONSTANT.DARK_SQUARE) {
-              moves.push(leftUpCoordinate);
+              moves.push(leftUpDelta);
             }
 
             // Check right up
             // for the rightmost one, it can only move to the left up side.
-            if (coordinate.col !== CONSTANT.COLUMN - 1) {
-              rightUpCoordinate = getToCoordinate(coordinate,
+            if (delta.col !== CONSTANT.COLUMN - 1) {
+              rightUpDelta = getToDelta(delta,
                   MOVE_TYPE.SIMPLE_MOVE, DIRECTION.UP_RIGHT);
-              if (state[rightUpCoordinate.row][rightUpCoordinate.col]
+              if (board[rightUpDelta.row][rightUpDelta.col]
                   === CONSTANT.DARK_SQUARE) {
-                moves.push(rightUpCoordinate);
+                moves.push(rightUpDelta);
               }
             }
           } else {
@@ -532,22 +514,22 @@
 
             // Check left up
             // For the leftmost one, it can only move to the right up side
-            if (coordinate.col !== 0) {
-              leftUpCoordinate = getToCoordinate(coordinate,
+            if (delta.col !== 0) {
+              leftUpDelta = getToDelta(delta,
                   MOVE_TYPE.SIMPLE_MOVE, DIRECTION.UP_LEFT);
-              if (state[leftUpCoordinate.row][leftUpCoordinate.col]
+              if (board[leftUpDelta.row][leftUpDelta.col]
                   === CONSTANT.DARK_SQUARE) {
-                moves.push(leftUpCoordinate);
+                moves.push(leftUpDelta);
               }
             }
 
             // Check right up
-            rightUpCoordinate = getToCoordinate(coordinate,
+            rightUpDelta = getToDelta(delta,
                 MOVE_TYPE.SIMPLE_MOVE, DIRECTION.UP_RIGHT);
 
-            if (state[rightUpCoordinate.row][rightUpCoordinate.col]
+            if (board[rightUpDelta.row][rightUpDelta.col]
                 === CONSTANT.DARK_SQUARE) {
-              moves.push(rightUpCoordinate);
+              moves.push(rightUpDelta);
             }
           }
 
@@ -556,45 +538,43 @@
 
         /**
          * Get all possible downwards simple moves for a specific piece by its
-         * square index.
+         * square delta.
          *
-         * @param state the game state
-         * @param coordinate the coordinate of the square holds the piece
+         * @param board the game board
+         * @param delta the delta of the square holds the piece
          * @return an array of all possible moves
          */
-        function getSimpleDownMoves(state, coordinate) {
+        function getSimpleDownMoves(board, delta) {
           var moves = [],
-            leftDownCoordinate,
-            rightDownCoordinate;
+            leftDownDelta,
+            rightDownDelta;
 
           // If the piece is in the last row, then there's no way to move
           // downwards.
-          if (coordinate.row === CONSTANT.ROW - 1) {
+          if (delta.row === CONSTANT.ROW - 1) {
             return moves;
           }
 
-          // In even row, the leftmost piece can only move right down.
-          // In odd row, the rightmost piece can only move left down.
-          if (coordinate.row % 2 === 0) {
+          if (delta.row % 2 === 0) {
             // Even row
 
-            // Check left up
-            leftDownCoordinate = getToCoordinate(coordinate,
+            // Check left down
+            leftDownDelta = getToDelta(delta,
                 MOVE_TYPE.SIMPLE_MOVE, DIRECTION.DOWN_LEFT);
 
-            if (state[leftDownCoordinate.row][leftDownCoordinate.col]
+            if (board[leftDownDelta.row][leftDownDelta.col]
                 === CONSTANT.DARK_SQUARE) {
-              moves.push(leftDownCoordinate);
+              moves.push(leftDownDelta);
             }
 
-            // Check right up
-            // for the rightmost one, it can only move to the left up side.
-            if (coordinate.col !== CONSTANT.COLUMN - 1) {
-              rightDownCoordinate = getToCoordinate(coordinate,
+            // Check right down
+            // for the rightmost one, it can only move to the left down side.
+            if (delta.col !== CONSTANT.COLUMN - 1) {
+              rightDownDelta = getToDelta(delta,
                   MOVE_TYPE.SIMPLE_MOVE, DIRECTION.DOWN_RIGHT);
-              if (state[rightDownCoordinate.row][rightDownCoordinate.col]
+              if (board[rightDownDelta.row][rightDownDelta.col]
                   === CONSTANT.DARK_SQUARE) {
-                moves.push(rightDownCoordinate);
+                moves.push(rightDownDelta);
               }
             }
           } else {
@@ -602,22 +582,22 @@
 
             // Check left down
             // For the leftmost one, it can only move to the right down side
-            if (coordinate.col !== 0) {
-              leftDownCoordinate = getToCoordinate(coordinate,
+            if (delta.col !== 0) {
+              leftDownDelta = getToDelta(delta,
                   MOVE_TYPE.SIMPLE_MOVE, DIRECTION.DOWN_LEFT);
-              if (state[leftDownCoordinate.row][leftDownCoordinate.col]
+              if (board[leftDownDelta.row][leftDownDelta.col]
                   === CONSTANT.DARK_SQUARE) {
-                moves.push(leftDownCoordinate);
+                moves.push(leftDownDelta);
               }
             }
 
-            // Check right up
-            rightDownCoordinate = getToCoordinate(coordinate,
+            // Check right down
+            rightDownDelta = getToDelta(delta,
                 MOVE_TYPE.SIMPLE_MOVE, DIRECTION.DOWN_RIGHT);
 
-            if (state[rightDownCoordinate.row][rightDownCoordinate.col]
+            if (board[rightDownDelta.row][rightDownDelta.col]
                 === CONSTANT.DARK_SQUARE) {
-              moves.push(rightDownCoordinate);
+              moves.push(rightDownDelta);
             }
           }
 
@@ -625,82 +605,78 @@
         }
 
         /**
-         * Calculate the jumped (opponent) square index
-         * @param fromCoord the first selected square coordinate.
+         * Calculate the jumped (opponent) square delta
+         * @param fromDelta the first selected square delta.
          *                      (The one moving or jumping)
-         * @param toCoord the second selected square coordinate.
+         * @param toDelta the second selected square delta.
          *                     (The destination)
-         * @returns {row: row, col: col} the jumped (opponent) square coordinate
+         * @returns {row: row, col: col} the jumped (opponent) square delta
          */
-        function getJumpedCoordinate(fromCoord, toCoord) {
-          var jumpedCoordinate = {row: -1, col: -1};
+        function getJumpedDelta(fromDelta, toDelta) {
+          var jumpedDelta = {row: -1, col: -1};
 
-          if (!isLegalCoordinate(fromCoord)
-              || !isLegalCoordinate(toCoord)) {
+          if (!isDarkSquare(fromDelta) || !isDarkSquare(toDelta)) {
             throw new Error("Illegal coordinate!!!");
           }
 
-          if ((Math.abs(fromCoord.row - toCoord.row) === 2)
-              && (Math.abs(fromCoord.col - toCoord.col) === 2)) {
-            jumpedCoordinate.row = (fromCoord.row + toCoord.row) / 2;
-            jumpedCoordinate.col = (fromCoord.col + toCoord.col) / 2;
+          if ((Math.abs(fromDelta.row - toDelta.row) === 2)
+              && (Math.abs(fromDelta.col - toDelta.col) === 2)) {
+            jumpedDelta.row = (fromDelta.row + toDelta.row) / 2;
+            jumpedDelta.col = (fromDelta.col + toDelta.col) / 2;
           }
 
-          return jumpedCoordinate;
+          return jumpedDelta;
         }
 
 
           /**
          * Get all possible upwards jump moves for a specific piece by its
-         * square index.
+         * square delta.
          *
-         * @param state the logic state
-         * @param coordinate the index of the square holds the piece
+         * @param board the game board
+         * @param delta the delta of the square holds the piece
          * @return an array of all possible moves
          */
-        function getJumpUpMoves(state, coordinate) {
-          var fromCoordinate = coordinate,
-            fromSquare = state[coordinate.row][coordinate.col],
-            jumpedCoordinate,
+        function getJumpUpMoves(board, delta) {
+          var moves = [],
+            fromDelta = delta,
+            fromSquare = board[delta.row][delta.col],
+            jumpedDelta,
             jumpedSquare,
-            toCoordinate,
-            toSquare,
-            moves = [];
+            toDelta,
+            toSquare;
 
           // If the piece is in either the first or the second row, then there's
           // no way to jump upwards.
-          if (fromCoordinate.row < 2) {
+          if (fromDelta.row < 2) {
             return moves;
           }
 
           // Check left first, for the leftmost one, it can only jump right
           // upwards.
-          if (fromCoordinate.col > 1) {
-            toCoordinate = getToCoordinate(coordinate, MOVE_TYPE.JUMP_MOVE,
-                DIRECTION.UP_LEFT);
-            jumpedCoordinate =
-                getJumpedCoordinate(fromCoordinate, toCoordinate);
+          if (fromDelta.col > 1) {
+            toDelta = getToDelta(delta, MOVE_TYPE.JUMP_MOVE, DIRECTION.UP_LEFT);
+            jumpedDelta = getJumpedDelta(fromDelta, toDelta);
 
-            toSquare = state[toCoordinate.row][toCoordinate.col];
-            jumpedSquare = state[jumpedCoordinate.row][jumpedCoordinate.col];
+            toSquare = board[toDelta.row][toDelta.col];
+            jumpedSquare = board[jumpedDelta.row][jumpedDelta.col];
 
             if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
-              moves.push(toCoordinate);
+              moves.push(toDelta);
             }
           }
 
           // Check right, for the rightmost one, it can only jump left upwards.
-          if (fromCoordinate.col < CONSTANT.COLUMN - 2) {
-            toCoordinate = getToCoordinate(coordinate, MOVE_TYPE.JUMP_MOVE,
-                DIRECTION.UP_RIGHT);
-            jumpedCoordinate =
-                getJumpedCoordinate(fromCoordinate, toCoordinate);
+          if (fromDelta.col < CONSTANT.COLUMN - 2) {
+            toDelta =
+                getToDelta(delta, MOVE_TYPE.JUMP_MOVE, DIRECTION.UP_RIGHT);
+            jumpedDelta = getJumpedDelta(fromDelta, toDelta);
 
-            toSquare = state[toCoordinate.row][toCoordinate.col];
-            jumpedSquare = state[jumpedCoordinate.row][jumpedCoordinate.col];
+            toSquare = board[toDelta.row][toDelta.col];
+            jumpedSquare = board[jumpedDelta.row][jumpedDelta.col];
 
             if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
-              moves.push(toCoordinate);
+              moves.push(toDelta);
             }
           }
 
@@ -709,15 +685,15 @@
 
         /**
          * Get all possible downwards jump moves for a specific piece by its
-         * square index.
+         * square delta.
          *
-         * @param logicState the logic state
-         * @param squareIndex the index of the square holds the piece
+         * @param board the game board
+         * @param delta the delta of the square holds the piece
          * @return an array of all possible moves
          */
-        function getJumpDownMoves(state, coordinate) {
-          var fromCoordinate = coordinate,
-            fromSquare = state[coordinate.row][coordinate.col],
+        function getJumpDownMoves(board, delta) {
+          var fromCoordinate = delta,
+            fromSquare = board[delta.row][delta.col],
             jumpedCoordinate,
             jumpedSquare,
             toCoordinate,
@@ -733,14 +709,12 @@
           // Check left first, for the leftmost one, it can only jump right
           // downwards.
           if (fromCoordinate.col > 1) {
-            toCoordinate = getToCoordinate(coordinate, MOVE_TYPE.JUMP_MOVE,
+            toCoordinate = getToDelta(delta, MOVE_TYPE.JUMP_MOVE,
                 DIRECTION.DOWN_LEFT);
+            jumpedCoordinate = getJumpedDelta(fromCoordinate, toCoordinate);
 
-            jumpedCoordinate =
-                getJumpedCoordinate(fromCoordinate, toCoordinate);
-
-            toSquare = state[toCoordinate.row][toCoordinate.col];
-            jumpedSquare = state[jumpedCoordinate.row][jumpedCoordinate.col];
+            toSquare = board[toCoordinate.row][toCoordinate.col];
+            jumpedSquare = board[jumpedCoordinate.row][jumpedCoordinate.col];
 
             if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
               moves.push(toCoordinate);
@@ -751,12 +725,12 @@
           // Check right, for the rightmost one, it can only jump left
           // downwards.
           if (fromCoordinate.col < CONSTANT.COLUMN - 2) {
-            toCoordinate = getToCoordinate(coordinate, MOVE_TYPE.JUMP_MOVE,
+            toCoordinate = getToDelta(delta, MOVE_TYPE.JUMP_MOVE,
                 DIRECTION.DOWN_RIGHT);
-            jumpedCoordinate =
-                getJumpedCoordinate(fromCoordinate, toCoordinate);
-            toSquare = state[toCoordinate.row][toCoordinate.col];
-            jumpedSquare = state[jumpedCoordinate.row][jumpedCoordinate.col];
+            jumpedCoordinate = getJumpedDelta(fromCoordinate, toCoordinate);
+
+            toSquare = board[toCoordinate.row][toCoordinate.col];
+            jumpedSquare = board[jumpedCoordinate.row][jumpedCoordinate.col];
 
             if (isValidJump(fromSquare, jumpedSquare, toSquare)) {
               moves.push(toCoordinate);
@@ -768,18 +742,18 @@
 
         /**
          * Get all possible simple moves for a specific piece by its square
-         * index. If it is crowned, also check if it can move one step backward.
+         * delta. If it is crowned, also check if it can move one step backward.
          *
-         * @param board the logic board
-         * @param coordinate the index of the square holds the piece
+         * @param board the game board
+         * @param delta the delta of the square holds the piece
          * @param turnIndex 0 represents the black player and 1
          *        represents the white player.
          * @return an array of all possible moves.
          */
-        function getSimpleMoves(board, coordinate, turnIndex) {
+        function getSimpleMoves(board, delta, turnIndex) {
           var moves = [],
             tmpMoves = [],
-            fromSquare = board[coordinate.row][coordinate.col],
+            fromSquare = board[delta.row][delta.col],
             color = fromSquare.substr(0, 1),
             kind = fromSquare.substr(1);
 
@@ -788,16 +762,15 @@
           if (isOwnColor(turnIndex, color)) {
             if (kind === CONSTANT.KING) {
               // Check both direction moves
-              tmpMoves = getSimpleUpMoves(board, coordinate);
+              tmpMoves = getSimpleUpMoves(board, delta);
               moves = moves.concat(tmpMoves);
-
-              tmpMoves = getSimpleDownMoves(board, coordinate);
+              tmpMoves = getSimpleDownMoves(board, delta);
               moves = moves.concat(tmpMoves);
             } else if (color === CONSTANT.WHITE) {
-              tmpMoves = getSimpleUpMoves(board, coordinate);
+              tmpMoves = getSimpleUpMoves(board, delta);
               moves = moves.concat(tmpMoves);
             } else if (color === CONSTANT.BLACK) {
-              tmpMoves = getSimpleDownMoves(board, coordinate);
+              tmpMoves = getSimpleDownMoves(board, delta);
               moves = moves.concat(tmpMoves);
             }
           }
@@ -806,19 +779,19 @@
         }
 
         /**
-         * Get all possible jump moves for a specific piece by its square index.
+         * Get all possible jump moves for a specific piece by its square delta.
          * If it is crowned, also check if it can jump one step backward.
          *
-         * @param board the logic board
-         * @param coordinate the index of the square holds the piece
+         * @param board the game board
+         * @param delta the delta of the square holds the piece
          * @param turnIndex 0 represents the black player and 1
          *        represents the white player.
          * @return an array of all possible moves
          */
-        function getJumpMoves(board, coordinate, turnIndex) {
+        function getJumpMoves(board, delta, turnIndex) {
           var moves = [],
             tmpMoves = [],
-            fromSquare = board[coordinate.row][coordinate.col],
+            fromSquare = board[delta.row][delta.col],
             color = fromSquare.substr(0, 1),
             kind = fromSquare.substr(1);
           // Check whether it's the current player's piece first, if not, since
@@ -826,16 +799,16 @@
           if (isOwnColor(turnIndex, color)) {
             if (kind === CONSTANT.KING) {
               // Check both direction moves
-              tmpMoves = getJumpUpMoves(board, coordinate);
+              tmpMoves = getJumpUpMoves(board, delta);
               moves = moves.concat(tmpMoves);
 
-              tmpMoves = getJumpDownMoves(board, coordinate);
+              tmpMoves = getJumpDownMoves(board, delta);
               moves = moves.concat(tmpMoves);
             } else if (color === CONSTANT.WHITE) {
-              tmpMoves = getJumpUpMoves(board, coordinate);
+              tmpMoves = getJumpUpMoves(board, delta);
               moves = moves.concat(tmpMoves);
             } else if (color === CONSTANT.BLACK) {
-              tmpMoves = getJumpDownMoves(board, coordinate);
+              tmpMoves = getJumpDownMoves(board, delta);
               moves = moves.concat(tmpMoves);
             }
           }
@@ -844,23 +817,23 @@
         }
 
         /**
-         * Get all possible moves for a specific piece by its square index.
+         * Get all possible moves for a specific piece by its square delta.
          *
-         * @param board the logic board.
-         * @param coordinate the index of the square holds the piece
+         * @param board the game board.
+         * @param delta the delta of the square holds the piece
          * @param turnIndex 0 represents the black player and 1
          *        represents the white player.
          * @return an array of all possible move.
          */
-        function getAllPossibleMoves(board, coordinate, turnIndex) {
+        function getAllPossibleMoves(board, delta, turnIndex) {
           var possibleMoves;
 
           // First get all possible jump moves.
-          possibleMoves = getJumpMoves(board, coordinate, turnIndex);
+          possibleMoves = getJumpMoves(board, delta, turnIndex);
           // If there's at least one jump move, then no need to check the simple
           // moves since jump move is mandatory.
           if (possibleMoves.length === 0) {
-            possibleMoves = getSimpleMoves(board, coordinate, turnIndex);
+            possibleMoves = getSimpleMoves(board, delta, turnIndex);
           }
 
           return possibleMoves;
@@ -869,7 +842,7 @@
         /**
          * Get the winner based on the current board.
          *
-         * @param gameApiState the current game API board
+         * @param board the game board
          * @param turnIndex 0 represents the black player and 1
          *        represents the white player.
          * @returns string "B" if the piece is black, "W" if the piece is
@@ -949,16 +922,16 @@
          */
         function hasMandatoryJumps(board, yourPlayerIndex) {
           var possibleMoves = [],
-            coordinate = {row: -1, col: -1},
+            delta = {row: -1, col: -1},
             row,
             col;
 
           for (row = 0; row < CONSTANT.ROW; row += 1) {
             for (col = 0; col < CONSTANT.COLUMN; col += 1) {
-              coordinate.row = row;
-              coordinate.col = col;
+              delta.row = row;
+              delta.col = col;
               possibleMoves = possibleMoves.concat(
-                getJumpMoves(board, coordinate, yourPlayerIndex)
+                getJumpMoves(board, delta, yourPlayerIndex)
               );
             }
           }
@@ -967,17 +940,17 @@
 
         /**
          * Get the expected operations for the selected squares (from and to
-         * square indexes).
+         * square deltas).
          *
          * @param board the game API state.
-         * @param fromCoord the first selected square index. (The one moving or
+         * @param fromDelta the first selected square delta. (The one moving or
          *                  jumping)
-         * @param toCoord the second selected square index. (The destination)
+         * @param toDelta the second selected square delta. (The destination)
          * @param turnIndexBeforeMove 0 represents the black player and 1
          *        represents the white player.
          * @returns {Array} operations
          */
-        function createMove(board, fromCoord, toCoord, turnIndexBeforeMove) {
+        function createMove(board, fromDelta, toDelta, turnIndexBeforeMove) {
           var firstOperation,
             isToKingsRow = false,
             isAJumpMove = false,
@@ -991,14 +964,14 @@
            * 1. Check the coordinates first.
            ********************************************************************/
 
-          if (!isLegalCoordinate(fromCoord)
-              || !isLegalCoordinate(toCoord)) {
-            throw new Error(ILLEGAL_CODE.ILLEGAL_COORDINATE);
+          if (!isDarkSquare(fromDelta)
+              || !isDarkSquare(toDelta)) {
+            throw new Error(ILLEGAL_CODE.ILLEGAL_DELTA);
           }
 
-          if (isSimpleMove(board, fromCoord, toCoord)) {
+          if (isSimpleMove(board, fromDelta, toDelta)) {
             isASimpleMove = true;
-          } else if (isJumpMove(board, fromCoord, toCoord)) {
+          } else if (isJumpMove(board, fromDelta, toDelta)) {
             isAJumpMove = true;
           }
 
@@ -1015,19 +988,19 @@
             }
 
             // No mandatory jumps, then get all simple moves.
-            possibleSimpleMoves = getSimpleMoves(board, fromCoord,
+            possibleSimpleMoves = getSimpleMoves(board, fromDelta,
                 turnIndexBeforeMove);
 
             // The move should exist in the possible simple moves.
-            if (!doesContainMove(possibleSimpleMoves, toCoord)) {
+            if (!doesContainMove(possibleSimpleMoves, toDelta)) {
               throw new Error(ILLEGAL_CODE.ILLEGAL_SIMPLE_MOVE);
             }
           } else if (isAJumpMove) {
             // Jump move
-            possibleJumpMoves = getJumpMoves(board, fromCoord,
+            possibleJumpMoves = getJumpMoves(board, fromDelta,
                 turnIndexBeforeMove);
             // The move should exist in the possible jump moves.
-            if (!doesContainMove(possibleJumpMoves, toCoord)) {
+            if (!doesContainMove(possibleJumpMoves, toDelta)) {
               throw new Error(ILLEGAL_CODE.ILLEGAL_JUMP_MOVE);
             }
           } else {
@@ -1040,14 +1013,14 @@
            ********************************************************************/
 
           if (isASimpleMove) {
-            board[toCoord.row][toCoord.col] =
-                board[fromCoord.row][fromCoord.col];
-            board[fromCoord.row][fromCoord.col] = CONSTANT.DARK_SQUARE;
+            board[toDelta.row][toDelta.col] =
+                board[fromDelta.row][fromDelta.col];
+            board[fromDelta.row][fromDelta.col] = CONSTANT.DARK_SQUARE;
           } else if (isAJumpMove) {
-            jumpedCoord = getJumpedCoordinate(fromCoord, toCoord);
-            board[toCoord.row][toCoord.col] =
-                board[fromCoord.row][fromCoord.col];
-            board[fromCoord.row][fromCoord.col] = CONSTANT.DARK_SQUARE;
+            jumpedCoord = getJumpedDelta(fromDelta, toDelta);
+            board[toDelta.row][toDelta.col] =
+                board[fromDelta.row][fromDelta.col];
+            board[fromDelta.row][fromDelta.col] = CONSTANT.DARK_SQUARE;
             board[jumpedCoord.row][jumpedCoord.col] = CONSTANT.DARK_SQUARE;
           }
 
@@ -1056,14 +1029,14 @@
            ********************************************************************/
 
           isToKingsRow =
-              hasMoveOrJumpToKingsRow(toCoord, turnIndexBeforeMove);
+              hasMoveOrJumpToKingsRow(toDelta, turnIndexBeforeMove);
           if (isToKingsRow) {
-            if (getColor(board[toCoord.row][toCoord.col])
+            if (getColor(board[toDelta.row][toDelta.col])
                 === CONSTANT.BLACK) {
-              board[toCoord.row][toCoord.col] = CONSTANT.BLACK_KING;
-            } else if (getColor(board[toCoord.row][toCoord.col])
+              board[toDelta.row][toDelta.col] = CONSTANT.BLACK_KING;
+            } else if (getColor(board[toDelta.row][toDelta.col])
                 === CONSTANT.WHITE) {
-              board[toCoord.row][toCoord.col] = CONSTANT.WHITE_KING;
+              board[toDelta.row][toDelta.col] = CONSTANT.WHITE_KING;
             }
           }
 
@@ -1078,7 +1051,7 @@
             firstOperation = {endMatch: {endMatchScores:
                     winner === CONSTANT.BLACK ? [1, 0] :  [0, 1]}};
           } else {
-            possibleJumpMoves = getJumpMoves(board, toCoord,
+            possibleJumpMoves = getJumpMoves(board, toDelta,
                 turnIndexBeforeMove);
             if (isAJumpMove && possibleJumpMoves.length > 0) {
               if (!isToKingsRow) {
@@ -1100,8 +1073,8 @@
 
           return [firstOperation,
             {set: {key: 'board', value: board}},
-            {set: {key: 'fromDelta', value: fromCoord}},
-            {set: {key: 'toDelta', value: toCoord}}];
+            {set: {key: 'fromDelta', value: fromDelta}},
+            {set: {key: 'toDelta', value: toDelta}}];
         }
 
         /**
@@ -1115,10 +1088,10 @@
         function isMoveOk(params) {
           var stateBeforeMove = params.stateBeforeMove,
             turnIndexBeforeMove = params.turnIndexBeforeMove,
-            board,
             move = params.move,
-            fromCoord,
-            toCoord,
+            board,
+            fromDelta,
+            toDelta,
             expectedMove;
 
           /*********************************************************************
@@ -1145,22 +1118,34 @@
           }
 
           /*********************************************************************
-           * 2. Create the move according to to move.
+           * 2. Compare the expected move and the player's move.
            ********************************************************************/
 
           try {
-            // Example move:
-            // [{setTurn: {turnIndex : 1},
-            //  {set: {key: 'board', value: [['X', '', ''],
-            // ['', '', ''], ['', '', '']]}},
-            //  {set: {key: 'delta', value: {row: 0, col: 0}}}]
-            fromCoord = move[2].set.value;
-            toCoord = move[3].set.value;
+            /*
+             * Example move:
+             * [
+             *   {setTurn: {turnIndex: 1}},
+             *   {set: {key: 'board', value: [
+             *     ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+             *     ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+             *     ['--', 'DS', '--', 'BM', '--', 'BM', '--', 'BM'],
+             *     ['BM', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+             *     ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+             *     ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+             *     ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+             *     ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']]
+             *   }}
+             *   {set: {key: 'fromDelta', value: {row: 2, col: 1}}}
+             *   {set: {key: 'toDelta', value: {row: 3, col: 0}}}
+             * ]
+             */
             board = stateBeforeMove.board;
+            fromDelta = move[2].set.value;
+            toDelta = move[3].set.value;
 
             expectedMove =
-                createMove(board, fromCoord, toCoord, turnIndexBeforeMove);
-
+                createMove(board, fromDelta, toDelta, turnIndexBeforeMove);
 //            console.log(JSON.stringify(move));
 //            console.log(JSON.stringify(expectedMove));
 //            console.log(angular.equals(move, expectedMove));
@@ -1177,8 +1162,8 @@
               return getIllegalEmailObj(ILLEGAL_CODE.ILLEGAL_SIMPLE_MOVE);
             case ILLEGAL_CODE.ILLEGAL_JUMP_MOVE:
               return getIllegalEmailObj(ILLEGAL_CODE.ILLEGAL_JUMP_MOVE);
-            case ILLEGAL_CODE.ILLEGAL_COORDINATE:
-              return getIllegalEmailObj(ILLEGAL_CODE.ILLEGAL_COORDINATE);
+            case ILLEGAL_CODE.ILLEGAL_DELTA:
+              return getIllegalEmailObj(ILLEGAL_CODE.ILLEGAL_DELTA);
             case ILLEGAL_CODE.ILLEGAL_COLOR_CHANGED:
               return getIllegalEmailObj(ILLEGAL_CODE.ILLEGAL_COLOR_CHANGED);
             case ILLEGAL_CODE.ILLEGAL_CROWNED:
@@ -1193,7 +1178,7 @@
             case ILLEGAL_CODE.ILLEGAL_END_MATCH_SCORE:
               return getIllegalEmailObj(ILLEGAL_CODE.ILLEGAL_END_MATCH_SCORE);
             default:
-              throw new Error('Illegal code!!!');
+              return getIllegalEmailObj(ILLEGAL_CODE.ILLEGAL_CODE);
             }
           }
 
@@ -1208,7 +1193,7 @@
           getSimpleMoves: getSimpleMoves,
           getAllPossibleMoves: getAllPossibleMoves,
           hasMandatoryJumps: hasMandatoryJumps,
-          getJumpedCoordinate: getJumpedCoordinate,
+          getJumpedDelta: getJumpedDelta,
           isOwnColor: isOwnColor,
           getIllegalEmailObj: getIllegalEmailObj,
           getWinner: getWinner,

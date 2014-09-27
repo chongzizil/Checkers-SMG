@@ -12,7 +12,7 @@
       // gameApiState and logicState, I only concern the dark squares.
       // Therefore the column is count to only 4.
       COLUMN: 8,
-      LIGHT_SQUARE: '  ',
+      LIGHT_SQUARE: '--',
       DARK_SQUARE: 'DS',
       BLACK_MAN: 'BM',
       BLACK_KING: 'BK',

@@ -27,15 +27,11 @@
          * @param squareIndex the square index.
          * @returns {number} the square value.
          */
-        function getSquareValue(square, squareIndex) {
-          if (checkersLogicService.getKind(square) === 'MAN') {
-            var row = CONSTANT.ROW,
-              column = CONSTANT.COLUMN;
-
-            if (checkersLogicService.getColor(square) === 'W') {
+        function getSquareValue(square, row, col) {
+          if (checkersLogicService.getKind(square) === CONSTANT.MAN) {
+            if (checkersLogicService.getColor(square) === CONSTANT.WHITE) {
               // White
-              if (Math.floor(squareIndex / column) >= 1 &&
-                  Math.floor(squareIndex / column) < 2) {
+              if (row === 1) {
                 // Closed to be crowned
                 return 7;
               }
@@ -43,15 +39,14 @@
             }
 
             // Black
-            if (Math.floor(squareIndex / column) >= row - 2 &&
-                Math.floor(squareIndex / column) < row - 1) {
+            if (col === CONSTANT.ROW - 2) {
               // Closed to be crowned
               return 7;
             }
             return 5;
           }
 
-          if (checkersLogicService.getKind(square) === 'CRO') {
+          if (checkersLogicService.getKind(square) === CONSTANT.KING) {
             // It's a crown
             return 10;
           }
@@ -60,34 +55,39 @@
           return 0;
         }
 
+//          if (square !== CONSTANT.LIGHT_SQUARE
+//              && square !== CONSTANT.DARK_SQUARE) {
+//
+//          }
+
         /**
-         * Get the state value.
+         * Get the board value.
          *
-         * @param state the game API state.
+         * @param board the game API board.
          * @param turnIndex 0 represents the black player and 1
          *        represents the white player.
-         * @returns {*} the state value.
+         * @returns {*} the board value.
          */
-        function getStateValue(state, turnIndex) {
+        function getStateValue(board, turnIndex) {
           var stateValue = 0,
             winner,
             // For different position of the board, there's a different weight.
             boardWeight = [
-              4, 4, 4, 4,
-              4, 3, 3, 3,
-              3, 2, 2, 4,
-              4, 2, 1, 3,
-              3, 1, 2, 4,
-              4, 2, 2, 3,
-              3, 3, 3, 4,
-              4, 4, 4, 4
+              [0, 4, 0, 4, 0, 4, 0, 4],
+              [4, 0, 3, 0, 3, 0, 3, 0],
+              [0, 3, 0, 2, 0, 2, 0, 4],
+              [4, 0, 2, 0, 1, 0, 3, 0],
+              [0, 3, 0, 1, 0, 2, 0, 4],
+              [4, 0, 2, 0, 2, 0, 3, 0],
+              [0, 3, 0, 3, 0, 3, 0, 4],
+              [4, 0, 4, 0, 4, 0, 4, 0]
             ],
-            squareIndex,
             square,
-            squareValue;
+            squareValue,
+            row,
+            col;
 
-          winner = checkersLogicService.getWinner(checkersLogicService.
-              convertGameApiStateToLogicState(state), turnIndex);
+          winner = checkersLogicService.getWinner(board, turnIndex);
 
           if (winner === 'B') {
             return Number.MIN_VALUE;
@@ -97,21 +97,25 @@
             return Number.MAX_VALUE;
           }
 
-          for (squareIndex in state) {
-            if (state.hasOwnProperty(squareIndex)) {
-              square = state[squareIndex];
-              // Get the square value which equals to the square value multiply
-              // the board weight.
-              squareValue = getSquareValue(square, squareIndex)
-                  * boardWeight[squareIndex];
+          for (row = 0; row < CONSTANT.ROW; row += 1) {
+            for (col = 0; col < CONSTANT.COLUMN; col += 1) {
+              square = board[row][col];
 
-              if (checkersLogicService.getColor(square)
-                  === CONSTANT.BLACK) {
-                // BLACK
-                stateValue -= squareValue;
-              } else {
-                // WHITE
-                stateValue += squareValue;
+              if (square !== CONSTANT.LIGHT_SQUARE
+                  && square !== CONSTANT.DARK_SQUARE) {
+                // Get the square value which equals to the square value
+                // multiply the board weight.
+                squareValue = getSquareValue(square, row, col)
+                    * boardWeight[row][col];
+
+                if (checkersLogicService.getColor(square)
+                    === CONSTANT.BLACK) {
+                  // BLACK
+                  stateValue -= squareValue;
+                } else {
+                  // WHITE
+                  stateValue += squareValue;
+                }
               }
             }
           }
@@ -122,7 +126,7 @@
         /**
          * Get all possible moves.
          *
-         * @param state the game API state
+         * @param board the game API board
          * @param turnIndex 0 represents the black player and 1
          *        represents the white player.
          * @returns {
@@ -130,59 +134,39 @@
          *            toIndex: number
          *          }
          */
-        function getAllMoves(state, turnIndex) {
+        function getAllMoves(board, turnIndex) {
           var allPossibleMoves = [],
             hasMandatoryJump,
             possibleMoves,
-            possibleMove,
-            logicState,
-            squareIndex,
+            delta,
+            row,
+            col,
             i;
 
-          hasMandatoryJump = checkersLogicService
-              .hasMandatoryJumps(state, turnIndex);
+          hasMandatoryJump =
+              checkersLogicService.hasMandatoryJumps(board, turnIndex);
 
-          // Check each square of the state
-          for (squareIndex in state) {
-            if (state.hasOwnProperty(squareIndex)) {
-              // Only check if the piece within the square is the current
-              // player's
+          // Check each square of the board
+          for (row = 0; row < CONSTANT.ROW; row += 1) {
+            for (col = 0; col < CONSTANT.COLUMN; col += 1) {
               if (checkersLogicService.isOwnColor(turnIndex,
-                  state[squareIndex].substr(0, 1))) {
-                squareIndex = parseInt(squareIndex, 10);
-                logicState =
-                    checkersLogicService.convertGameApiStateToLogicState(state);
+                  board[row][col].substr(0, 1))) {
+                delta = {row: row, col: col};
+//                squareIndex = parseInt(squareIndex, 10);
 
                 if (hasMandatoryJump) {
                   // If there's any mandatory jumps
                   possibleMoves = checkersLogicService
-                      .getJumpMoves(logicState, squareIndex, turnIndex);
+                      .getJumpMoves(board, delta, turnIndex);
                 } else {
                   // If there's no mandatory jump,
                   // then check the possible simple move
                   possibleMoves = checkersLogicService
-                      .getSimpleMoves(logicState, squareIndex, turnIndex);
+                      .getSimpleMoves(board, delta, turnIndex);
                 }
 
-                // Convert each possible moves to a move object, and added to
-                // the allPossibleMoves array.
                 for (i = 0; i < possibleMoves.length; i += 1) {
-                  possibleMove = {
-                    fromIndex: squareIndex,
-                    toIndex: -1
-                  };
-
-                  if (typeof possibleMoves[i] === 'number') {
-                    // Simple move
-                    // e.g. [16] or [16, 17]
-                    possibleMove.toIndex = possibleMoves[i];
-                    allPossibleMoves.push(possibleMove);
-                  } else {
-                    // Jump move
-                    // e.g. [[4, 8]] or [[4, 8], [5, 10]]
-                    possibleMove.toIndex = possibleMoves[i][1];
-                    allPossibleMoves.push(possibleMove);
-                  }
+                  allPossibleMoves.push([delta, possibleMoves[i]]);
                 }
               }
             }
@@ -206,44 +190,41 @@
         }
 
         /**
-         * Find the highest move score of a state.
+         * Find the highest move score of a board.
          *
-         * @param state the game API state
+         * @param board the game API board
          * @param turnIndex 0 represents the black player and 1
          *        represents the white player.
          * @param depth the depth for the alpha beta pruning algorithm.
          * @param alpha the found max value.
          * @param beta the found min value.
          * @param timer the timer which limit the time for the algorithm.
-         * @returns {*} the highest state value if the depth is 0, otherwise
+         * @returns {*} the highest board value if the depth is 0, otherwise
          *              return the alpha value if the current player is White,
          *              otherwise return the beta value.
          */
-        function findMoveScore(state, turnIndex, depth, alpha, beta, timer) {
+        function findMoveScore(board, turnIndex, depth, alpha, beta, timer) {
           var possibleMoves,
             move,
             childScore,
             index,
-            winner = checkersLogicService.getWinner(checkersLogicService.
-              convertGameApiStateToLogicState(state), turnIndex);
+            winner = checkersLogicService.getWinner(board, turnIndex);
 
           if (Date.now() - timer.startTime > timer.timeLimit) {
-//      console.log("Time's up");
+//            console.log("Time's up");
             throw "Time's up";
           }
 
           if (depth === 0 || winner !== '') {
-            return getStateValue(state, turnIndex);
+            return getStateValue(board, turnIndex);
           }
 
-          possibleMoves = getAllMoves(state, turnIndex);
+          possibleMoves = getAllMoves(board, turnIndex);
           for (index = 0; index < possibleMoves.length; index += 1) {
-            move = checkersLogicService.getExpectedOperations(state,
-                possibleMoves[index].fromIndex, possibleMoves[index].toIndex,
+            move = checkersLogicService.createMove(angular.copy(board),
+                possibleMoves[index][0], possibleMoves[index][1],
                 turnIndex);
-
-            childScore = findMoveScore(checkersLogicService.
-                    getNextState(state, move).nextState,
+            childScore = findMoveScore(angular.copy(move[1].set.value),
                     1 - turnIndex, depth - 1, alpha, beta, timer);
 
             if (turnIndex === 1) {
@@ -265,19 +246,21 @@
         /**
          * Find the best move.
          *
-         * @param state the game API state.
+         * @param board the game API board.
          * @param depth the depth for the alpha beta pruning algorithm.
          * @param timer the timer which limit the time for the algorithm.
          * @returns {{fromIndex: *, toIndex: *}} the best move object.
          */
-        function findBestMove(state, aiPlayerTurnIndex, depth, timer) {
+        function findBestMove(board, aiPlayerTurnIndex, depth, timer) {
+
           var deferred = $q.defer(),
             scores = [],
             score = {},
             moveScore,
             move,
             turnIndex = aiPlayerTurnIndex,
-            possibleMoves = getAllMoves(state, turnIndex),
+            possibleMoves = getAllMoves(board, turnIndex),
+            nextState,
             index,
             i,
             j;
@@ -292,17 +275,15 @@
           try {
             for (i = 0; i < depth; i += 1) {
 //        console.log(Date.now());
-//        console.log('depth: ' + i);
+//        console.log('Total depth: ' + depth + ' depth start: ' + i);
               for (j = 0; j < scores.length; j += 1) {
                 moveScore = scores[j];
-                move = checkersLogicService
-                    .getExpectedOperations(state, moveScore.move.fromIndex,
-                    moveScore.move.toIndex, turnIndex);
-                score = findMoveScore(checkersLogicService.
-                        getNextState(state, move).nextState,
-                        1 - turnIndex, i,
-                        Number.MIN_VALUE, Number.MAX_VALUE, timer);
+                move = checkersLogicService.createMove(angular.copy(board),
+                    moveScore.move[0], moveScore.move[1], turnIndex);
 
+                nextState = move[1].set.value;
+                score = findMoveScore(nextState, 1 - turnIndex, i,
+                        Number.MIN_VALUE, Number.MAX_VALUE, timer);
                 if (turnIndex !== 1) {
                   score = -score;
                 }
@@ -311,7 +292,7 @@
               // Sort the scores decreasingly.
               scores.sort(sortScore);
             }
-          } catch (ignore) {
+          } catch (e) {
             // Ok, time's up so just make a move :)
           }
 

@@ -252,6 +252,7 @@ var platform = (function () {
           }));
       throwError("You declated a hacker for a legal move! move=" + moveForIndex);
     }
+
     game.updateUI(
         {
           move : moveForIndex,

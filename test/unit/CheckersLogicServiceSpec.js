@@ -11,8 +11,8 @@
     var checkersLogicService,
       CONSTANT,
       ILLEGAL_CODE,
-      emptyState = {},
-      initialState = {},
+      emptyBoard = {},
+      initialBoard = {},
       BLACK_TURN_INDEX = 0,
       WHITE_TURN_INDEX = 1,
       i;
@@ -35,40 +35,38 @@
 
     // Set up an empty (no pieces on board) state for test random situation
     beforeEach(function setEmptyState() {
-      emptyState = {};
-
-      for (i = 0; i < CONSTANT.ROW * CONSTANT.COLUMN; i += 1) {
-        emptyState[i] = 'EMPTY';
-      }
+      emptyBoard = [
+        ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+        ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+        ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+        ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+        ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+        ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+        ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+        ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+      ];
     });
 
     // Set up an initial set up state
     beforeEach(function setInitialState() {
-      initialState = {};
-
-      for (i = 0; i < (CONSTANT.ROW - 2) / 2 * CONSTANT.COLUMN; i += 1) {
-        initialState[i] = 'BMAN';
-      }
-
-      for (i = (CONSTANT.ROW / 2 - 1) * CONSTANT.COLUMN;
-           i < (CONSTANT.ROW / 2 + 1) * CONSTANT.COLUMN; i += 1) {
-        initialState[i] = 'EMPTY';
-      }
-
-      for (i = (CONSTANT.ROW / 2 + 1) * CONSTANT.COLUMN;
-           i < CONSTANT.ROW * CONSTANT.COLUMN; i += 1) {
-        initialState[i] = 'WMAN';
-      }
+      initialBoard = [
+        ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+        ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+        ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+        ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+        ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+        ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+        ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+        ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']
+      ];
     });
 
     it('Should have those functions.', function () {
       expect(angular.isFunction(checkersLogicService.isMoveOk))
           .toBe(true);
-      expect(angular.isFunction(checkersLogicService.getNextState))
-          .toBe(true);
       expect(angular.isFunction(checkersLogicService.getFirstMove))
           .toBe(true);
-      expect(angular.isFunction(checkersLogicService.getExpectedOperations)).
+      expect(angular.isFunction(checkersLogicService.createMove)).
           toBe(true);
       expect(angular.isFunction(checkersLogicService.getJumpMoves))
           .toBe(true);
@@ -78,10 +76,7 @@
           .toBe(true);
       expect(angular.isFunction(checkersLogicService.hasMandatoryJumps))
           .toBe(true);
-      expect(angular.isFunction(checkersLogicService.getJumpedIndex))
-          .toBe(true);
-      expect(angular
-          .isFunction(checkersLogicService.convertGameApiStateToLogicState))
+      expect(angular.isFunction(checkersLogicService.getJumpedDelta))
           .toBe(true);
       expect(angular.isFunction(checkersLogicService.isOwnColor))
           .toBe(true);
@@ -93,8 +88,6 @@
           .toBe(true);
       expect(angular.isFunction(checkersLogicService.getKind))
           .toBe(true);
-      expect(angular.isFunction(checkersLogicService.cloneObj))
-          .toBe(true);
       expect(angular.isFunction(checkersLogicService.isEmptyObj))
           .toBe(true);
     });
@@ -104,9 +97,11 @@
         it("Black legally makes the initialize move", function () {
           var match = {};
           match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-          match.turnIndexAfterMove = BLACK_TURN_INDEX;
           match.stateBeforeMove = {};
-          match.move = checkersLogicService.getFirstMove();
+
+          match.move = [];
+          match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+          match.move.push({set: {key: 'board', value: initialBoard}});
 
           expect(checkersLogicService.isMoveOk(match)).toBe(true);
         });
@@ -115,9 +110,11 @@
                 "game", function () {
             var match = {};
             match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-            match.turnIndexAfterMove = BLACK_TURN_INDEX;
-            match.stateBeforeMove = initialState;
-            match.move = checkersLogicService.getFirstMove();
+            match.stateBeforeMove = initialBoard;
+
+            match.move = [];
+            match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+            match.move.push({set: {key: 'board', value: initialBoard}});
 
             expectIllegalOperation(checkersLogicService, match,
                 ILLEGAL_CODE.ILLEGAL_MOVE);
@@ -126,414 +123,589 @@
         it("White illegally makes the initialize move", function () {
           var match = {};
           match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-          match.turnIndexAfterMove = WHITE_TURN_INDEX;
           match.stateBeforeMove = {};
-          match.move = checkersLogicService.getFirstMove();
+          match.move = [];
+
+          match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
+          match.move.push({set: {key: 'board', value: initialBoard}});
 
           expectIllegalOperation(checkersLogicService, match,
               ILLEGAL_CODE.ILLEGAL_MOVE);
         });
       });
 
+
       /*
-       * FIRST STATE SCENARIO - BLACK
+       * INITIAL STATE SCENARIO - BLACK
        *
-       *      0    1    2    3    4    5    6    7
-       * 0 | ** |  0 | ** |  1 | ** |  2 | ** |  3 |
-       *   | -- | BM | -- | BM | -- | BM | -- | BM |
-       * 1 |  4 | ** |  5 | ** |  6 | ** |  7 | ** |
-       *   | BM | -- | BM | -- | BM | -- | BM | -- |
-       * 2 | ** |  8 | ** |  9 | ** | 10 | ** | 11 |
-       *   | -- | BM | -- | BM | -- | BM | -- | BM |
-       * 3 | 12 | ** | 13 | ** | 14 | ** | 15 | ** |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 4 | ** | 16 | ** | 17 | ** | 18 | ** | 19 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 5 | 20 | ** | 21 | ** | 22 | ** | 23 | ** |
-       *   | WM | -- | WM | -- | WM | -- | WM | -- |
-       * 6 | ** | 24 | ** | 25 | ** | 26 | ** | 27 |
-       *   | -- | WM | -- | WM | -- | WM | -- | WM |
-       * 7 | 28 | ** | 29 | ** | 30 | ** | 31 | ** |
-       *   | WM | -- | WM | -- | WM | -- | WM | -- |
+       *             0     1     2     3     4     5     6     7
+       * 0:even  [['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+       * 1:odd    ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+       * 2:even   ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+       * 3:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+       * 4:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+       * 5:odd    ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+       * 6:even   ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+       * 7:odd    ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']]
        */
-      describe("FIRST STATE SCENARIO - BLACK:", function () {
-        it("8 -> 12", function () {
+      describe("INITIAL STATE SCENARIO - BLACK:", function () {
+        var testState;
+
+        beforeEach(function setTestState() {
+          testState = {
+            board: initialBoard,
+            deltaFrom: {row: -1, col: -1},
+            deltaTo: {row: -1, col: -1}
+          };
+        });
+
+        it("[2, 1] -> [3, 0]", function () {
           var match = {};
           match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-          match.turnIndexAfterMove = WHITE_TURN_INDEX;
-          match.stateBeforeMove = initialState;
-          match.move = [];
+          match.stateBeforeMove = testState;
 
+          match.move = [];
           match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
-          match.move.push({set: {key: 8, value: "EMPTY"}});
-          match.move.push({set: {key: 12, value: "BMAN"}});
+          match.move.push({set: {key: 'board', value: [
+            ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+            ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+            ['--', 'DS', '--', 'BM', '--', 'BM', '--', 'BM'],
+            ['BM', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+            ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+            ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']
+          ]}});
+          match.move.push({set: {key: 'fromDelta', value: {row: 2, col: 1}}});
+          match.move.push({set: {key: 'toDelta', value: {row: 3, col: 0}}});
 
           expect(checkersLogicService.isMoveOk(match)).toBe(true);
         });
 
-        it("8 -> 14: Illegal because it can only move one square diagonally" +
-            "to an adjacent unoccupied dark square.", function () {
+        it("[2, 1] -> [3, 4]: Illegal because it can only move one square" +
+            "diagonally to an adjacent unoccupied dark square.", function () {
             var match = {};
             match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-            match.turnIndexAfterMove = WHITE_TURN_INDEX;
-            match.stateBeforeMove = initialState;
-            match.move = [];
+            match.stateBeforeMove = testState;
 
+            match.move = [];
             match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
-            match.move.push({set: {key: 8, value: "EMPTY"}});
-            match.move.push({set: {key: 14, value: "BMAN"}});
+            match.move.push({set: {key: 'board', value: [
+              ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+              ['--', 'DS', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['DS', '--', 'DS', '--', 'BM', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+              ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+              ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']
+            ]}});
+            match.move.push({set: {key: 'fromDelta', value: {row: 2, col: 1}}});
+            match.move.push({set: {key: 'toDelta', value: {row: 3, col: 4}}});
 
             expectIllegalOperation(checkersLogicService, match,
-                ILLEGAL_CODE.ILLEGAL_SIMPLE_MOVE);
+                ILLEGAL_CODE.ILLEGAL_MOVE);
           });
 
-        it("8 -> 16: Illegal because it can only move one square diagonally" +
-            "to an adjacent unoccupied dark square.", function () {
+        it("[2, 1] -> [4, 1]: Illegal because it can only move one square" +
+            "diagonally to an adjacent unoccupied dark square.", function () {
             var match = {};
             match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-            match.turnIndexAfterMove = WHITE_TURN_INDEX;
-            match.stateBeforeMove = initialState;
-            match.move = [];
+            match.stateBeforeMove = testState;
 
+            match.move = [];
             match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
-            match.move.push({set: {key: 8, value: "EMPTY"}});
-            match.move.push({set: {key: 16, value: "BMAN"}});
+            match.move.push({set: {key: 'board', value: [
+              ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+              ['--', 'DS', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'BM', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+              ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+              ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']
+            ]}});
+            match.move.push({set: {key: 'fromDelta', value: {row: 2, col: 1}}});
+            match.move.push({set: {key: 'toDelta', value: {row: 4, col: 1}}});
 
             expectIllegalOperation(checkersLogicService, match,
-                ILLEGAL_CODE.ILLEGAL_SIMPLE_MOVE);
+                ILLEGAL_CODE.ILLEGAL_MOVE);
           });
 
-        it("8 -> 4: Illegal because MAN can not move backward", function () {
+        it("[2, 1] -> [1, 0]: Illegal because MAN can not move backward",
+              function () {
+            var match = {};
+            match.turnIndexBeforeMove = BLACK_TURN_INDEX;
+            // Empty 4 first
+            initialBoard[1][0] = CONSTANT.DARK_SQUARE;
+            match.stateBeforeMove = testState;
+
+            match.move = [];
+            match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
+            match.move.push({set: {key: 'board', value: [
+              ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+              ['--', 'DS', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+              ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+              ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']
+            ]}});
+            match.move.push({set: {key: 'fromDelta', value: {row: 2, col: 1}}});
+            match.move.push({set: {key: 'toDelta', value: {row: 1, col: 0}}});
+
+            expectIllegalOperation(checkersLogicService, match,
+                ILLEGAL_CODE.ILLEGAL_MOVE);
+          });
+
+        it("[1, 0] -> [2, 1]: Illegal because 4 is occupied", function () {
           var match = {};
           match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-          match.turnIndexAfterMove = WHITE_TURN_INDEX;
-          match.stateBeforeMove = initialState;
-          // Empty 4 first
-          match.stateBeforeMove['4'] = "EMPTY";
-          match.move = [];
+          match.stateBeforeMove = testState;
 
+          match.move = [];
           match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
-          match.move.push({set: {key: 8, value: "EMPTY"}});
-          match.move.push({set: {key: 4, value: "BMAN"}});
+          match.move.push({set: {key: 'board', value: [
+            ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+            ['DS', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+            ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+            ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+            ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']
+          ]}});
+          match.move.push({set: {key: 'fromDelta', value: {row: 1, col: 0}}});
+          match.move.push({set: {key: 'toDelta', value: {row: 2, col: 1}}});
 
           expectIllegalOperation(checkersLogicService, match,
               ILLEGAL_CODE.ILLEGAL_SIMPLE_MOVE);
         });
 
-        it("8 -> 4: Illegal because 4 is occupied", function () {
-          var match = {};
-          match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-          match.turnIndexAfterMove = WHITE_TURN_INDEX;
-          match.stateBeforeMove = initialState;
-          match.move = [];
-
-          match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
-          match.move.push({set: {key: 8, value: "EMPTY"}});
-          match.move.push({set: {key: 4, value: "BMAN"}});
-
-          expectIllegalOperation(checkersLogicService, match,
-              ILLEGAL_CODE.ILLEGAL_SIMPLE_MOVE);
-        });
-
-        it("20 -> 16: Illegal because the player can only move his/her own" +
-            "pieces", function () {
+        it("[5, 0] -> [4, 1]: Illegal because the player can only move" +
+              "his/her own pieces", function () {
             var match = {};
             match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-            match.turnIndexAfterMove = BLACK_TURN_INDEX;
-            match.stateBeforeMove = initialState;
-            match.move = [];
+            match.stateBeforeMove = testState;
 
+            match.move = [];
             match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
-            match.move.push({set: {key: 20, value: "EMPTY"}});
-            match.move.push({set: {key: 16, value: "WMAN"}});
+            match.move.push({set: {key: 'board', value: [
+              ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+              ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'WM', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+              ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+              ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']
+            ]}});
+            match.move.push({set: {key: 'fromDelta', value: {row: 5, col: 0}}});
+            match.move.push({set: {key: 'toDelta', value: {row: 4, col: 1}}});
 
             expectIllegalOperation(checkersLogicService, match,
                 ILLEGAL_CODE.ILLEGAL_SIMPLE_MOVE);
           });
 
-        it("? -> 15: Illegal because the piece does not exist", function () {
-          var match = {};
-          match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-          match.turnIndexAfterMove = BLACK_TURN_INDEX;
-          match.stateBeforeMove = initialState;
-          match.move = [];
+        it("[?, ?] -> [3, 0]: Illegal because the piece does not exist",
+              function () {
+            var match = {};
+            match.turnIndexBeforeMove = BLACK_TURN_INDEX;
+            match.stateBeforeMove = testState;
 
-          match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
-          match.move.push({set: {key: 33, value: "EMPTY"}});
-          match.move.push({set: {key: 15, value: "BMAN"}});
+            match.move = [];
+            match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
+            match.move.push({set: {key: 'board', value: [
+              ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+              ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+              ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+              ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']
+            ]}});
+            match.move.push({set: {key: 'fromDelta', value: {row: 8, col: 8}}});
+            match.move.push({set: {key: 'toDelta', value: {row: 3, col: 0}}});
 
-          expectIllegalOperation(checkersLogicService, match,
-              ILLEGAL_CODE.ILLEGAL_INDEX);
-        });
+            expectIllegalOperation(checkersLogicService, match,
+                ILLEGAL_CODE.ILLEGAL_DELTA);
+          });
 
-        it("8 -> ?: Illegal because it moves to non exist square", function () {
-          var match = {};
-          match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-          match.turnIndexAfterMove = BLACK_TURN_INDEX;
-          match.stateBeforeMove = initialState;
-          match.move = [];
+        it("[2, 0] -> [?, ?]: Illegal because it moves to non exist square",
+              function () {
+            var match = {};
+            match.turnIndexBeforeMove = BLACK_TURN_INDEX;
+            match.stateBeforeMove = testState;
 
-          match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
-          match.move.push({set: {key: 8, value: "EMPTY"}});
-          match.move.push({set: {key: 33, value: "BMAN"}});
+            match.move = [];
+            match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
+            match.move.push({set: {key: 'board', value: [
+              ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+              ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+              ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+              ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']
+            ]}});
+            match.move.push({set: {key: 'fromDelta', value: {row: 2, col: 1}}});
+            match.move.push({set: {key: 'toDelta', value: {row: 8, col: 8}}});
 
-          expectIllegalOperation(checkersLogicService, match,
-              ILLEGAL_CODE.ILLEGAL_INDEX);
-        });
+            expectIllegalOperation(checkersLogicService, match,
+                ILLEGAL_CODE.ILLEGAL_DELTA);
+          });
       });
 
       /*
-       * FIRST STATE SCENARIO - WHITE (Black first move: 8 -> 12)
+       * FIRST STATE SCENARIO - WHITE (Black first move: [2, 1] -> [3, 0])
        *
-       *      0    1    2    3    4    5    6    7
-       * 0 | ** |  0 | ** |  1 | ** |  2 | ** |  3 |
-       *   | -- | BM | -- | BM | -- | BM | -- | BM |
-       * 1 |  4 | ** |  5 | ** |  6 | ** |  7 | ** |
-       *   | BM | -- | BM | -- | BM | -- | BM | -- |
-       * 2 | ** |  8 | ** |  9 | ** | 10 | ** | 11 |
-       *   | -- | -- | -- | BM | -- | BM | -- | BM |
-       * 3 | 12 | ** | 13 | ** | 14 | ** | 15 | ** |
-       *   | BM | -- | -- | -- | -- | -- | -- | -- |
-       * 4 | ** | 16 | ** | 17 | ** | 18 | ** | 19 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 5 | 20 | ** | 21 | ** | 22 | ** | 23 | ** |
-       *   | WM | -- | WM | -- | WM | -- | WM | -- |
-       * 6 | ** | 24 | ** | 25 | ** | 26 | ** | 27 |
-       *   | -- | WM | -- | WM | -- | WM | -- | WM |
-       * 7 | 28 | ** | 29 | ** | 30 | ** | 31 | ** |
-       *   | WM | -- | WM | -- | WM | -- | WM | -- |
+       *             0     1     2     3     4     5     6     7
+       * 0:even  [['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+       * 1:odd    ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+       * 2:even   ['--', 'DS', '--', 'BM', '--', 'BM', '--', 'BM'],
+       * 3:odd    ['BM', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+       * 4:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+       * 5:odd    ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+       * 6:even   ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+       * 7:odd    ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']]
        */
       describe("FIRST STATE SCENARIO - WHITE:", function () {
         var testState;
+
         beforeEach(function setTestState() {
-          testState = initialState;
-          testState['8'] = "EMPTY";
-          testState['12'] = "BMAN";
+          initialBoard[2][1] = CONSTANT.DARK_SQUARE;
+          initialBoard[3][0] = CONSTANT.BLACK_MAN;
+          testState = {
+            board: initialBoard,
+            deltaFrom: {row: 2, col: 1},
+            deltaTo: {row: 3, col: 0}
+          };
         });
 
-        it("20 -> 16", function () {
+        it("[5, 0] -> [4, 1]", function () {
           var match = {};
           match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-          match.turnIndexAfterMove = BLACK_TURN_INDEX;
           match.stateBeforeMove = testState;
 
           match.move = [];
           match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-          match.move.push({set: {key: 20, value: "EMPTY"}});
-          match.move.push({set: {key: 16, value: "WMAN"}});
+          match.move.push({set: {key: 'board', value: [
+            ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+            ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+            ['--', 'DS', '--', 'BM', '--', 'BM', '--', 'BM'],
+            ['BM', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'WM', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+            ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+            ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']
+          ]}});
+          match.move.push({set: {key: 'fromDelta', value: {row: 5, col: 0}}});
+          match.move.push({set: {key: 'toDelta', value: {row: 4, col: 1}}});
 
           expect(checkersLogicService.isMoveOk(match)).toBe(true);
         });
 
-        it("20 -> 17: Illegal because it can only move one square diagonally" +
-            "to an adjacent unoccupied dark square.", function () {
+        it("[5, 0] -> [4, 3]: Illegal because it can only move one square" +
+            "diagonally to an adjacent unoccupied dark square.", function () {
             var match = {};
             match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-            match.turnIndexAfterMove = BLACK_TURN_INDEX;
             match.stateBeforeMove = testState;
 
             match.move = [];
             match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-            match.move.push({set: {key: 20, value: "EMPTY"}});
-            match.move.push({set: {key: 17, value: "WMAN"}});
+            match.move.push({set: {key: 'board', value: [
+              ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+              ['--', 'DS', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['BM', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'WM', '--', 'DS', '--', 'DS'],
+              ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+              ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+              ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']
+            ]}});
+            match.move.push({set: {key: 'fromDelta', value: {row: 5, col: 0}}});
+            match.move.push({set: {key: 'toDelta', value: {row: 4, col: 3}}});
 
             expectIllegalOperation(checkersLogicService, match,
-                ILLEGAL_CODE.ILLEGAL_SIMPLE_MOVE);
+                ILLEGAL_CODE.ILLEGAL_MOVE);
           });
 
-        it("21 -> 13: Illegal because it can only move one square diagonally" +
-            "to an adjacent unoccupied dark square.", function () {
+        it("[5, 2] -> [3, 2]: Illegal because it can only move one square" +
+            "diagonally to an adjacent unoccupied dark square.", function () {
             var match = {};
             match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-            match.turnIndexAfterMove = BLACK_TURN_INDEX;
             match.stateBeforeMove = testState;
 
             match.move = [];
             match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-            match.move.push({set: {key: 21, value: "EMPTY"}});
-            match.move.push({set: {key: 13, value: "WMAN"}});
+            match.move.push({set: {key: 'board', value: [
+              ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+              ['--', 'DS', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['BM', '--', 'WM', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['WM', '--', 'DS', '--', 'WM', '--', 'WM', '--'],
+              ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+              ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']
+            ]}});
+            match.move.push({set: {key: 'fromDelta', value: {row: 5, col: 2}}});
+            match.move.push({set: {key: 'toDelta', value: {row: 3, col: 2}}});
 
             expectIllegalOperation(checkersLogicService, match,
-                ILLEGAL_CODE.ILLEGAL_SIMPLE_MOVE);
+                ILLEGAL_CODE.ILLEGAL_MOVE);
           });
 
-        it("20 -> 24: Illegal because MAN can not move backward", function () {
-          var match = {};
-          match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-          match.turnIndexAfterMove = BLACK_TURN_INDEX;
-          match.stateBeforeMove = initialState;
-          // Empty 4 first
-          match.stateBeforeMove['24'] = "EMPTY";
-          match.move = [];
-
-          match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-          match.move.push({set: {key: 20, value: "EMPTY"}});
-          match.move.push({set: {key: 24, value: "WMAN"}});
-
-          expectIllegalOperation(checkersLogicService, match,
-
-              ILLEGAL_CODE.ILLEGAL_SIMPLE_MOVE);
-        });
-
-        it("20 -> 24: Illegal because 4 is occupied", function () {
-          var match = {};
-          match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-          match.turnIndexAfterMove = BLACK_TURN_INDEX;
-          match.stateBeforeMove = initialState;
-          match.move = [];
-
-          match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-          match.move.push({set: {key: 20, value: "EMPTY"}});
-          match.move.push({set: {key: 24, value: "WMAN"}});
-
-          expectIllegalOperation(checkersLogicService, match,
-
-              ILLEGAL_CODE.ILLEGAL_SIMPLE_MOVE);
-        });
-
-        it("12 -> 16: Illegal because the player can only move his/her own" +
-            "pieces", function () {
-            var match = {};
-            match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-            match.turnIndexAfterMove = BLACK_TURN_INDEX;
-            match.stateBeforeMove = initialState;
-            match.move = [];
-
-            match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-            match.move.push({set: {key: 12, value: "EMPTY"}});
-            match.move.push({set: {key: 16, value: "BMAN"}});
-
-            expectIllegalOperation(checkersLogicService, match,
-
-                ILLEGAL_CODE.ILLEGAL_SIMPLE_MOVE);
-          });
-
-        it("? -> 16: Illegal because the piece does not exist", function () {
-          var match = {};
-          match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-          match.turnIndexAfterMove = BLACK_TURN_INDEX;
-          match.stateBeforeMove = initialState;
-          match.move = [];
-
-          match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-          match.move.push({set: {key: 33, value: "EMPTY"}});
-          match.move.push({set: {key: 16, value: "WMAN"}});
-
-          expectIllegalOperation(checkersLogicService, match,
-
-              ILLEGAL_CODE.ILLEGAL_INDEX);
-        });
-
-        it("20 -> ?: Illegal because it moves to non exist square",
+        it("[5, 0] -> [6, 1]: Illegal because MAN can not move backward",
             function () {
             var match = {};
             match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-            match.turnIndexAfterMove = BLACK_TURN_INDEX;
-            match.stateBeforeMove = initialState;
-            match.move = [];
+            match.stateBeforeMove = testState;
+            testState.board[6][1] = CONSTANT.DARK_SQUARE;
 
+            match.move = [];
             match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-            match.move.push({set: {key: 20, value: "EMPTY"}});
-            match.move.push({set: {key: 33, value: "WMAN"}});
+            match.move.push({set: {key: 'board', value: [
+              ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+              ['--', 'DS', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['BM', '--', 'WM', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['WM', '--', 'DS', '--', 'WM', '--', 'WM', '--'],
+              ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+              ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']
+            ]}});
+            match.move.push({set: {key: 'fromDelta', value: {row: 5, col: 0}}});
+            match.move.push({set: {key: 'toDelta', value: {row: 6, col: 1}}});
 
             expectIllegalOperation(checkersLogicService, match,
+                ILLEGAL_CODE.ILLEGAL_MOVE);
+          });
 
-                ILLEGAL_CODE.ILLEGAL_INDEX);
+        it("[6, 1] -> [5, 0]: Illegal because [6, 0] is occupied", function () {
+          var match = {};
+          match.turnIndexBeforeMove = WHITE_TURN_INDEX;
+          match.stateBeforeMove = testState;
+
+          match.move = [];
+          match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+          match.move.push({set: {key: 'board', value: [
+            ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+            ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+            ['--', 'DS', '--', 'BM', '--', 'BM', '--', 'BM'],
+            ['BM', '--', 'WM', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+            ['--', 'DS', '--', 'WM', '--', 'WM', '--', 'WM'],
+            ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']
+          ]}});
+          match.move.push({set: {key: 'fromDelta', value: {row: 6, col: 1}}});
+          match.move.push({set: {key: 'toDelta', value: {row: 5, col: 0}}});
+
+          expectIllegalOperation(checkersLogicService, match,
+              ILLEGAL_CODE.ILLEGAL_SIMPLE_MOVE);
+        });
+
+        it("[2, 7] -> [3, 6]: Illegal because the player can only move" +
+              "his/her own pieces", function () {
+            var match = {};
+            match.turnIndexBeforeMove = WHITE_TURN_INDEX;
+            match.stateBeforeMove = testState;
+
+            match.move = [];
+            match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+            match.move.push({set: {key: 'board', value: [
+              ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+              ['--', 'DS', '--', 'BM', '--', 'BM', '--', 'DS'],
+              ['BM', '--', 'WM', '--', 'DS', '--', 'BM', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'WM', '--', 'WM', '--'],
+              ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+              ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']
+            ]}});
+            match.move.push({set: {key: 'fromDelta', value: {row: 2, col: 7}}});
+            match.move.push({set: {key: 'toDelta', value: {row: 3, col: 6}}});
+
+            expectIllegalOperation(checkersLogicService, match,
+                ILLEGAL_CODE.ILLEGAL_SIMPLE_MOVE);
+          });
+
+        it("[?, ?] -> [4, 1]: Illegal because the piece does not exist",
+              function () {
+            var match = {};
+            match.turnIndexBeforeMove = WHITE_TURN_INDEX;
+            match.stateBeforeMove = testState;
+
+            match.move = [];
+            match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+            match.move.push({set: {key: 'board', value: [
+              ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+              ['--', 'DS', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['BM', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'WM', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+              ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+              ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']
+            ]}});
+            match.move.push({
+              set: {key: 'fromDelta', value: {row: -1, col: -1}}
+            });
+            match.move.push({set: {key: 'toDelta', value: {row: 4, col: 1}}});
+
+            expectIllegalOperation(checkersLogicService, match,
+                ILLEGAL_CODE.ILLEGAL_DELTA);
+          });
+
+        it("[5, 0] -> [?, ]: Illegal because it moves to non exist square",
+            function () {
+            var match = {};
+            match.turnIndexBeforeMove = WHITE_TURN_INDEX;
+            match.stateBeforeMove = testState;
+
+            match.move = [];
+            match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+            match.move.push({set: {key: 'board', value: [
+              ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+              ['--', 'DS', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['BM', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+              ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+              ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']
+            ]}});
+            match.move.push({set: {key: 'fromDelta', value: {row: 5, col: 0}}});
+            match.move.push({set: {key: 'toDelta', value: {row: -1, col: -1}}});
+
+            expectIllegalOperation(checkersLogicService, match,
+                ILLEGAL_CODE.ILLEGAL_DELTA);
           });
       });
 
       /*
        * MANDATORY JUMP SCENARIO - BLACK
        *
-       *     0    1    2    3    4    5    6    7
-       * 0 | ** |  0 | ** |  1 | ** |  2 | ** |  3 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 1 |  4 | ** |  5 | ** |  6 | ** |  7 | ** |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 2 | ** |  8 | ** |  9 | ** | 10 | ** | 11 |
-       *   | -- | -- | -- | WM | -- | -- | -- | -- |
-       * 3 | 12 | ** | 13 | ** | 14 | ** | 15 | ** |
-       *   | -- | -- | BC | -- | -- | -- | -- | -- |
-       * 4 | ** | 16 | ** | 17 | ** | 18 | ** | 19 |
-       *   | -- | -- | -- | -- | -- | WM | -- | -- |
-       * 5 | 20 | ** | 21 | ** | 22 | ** | 23 | ** |
-       *   | -- | -- | -- | -- | WC | -- | -- | -- |
-       * 6 | ** | 24 | ** | 25 | ** | 26 | ** | 27 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 7 | 28 | ** | 29 | ** | 30 | ** | 31 | ** |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
+       *             0     1     2     3     4     5     6     7
+       * 0:even  [['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+       * 1:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+       * 2:even   ['--', 'DS', '--', 'WM', '--', 'DS', '--', 'DS'],
+       * 3:odd    ['DS', '--', 'BK', '--', 'DS', '--', 'DS', '--'],
+       * 4:even   ['--', 'DS', '--', 'DS', '--', 'BM', '--', 'DS'],
+       * 5:odd    ['DS', '--', 'DS', '--', 'WK', '--', 'DS', '--'],
+       * 6:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+       * 7:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']]
        */
       describe('MANDATORY JUMP SCENARIO - BLACK:', function () {
         var testState;
         beforeEach(function setTestState() {
-          testState = emptyState;
-          testState['9'] = "WMAN";
-          testState['13'] = "BCRO";
-          testState['18'] = "BMAN";
-          testState['22'] = "WCRO";
+          testState = {
+            board: emptyBoard,
+            deltaFrom: {row: 3, col: 4},
+            deltaTo: {row: 2, col: 3}
+          };
+          testState.board[2][3] = CONSTANT.WHITE_MAN;
+          testState.board[3][2] = CONSTANT.BLACK_KING;
+          testState.board[4][5] = CONSTANT.BLACK_MAN;
+          testState.board[5][4] = CONSTANT.WHITE_KING;
         });
 
-        it("13 -> 9 -> 6", function () {
+        it("[3, 2] -> [2, 3] -> [1, 4]", function () {
           var match = {};
           match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-          match.turnIndexAfterMove = WHITE_TURN_INDEX;
           match.stateBeforeMove = testState;
-          match.move = [];
 
+          match.move = [];
           match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
-          match.move.push({set: {key: 13, value: "EMPTY"}});
-          match.move.push({set: {key: 9, value: "EMPTY"}});
-          match.move.push({set: {key: 6, value: "BCRO"}});
+          match.move.push({set: {key: 'board', value: [
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'BK', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'BM', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'WK', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+          ]}});
+          match.move.push({set: {key: 'fromDelta', value: {row: 3, col: 2}}});
+          match.move.push({set: {key: 'toDelta', value: {row: 1, col: 4}}});
 
           expect(checkersLogicService.isMoveOk(match)).toEqual(true);
         });
 
-        it("18 -> 22 -> 25", function () {
+        it("[4, 5] -> [5, 4] -> [6, 3]", function () {
           var match = {};
           match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-          match.turnIndexAfterMove = WHITE_TURN_INDEX;
           match.stateBeforeMove = testState;
-          match.move = [];
 
+          match.move = [];
           match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
-          match.move.push({set: {key: 18, value: "EMPTY"}});
-          match.move.push({set: {key: 22, value: "EMPTY"}});
-          match.move.push({set: {key: 25, value: "BMAN"}});
+          match.move.push({set: {key: 'board', value: [
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'WM', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'BK', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'BM', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+          ]}});
+          match.move.push({set: {key: 'fromDelta', value: {row: 4, col: 5}}});
+          match.move.push({set: {key: 'toDelta', value: {row: 6, col: 3}}});
 
           expect(checkersLogicService.isMoveOk(match)).toEqual(true);
         });
 
-        it("13 - 8: Illegal because 13 ignores the mandatory jump",
+        it("[3, 2] -> [2, 1]: Illegal because 13 ignores the mandatory jump",
             function () {
             var match = {};
             match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-            match.turnIndexAfterMove = WHITE_TURN_INDEX;
             match.stateBeforeMove = testState;
-            match.move = [];
 
+            match.move = [];
             match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
-            match.move.push({set: {key: 13, value: "EMPTY"}});
-            match.move.push({set: {key: 8, value: "BCRO"}});
+            match.move.push({set: {key: 'board', value: [
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'BK', '--', 'WM', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'BM', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'WK', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+            ]}});
+            match.move.push({set: {key: 'fromDelta', value: {row: 3, col: 2}}});
+            match.move.push({set: {key: 'toDelta', value: {row: 2, col: 1}}});
 
             expectIllegalOperation(checkersLogicService, match,
-
                 ILLEGAL_CODE.ILLEGAL_IGNORE_MANDATORY_JUMP);
           });
 
-        it("18 - 23: Illegal because 18 ignores the mandatory jump",
+        it("[4, 5] -> [5, 6]: Illegal because 18 ignores the mandatory jump",
             function () {
             var match = {};
             match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-            match.turnIndexAfterMove = WHITE_TURN_INDEX;
             match.stateBeforeMove = testState;
-            match.move = [];
 
+            match.move = [];
             match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
-            match.move.push({set: {key: 18, value: "EMPTY"}});
-            match.move.push({set: {key: 23, value: "BMAN"}});
+            match.move.push({set: {key: 'board', value: [
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'WM', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'BK', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'WK', '--', 'BM', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+            ]}});
+            match.move.push({set: {key: 'fromDelta', value: {row: 4, col: 5}}});
+            match.move.push({set: {key: 'toDelta', value: {row: 5, col: 6}}});
 
             expectIllegalOperation(checkersLogicService, match,
-
                 ILLEGAL_CODE.ILLEGAL_IGNORE_MANDATORY_JUMP);
           });
       });
@@ -541,91 +713,121 @@
       /*
        * MANDATORY JUMP SCENARIO - WHITE
        *
-       *     0    1    2    3    4    5    6    7
-       * 0 | ** |  0 | ** |  1 | ** |  2 | ** |  3 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 1 |  4 | ** |  5 | ** |  6 | ** |  7 | ** |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 2 | ** |  8 | ** |  9 | ** | 10 | ** | 11 |
-       *   | -- | -- | -- | BC | -- | -- | -- | -- |
-       * 3 | 12 | ** | 13 | ** | 14 | ** | 15 | ** |
-       *   | -- | -- | WM | -- | -- | -- | -- | -- |
-       * 4 | ** | 16 | ** | 17 | ** | 18 | ** | 19 |
-       *   | -- | -- | -- | -- | -- | WC | -- | -- |
-       * 5 | 20 | ** | 21 | ** | 22 | ** | 23 | ** |
-       *   | -- | -- | -- | -- | BM | -- | -- | -- |
-       * 6 | ** | 24 | ** | 25 | ** | 26 | ** | 27 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 7 | 28 | ** | 29 | ** | 30 | ** | 31 | ** |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
+       *             0     1     2     3     4     5     6     7
+       * 0:even  [['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+       * 1:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+       * 2:even   ['--', 'DS', '--', 'BK', '--', 'DS', '--', 'DS'],
+       * 3:odd    ['DS', '--', 'WM', '--', 'DS', '--', 'DS', '--'],
+       * 4:even   ['--', 'DS', '--', 'DS', '--', 'WK', '--', 'DS'],
+       * 5:odd    ['DS', '--', 'DS', '--', 'BM', '--', 'DS', '--'],
+       * 6:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+       * 7:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']]
        */
       describe('MANDATORY JUMP SCENARIO - WHITE', function () {
         var testState;
         beforeEach(function setTestState() {
-          testState = emptyState;
-          testState['9'] = "BCRO";
-          testState['13'] = "WMAN";
-          testState['18'] = "WCRO";
-          testState['22'] = "BMAN";
+          testState = {
+            board: emptyBoard,
+            deltaFrom: {row: 4, col: 1},
+            deltaTo: {row: 3, col: 2}
+          };
+          testState.board[3][2] = CONSTANT.WHITE_MAN;
+          testState.board[2][3] = CONSTANT.BLACK_KING;
+          testState.board[5][4] = CONSTANT.BLACK_MAN;
+          testState.board[4][5] = CONSTANT.WHITE_KING;
         });
 
-        it("13 -> 9 -> 6", function () {
+        it("[3, 2] -> [2, 3] -> [1, 4]", function () {
           var match = {};
           match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-          match.turnIndexAfterMove = BLACK_TURN_INDEX;
           match.stateBeforeMove = testState;
-          match.move = [];
 
+          match.move = [];
           match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-          match.move.push({set: {key: 13, value: "EMPTY"}});
-          match.move.push({set: {key: 9, value: "EMPTY"}});
-          match.move.push({set: {key: 6, value: "WMAN"}});
+          match.move.push({set: {key: 'board', value: [
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'WM', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'WK', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'BM', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+          ]}});
+          match.move.push({set: {key: 'fromDelta', value: {row: 3, col: 2}}});
+          match.move.push({set: {key: 'toDelta', value: {row: 1, col: 4}}});
 
           expect(checkersLogicService.isMoveOk(match)).toEqual(true);
         });
 
-        it("18 -> 22 -> 25", function () {
+        it("[4, 5] -> [5, 4] -> [6, 3]", function () {
           var match = {};
           match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-          match.turnIndexAfterMove = BLACK_TURN_INDEX;
           match.stateBeforeMove = testState;
-          match.move = [];
 
+          match.move = [];
           match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-          match.move.push({set: {key: 18, value: "EMPTY"}});
-          match.move.push({set: {key: 22, value: "EMPTY"}});
-          match.move.push({set: {key: 25, value: "WCRO"}});
+          match.move.push({set: {key: 'board', value: [
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'BK', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'WM', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'WK', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+          ]}});
+          match.move.push({set: {key: 'fromDelta', value: {row: 4, col: 5}}});
+          match.move.push({set: {key: 'toDelta', value: {row: 6, col: 3}}});
 
           expect(checkersLogicService.isMoveOk(match)).toEqual(true);
         });
 
-        it("13 - 8: Illegal because 13 ignores the mandatory jump",
+        it("[3, 2] -> [2, 1]: Illegal because 13 ignores the mandatory jump",
             function () {
             var match = {};
             match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-            match.turnIndexAfterMove = BLACK_TURN_INDEX;
             match.stateBeforeMove = testState;
-            match.move = [];
 
+            match.move = [];
             match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-            match.move.push({set: {key: 13, value: "EMPTY"}});
-            match.move.push({set: {key: 8, value: "WMAN"}});
+            match.move.push({set: {key: 'board', value: [
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'WM', '--', 'BK', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'WK', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'BM', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+            ]}});
+            match.move.push({set: {key: 'fromDelta', value: {row: 3, col: 2}}});
+            match.move.push({set: {key: 'toDelta', value: {row: 2, col: 1}}});
 
             expectIllegalOperation(checkersLogicService, match,
                 ILLEGAL_CODE.ILLEGAL_IGNORE_MANDATORY_JUMP);
           });
 
-        it("18 - 23: Illegal because 18 ignores the mandatory jump",
+        it("[4, 5] -> [5, 6]: Illegal because 18 ignores the mandatory jump",
             function () {
             var match = {};
             match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-            match.turnIndexAfterMove = BLACK_TURN_INDEX;
             match.stateBeforeMove = testState;
-            match.move = [];
 
+            match.move = [];
             match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-            match.move.push({set: {key: 18, value: "EMPTY"}});
-            match.move.push({set: {key: 23, value: "WCRO"}});
+            match.move.push({set: {key: 'board', value: [
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'BK', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'WM', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'BM', '--', 'WK', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+            ]}});
+            match.move.push({set: {key: 'fromDelta', value: {row: 4, col: 5}}});
+            match.move.push({set: {key: 'toDelta', value: {row: 5, col: 6}}});
 
             expectIllegalOperation(checkersLogicService, match,
                 ILLEGAL_CODE.ILLEGAL_IGNORE_MANDATORY_JUMP);
@@ -635,427 +837,645 @@
       /*
        * CROWNED SCENARIO - BLACK
        *
-       *      0    1    2    3    4    5    6    7
-       * 0 | ** |  0 | ** |  1 | ** |  2 | ** |  3 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 1 |  4 | ** |  5 | ** |  6 | ** |  7 | ** |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 2 | ** |  8 | ** |  9 | ** | 10 | ** | 11 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 3 | 12 | ** | 13 | ** | 14 | ** | 15 | ** |
-       *   | -- | -- | BM | -- | -- | -- | -- | -- |
-       * 4 | ** | 16 | ** | 17 | ** | 18 | ** | 19 |
-       *   | -- | -- | -- | WM?| -- | -- | -- | -- |
-       * 5 | 20 | ** | 21 | ** | 22 | ** | 23 | ** |
-       *   | -- | -- | BM | -- | -- | -- | -- | -- |
-       * 6 | ** | 24 | ** | 25 | ** | 26 | ** | 27 |
-       *   | -- | BM | -- | WM?| -- | -- | -- | -- |
-       * 7 | 28 | ** | 29 | ** | 30 | ** | 31 | ** |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
+       *             0     1     2     3     4     5     6     7
+       * 0:even  [['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+       * 1:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+       * 2:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+       * 3:odd    ['DS', '--', 'BM', '--', 'DS', '--', 'DS', '--'],
+       * 4:even   ['--', 'DS', '--', 'WM?','--', 'DS', '--', 'DS'],
+       * 5:odd    ['DS', '--', 'BM', '--', 'DS', '--', 'DS', '--'],
+       * 6:even   ['--', 'BM', '--', 'WM?','--', 'DS', '--', 'DS'],
+       * 7:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'WM', '--']]
        *
-       *   Note: piece with '?' mean the piece exist for certain test case in
-       *         order to prevent the influence of mandatory jump.
+       * Note: piece with '?' mean the piece exist for certain test case in
+       *       order to prevent the influence of mandatory jump.
        */
-      describe('CROWNED SCENARIO FOR WHITE', function () {
+      describe('CROWNED SCENARIO FOR BLACK', function () {
         var testState;
         beforeEach(function setTestState() {
-          testState = emptyState;
-          testState['13'] = "BMAN";
-          testState['21'] = "BMAN";
-          testState['24'] = "BMAN";
+          testState = {
+            board: emptyBoard,
+            deltaFrom: {row: 5, col: 4},
+            deltaTo: {row: 4, col: 3}
+          };
+          testState.board[3][2] = CONSTANT.BLACK_MAN;
+          testState.board[5][2] = CONSTANT.BLACK_MAN;
+          testState.board[6][1] = CONSTANT.BLACK_MAN;
+          testState.board[7][6] = CONSTANT.WHITE_MAN;
         });
 
-        it("24 -> 28*", function () {
+        it("[6, 1] -> [7, 0]*", function () {
           var match = {};
           match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-          match.turnIndexAfterMove = WHITE_TURN_INDEX;
           match.stateBeforeMove = testState;
-          match.move = [];
 
+          match.move = [];
           match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
-          match.move.push({set: {key: 24, value: "EMPTY"}});
-          match.move.push({set: {key: 28, value: "BCRO"}});
+          match.move.push({set: {key: 'board', value: [
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'BM', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'BM', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['BK', '--', 'DS', '--', 'DS', '--', 'WM', '--']
+          ]}});
+          match.move.push({set: {key: 'fromDelta', value: {row: 6, col: 1}}});
+          match.move.push({set: {key: 'toDelta', value: {row: 7, col: 0}}});
 
           expect(checkersLogicService.isMoveOk(match)).toEqual(true);
         });
 
-        it("21 -> 25 -> 30*", function () {
+        it("[5, 2] -> [6, 3] -> [7, 4]*", function () {
           var match = {};
           match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-          match.turnIndexAfterMove = WHITE_TURN_INDEX;
+          testState.board[6][3] = CONSTANT.WHITE_MAN;
           match.stateBeforeMove = testState;
-          match.stateBeforeMove['25'] = "WMAN";
-          match.move = [];
 
+          match.move = [];
           match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
-          match.move.push({set: {key: 21, value: "EMPTY"}});
-          match.move.push({set: {key: 25, value: "EMPTY"}});
-          match.move.push({set: {key: 30, value: "BCRO"}});
+          match.move.push({set: {key: 'board', value: [
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'BM', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'BM', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'BK', '--', 'WM', '--']
+          ]}});
+          match.move.push({set: {key: 'fromDelta', value: {row: 5, col: 2}}});
+          match.move.push({set: {key: 'toDelta', value: {row: 7, col: 4}}});
 
           expect(checkersLogicService.isMoveOk(match)).toEqual(true);
         });
 
-        it("13 -> 16*: Illegal because it does not move to the final row in" +
-            "order to be crowned", function () {
-            var match = {};
-            match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-            match.turnIndexAfterMove = WHITE_TURN_INDEX;
-            match.stateBeforeMove = testState;
-            match.move = [];
-
-            match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
-            match.move.push({set: {key: 13, value: "EMPTY"}});
-            match.move.push({set: {key: 16, value: "BCRO"}});
-
-            expectIllegalOperation(checkersLogicService, match,
-                ILLEGAL_CODE.ILLEGAL_CROWNED);
-          });
-
-        it("13 -> 17 -> 22*: Illegal because it does not move to the final" +
+        it("[5, 2] -> [6, 3]*: Illegal because it does not move to the final" +
             "row in order to be crowned", function () {
             var match = {};
             match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-            match.turnIndexAfterMove = WHITE_TURN_INDEX;
             match.stateBeforeMove = testState;
-            match.stateBeforeMove['17'] = "WMAN";
-            match.move = [];
 
+            match.move = [];
             match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
-            match.move.push({set: {key: 13, value: "EMPTY"}});
-            match.move.push({set: {key: 17, value: "EMPTY"}});
-            match.move.push({set: {key: 22, value: "BCRO"}});
+            match.move.push({set: {key: 'board', value: [
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'BM', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'BM', '--', 'BK', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+            ]}});
+            match.move.push({set: {key: 'fromDelta', value: {row: 5, col: 2}}});
+            match.move.push({set: {key: 'toDelta', value: {row: 6, col: 3}}});
 
             expectIllegalOperation(checkersLogicService, match,
-                ILLEGAL_CODE.ILLEGAL_CROWNED);
+                ILLEGAL_CODE.ILLEGAL_MOVE);
+          });
+
+        it("[3, 2] -> [4, 3] -> [5, 4]*: Illegal because it does not move" +
+            "to the final row in order to be crowned", function () {
+            var match = {};
+            match.turnIndexBeforeMove = BLACK_TURN_INDEX;
+            match.stateBeforeMove = testState;
+            testState.board[4][3] = CONSTANT.WHITE_MAN;
+
+            match.move = [];
+            match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
+            match.move.push({set: {key: 'board', value: [
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'BM', '--', 'BK', '--', 'DS', '--'],
+              ['--', 'BM', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+            ]}});
+            match.move.push({set: {key: 'fromDelta', value: {row: 3, col: 2}}});
+            match.move.push({set: {key: 'toDelta', value: {row: 5, col: 4}}});
+            expectIllegalOperation(checkersLogicService, match,
+                  ILLEGAL_CODE.ILLEGAL_MOVE);
           });
       });
 
       /*
        * CROWNED SCENARIO - WHITE
        *
-       *      0    1    2    3    4    5    6    7
-       * 0 | ** |  0 | ** |  1 | ** |  2 | ** |  3 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 1 |  4 | ** |  5 | ** |  6 | ** |  7 | ** |
-       *   | -- | -- | WM | -- | BM?| -- | -- | -- |
-       * 2 | ** |  8 | ** |  9 | ** | 10 | ** | 11 |
-       *   | -- | -- | -- | WM | -- | -- | -- | -- |
-       * 3 | 12 | ** | 13 | ** | 14 | ** | 15 | ** |
-       *   | -- | -- | -- | -- | BM?| -- | -- | -- |
-       * 4 | ** | 16 | ** | 17 | ** | 18 | ** | 19 |
-       *   | -- | -- | -- | WM | -- | -- | -- | -- |
-       * 5 | 20 | ** | 21 | ** | 22 | ** | 23 | ** |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 6 | ** | 24 | ** | 25 | ** | 26 | ** | 27 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 7 | 28 | ** | 29 | ** | 30 | ** | 31 | ** |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
+       *             0     1     2     3     4     5     6     7
+       * 0:even  [['--', 'DS', '--', 'DS', '--', 'DS', '--', 'BM'],
+       * 1:odd    ['DS', '--', 'WM', '--', 'BM?','--', 'DS', '--'],
+       * 2:even   ['--', 'DS', '--', 'WM', '--', 'DS', '--', 'DS'],
+       * 3:odd    ['DS', '--', 'DS', '--', 'BM?','--', 'DS', '--'],
+       * 4:even   ['--', 'DS', '--', 'WM', '--', 'DS', '--', 'DS'],
+       * 5:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+       * 6:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+       * 7:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']]
        *
-       *   Note: piece with '?' mean the piece exist for certain test case in
-       *         order to prevent the influence of mandatory jump.
+       * Note: piece with '?' mean the piece exist for certain test case in
+       *       order to prevent the influence of mandatory jump.
        */
-      describe('CROWNED SCENARIO FOR BLACK', function () {
+      describe('CROWNED SCENARIO FOR WHITE', function () {
         var testState;
         beforeEach(function setTestState() {
-          testState = emptyState;
-          testState['5'] = "WMAN";
-          testState['9'] = "WMAN";
-          testState['17'] = "WMAN";
+          testState = {
+            board: emptyBoard,
+            deltaFrom: {row: 5, col: 4},
+            deltaTo: {row: 4, col: 3}
+          };
+          testState.board[1][2] = CONSTANT.WHITE_MAN;
+          testState.board[2][3] = CONSTANT.WHITE_MAN;
+          testState.board[4][3] = CONSTANT.WHITE_MAN;
+          testState.board[0][7] = CONSTANT.BLACK_MAN;
         });
 
-        it("5 -> 0*", function () {
+//        ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'BM'],
+//        ['DS', '--', 'WM', '--', 'BM?','--', 'DS', '--'],
+//        ['--', 'DS', '--', 'WM', '--', 'DS', '--', 'DS'],
+//        ['DS', '--', 'DS', '--', 'BM?','--', 'DS', '--'],
+//        ['--', 'DS', '--', 'WM', '--', 'DS', '--', 'DS'],
+//        ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+//        ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+//        ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+
+        it("[1, 2] -> [0, 3]*", function () {
           var match = {};
           match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-          match.turnIndexAfterMove = BLACK_TURN_INDEX;
           match.stateBeforeMove = testState;
-          match.move = [];
 
+          match.move = [];
           match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-          match.move.push({set: {key: 5, value: "EMPTY"}});
-          match.move.push({set: {key: 0, value: "WCRO"}});
+          match.move.push({set: {key: 'board', value: [
+            ['--', 'DS', '--', 'WK', '--', 'DS', '--', 'BM'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'WM', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'WM', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+          ]}});
+          match.move.push({set: {key: 'fromDelta', value: {row: 1, col: 2}}});
+          match.move.push({set: {key: 'toDelta', value: {row: 0, col: 3}}});
 
           expect(checkersLogicService.isMoveOk(match)).toEqual(true);
         });
 
-        it("9 -> 6 -> 2*", function () {
+        it("[2, 3] -> [1, 4] -> [0, 5]*", function () {
           var match = {};
           match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-          match.turnIndexAfterMove = BLACK_TURN_INDEX;
+          testState.board[1][4] = CONSTANT.BLACK_MAN;
           match.stateBeforeMove = testState;
-          match.stateBeforeMove['6'] = "BMAN";
-          match.move = [];
 
+          match.move = [];
           match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-          match.move.push({set: {key: 9, value: "EMPTY"}});
-          match.move.push({set: {key: 6, value: "EMPTY"}});
-          match.move.push({set: {key: 2, value: "WCRO"}});
+          match.move.push({set: {key: 'board', value: [
+            ['--', 'DS', '--', 'DS', '--', 'WK', '--', 'BM'],
+            ['DS', '--', 'WM', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'WM', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+          ]}});
+          match.move.push({set: {key: 'fromDelta', value: {row: 2, col: 3}}});
+          match.move.push({set: {key: 'toDelta', value: {row: 0, col: 5}}});
 
           expect(checkersLogicService.isMoveOk(match)).toEqual(true);
         });
 
-        it("17 -> 13*: Illegal because it does not move to the final row in" +
-            "order to be crowned", function () {
-            var match = {};
-            match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-            match.turnIndexAfterMove = BLACK_TURN_INDEX;
-            match.stateBeforeMove = testState;
-            match.move = [];
-
-            match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-            match.move.push({set: {key: 17, value: "EMPTY"}});
-            match.move.push({set: {key: 13, value: "WCRO"}});
-
-            expectIllegalOperation(checkersLogicService, match,
-                ILLEGAL_CODE.ILLEGAL_CROWNED);
-          });
-
-        it("17 -> 14 -> 10*: Illegal because it does not move to the final" +
+        it("[2, 3] -> [1, 4]*: Illegal because it does not move to the final" +
             "row in order to be crowned", function () {
             var match = {};
             match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-            match.turnIndexAfterMove = BLACK_TURN_INDEX;
             match.stateBeforeMove = testState;
-            match.stateBeforeMove['14'] = "BMAN";
-            match.move = [];
 
+            match.move = [];
             match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-            match.move.push({set: {key: 17, value: "EMPTY"}});
-            match.move.push({set: {key: 14, value: "EMPTY"}});
-            match.move.push({set: {key: 10, value: "WCRO"}});
+            match.move.push({set: {key: 'board', value: [
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'BM'],
+              ['DS', '--', 'WM', '--', 'WK', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'WM', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+            ]}});
+            match.move.push({set: {key: 'fromDelta', value: {row: 2, col: 3}}});
+            match.move.push({set: {key: 'toDelta', value: {row: 1, col: 4}}});
 
             expectIllegalOperation(checkersLogicService, match,
-                ILLEGAL_CODE.ILLEGAL_CROWNED);
+                ILLEGAL_CODE.ILLEGAL_MOVE);
           });
+
+        it("[4, 3] -> [3, 4] -> [2, 5]*: Illegal because it does not move to" +
+            "the final row in order to be crowned", function () {
+            var match = {};
+            match.turnIndexBeforeMove = WHITE_TURN_INDEX;
+            testState.board[3][4] = CONSTANT.BLACK_MAN;
+            match.stateBeforeMove = testState;
+
+            match.move = [];
+            match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+            match.move.push({set: {key: 'board', value: [
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'BM'],
+              ['DS', '--', 'WM', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'WM', '--', 'WK', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+            ]}});
+            match.move.push({set: {key: 'fromDelta', value: {row: 4, col: 3}}});
+            match.move.push({set: {key: 'toDelta', value: {row: 2, col: 5}}});
+
+            expectIllegalOperation(checkersLogicService, match,
+                ILLEGAL_CODE.ILLEGAL_MOVE);
+          });
+      });
+
+      /**
+       * CONSECUTIVE JUMP - BLACK
+       */
+      describe('CONSECUTIVE JUMP SCENARIO FOR BLACK', function () {
+        var testState;
+        beforeEach(function setTestState() {
+          testState = {
+            board: emptyBoard,
+            deltaFrom: {row: 5, col: 4},
+            deltaTo: {row: 4, col: 3}
+          };
+        });
+
+        /*
+         * BLACK
+         *             0     1     2     3     4     5     6     7
+         * 0:even  [['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 1:odd    ['BM', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 2:even   ['--', 'WM', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 3:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 4:even   ['--', 'DS', '--', 'WM', '--', 'DS', '--', 'DS'],
+         * 5:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 6:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 7:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']]
+         */
+        it("[1, 0] -> [2, 1] -> [3, 2]", function () {
+          var match = {};
+          match.turnIndexBeforeMove = BLACK_TURN_INDEX;
+          testState.board[1][0] = CONSTANT.BLACK_MAN;
+          testState.board[2][1] = CONSTANT.WHITE_MAN;
+          testState.board[4][3] = CONSTANT.WHITE_MAN;
+          match.stateBeforeMove = testState;
+
+          match.move = [];
+          match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+          match.move.push({set: {key: 'board', value: [
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'BM', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'WM', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+          ]}});
+          match.move.push({set: {key: 'fromDelta', value: {row: 1, col: 0}}});
+          match.move.push({set: {key: 'toDelta', value: {row: 3, col: 2}}});
+
+          expect(checkersLogicService.isMoveOk(match)).toEqual(true);
+        });
+
+        /*
+         * BLACK
+         *             0     1     2     3     4     5     6     7
+         * 0:even  [['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 1:odd    ['BM', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 2:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 3:odd    ['DS', '--', 'WM', '--', 'DS', '--', 'DS', '--'],
+         * 4:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 5:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 6:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 7:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']]
+         */
+        it("[1, 0] -> [2, 1]", function () {
+          var match = {};
+          match.turnIndexBeforeMove = BLACK_TURN_INDEX;
+          testState.board[1][0] = CONSTANT.BLACK_MAN;
+          testState.board[3][2] = CONSTANT.WHITE_MAN;
+          match.stateBeforeMove = testState;
+
+          match.move = [];
+          match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
+          match.move.push({set: {key: 'board', value: [
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'BM', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'WM', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+          ]}});
+          match.move.push({set: {key: 'fromDelta', value: {row: 1, col: 0}}});
+          match.move.push({set: {key: 'toDelta', value: {row: 2, col: 1}}});
+
+          expect(checkersLogicService.isMoveOk(match)).toEqual(true);
+        });
+      });
+
+      /**
+       * CONSECUTIVE JUMP - WHITE
+       */
+      describe('CONSECUTIVE JUMP SCENARIO FOR WHITE', function () {
+        var testState;
+        beforeEach(function setTestState() {
+          testState = {
+            board: emptyBoard,
+            deltaFrom: {row: 5, col: 4},
+            deltaTo: {row: 4, col: 3}
+          };
+        });
+
+        /*
+         * WHITE
+         *
+         *             0     1     2     3     4     5     6     7
+         * 0:even  [['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 1:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 2:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 3:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 4:even   ['--', 'DS', '--', 'BM', '--', 'DS', '--', 'DS'],
+         * 5:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 6:even   ['--', 'BM', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 7:odd    ['WM', '--', 'DS', '--', 'DS', '--', 'DS', '--']]
+         *
+         *   Note: piece with '?' mean the piece exist for certain test case in
+         *         order to prevent the influence of mandatory jump.
+         */
+        it("[7, 0] -> [6, 1] -> [5, 2]", function () {
+          var match = {};
+          match.turnIndexBeforeMove = WHITE_TURN_INDEX;
+          testState.board[7][0] = CONSTANT.WHITE_MAN;
+          testState.board[6][1] = CONSTANT.BLACK_MAN;
+          testState.board[4][3] = CONSTANT.BLACK_MAN;
+          match.stateBeforeMove = testState;
+
+          match.move = [];
+          match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
+          match.move.push({set: {key: 'board', value: [
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'BM', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'WM', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+          ]}});
+          match.move.push({set: {key: 'fromDelta', value: {row: 7, col: 0}}});
+          match.move.push({set: {key: 'toDelta', value: {row: 5, col: 2}}});
+
+          expect(checkersLogicService.isMoveOk(match)).toEqual(true);
+        });
+
+        /*
+         * WHITE
+         *
+         *             0     1     2     3     4     5     6     7
+         * 0:even  [['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 1:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 2:even   ['--', 'BM', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 3:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 4:even   ['--', 'DS', '--', 'WM', '--', 'DS', '--', 'DS'],
+         * 5:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 6:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 7:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']]
+         */
+        it("WHITE: [4, 3] -> [3, 2]", function () {
+          var match = {};
+          match.turnIndexBeforeMove = WHITE_TURN_INDEX;
+          testState.board[2][1] = CONSTANT.BLACK_MAN;
+          testState.board[4][3] = CONSTANT.WHITE_MAN;
+          match.stateBeforeMove = testState;
+
+          match.move = [];
+          match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
+          match.move.push({set: {key: 'board', value: [
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'BM', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'WM', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+          ]}});
+          match.move.push({set: {key: 'fromDelta', value: {row: 4, col: 3}}});
+          match.move.push({set: {key: 'toDelta', value: {row: 3, col: 2}}});
+
+          expect(checkersLogicService.isMoveOk(match)).toEqual(true);
+        });
       });
 
       /*
        * TERMINATE TURN WHEN MOVES TO KINGS ROW - BLACK
        *
-       *      0    1    2    3    4    5    6    7
-       * 0 | ** |  0 | ** |  1 | ** |  2 | ** |  3 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 1 |  4 | ** |  5 | ** |  6 | ** |  7 | ** |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 2 | ** |  8 | ** |  9 | ** | 10 | ** | 11 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 3 | 12 | ** | 13 | ** | 14 | ** | 15 | ** |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 4 | ** | 16 | ** | 17 | ** | 18 | ** | 19 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 5 | 20 | ** | 21 | ** | 22 | ** | 23 | ** |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 6 | ** | 24 | ** | 25 | ** | 26 | ** | 27 |
-       *   | -- |BM/C| -- | WM | -- | -- | -- | -- |
-       * 7 | 28 | ** | 29 | ** | 30 | ** | 31 | ** |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
+       *             0     1     2     3     4     5     6     7
+       * 0:even  [['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+       * 1:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+       * 2:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+       * 3:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+       * 4:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+       * 5:odd   ['BM/K','--', 'DS', '--', 'DS', '--', 'DS', '--'],
+       * 6:even   ['--', 'WM', '--', 'WM', '--', 'DS', '--', 'DS'],
+       * 7:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']]
        *
-       *   Note: BM/C means it will be assigned to BMAN or BCRO according to the
-       *         specific test.
+       * Note: BM/L means it will be assigned to BM or BK according to the
+       *       specific test.
        */
       describe('TERMINATE TURN WHEN MOVES TO KINGS ROW FOR BLACK', function () {
         var testState;
         beforeEach(function setTestState() {
-          testState = emptyState;
-          testState['25'] = "WMAN";
+          testState = {
+            board: emptyBoard,
+            deltaFrom: {row: 5, col: 4},
+            deltaTo: {row: 4, col: 3}
+          };
+          testState.board[6][1] = CONSTANT.WHITE_MAN;
+          testState.board[6][3] = CONSTANT.WHITE_MAN;
         });
 
-        it("24 -> 29*: Test for MAN", function () {
+        it("[5, 0] -> [6, 1] -> [7, 2]*: Test for MAN", function () {
           var match = {};
           match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-          match.turnIndexAfterMove = WHITE_TURN_INDEX;
+          testState.board[5][0] = CONSTANT.BLACK_MAN;
           match.stateBeforeMove = testState;
-          match.move = [];
 
-          match.stateBeforeMove['24'] = "BMAN";
+          match.move = [];
           match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
-          match.move.push({set: {key: 24, value: "EMPTY"}});
-          match.move.push({set: {key: 29, value: "BCRO"}});
+          match.move.push({set: {key: 'board', value: [
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'WM', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'BK', '--', 'DS', '--', 'DS', '--']
+          ]}});
+          match.move.push({set: {key: 'fromDelta', value: {row: 5, col: 0}}});
+          match.move.push({set: {key: 'toDelta', value: {row: 7, col: 2}}});
 
           expect(checkersLogicService.isMoveOk(match)).toEqual(true);
         });
 
-        it("24 -> 29*: Test for MAN, Illegal because once the piece enters" +
-            "the kings row, the turn is terminated", function () {
-            var match = {};
-            match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-            match.turnIndexAfterMove = WHITE_TURN_INDEX;
-            match.stateBeforeMove = testState;
-            match.move = [];
-
-            match.stateBeforeMove['24'] = "BMAN";
-            match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-            match.move.push({set: {key: 24, value: "EMPTY"}});
-            match.move.push({set: {key: 29, value: "BCRO"}});
-
-            expectIllegalOperation(checkersLogicService, match,
-                ILLEGAL_CODE.ILLEGAL_SET_TURN);
-          });
-
-        it("24 -> 29*: Test for CRO", function () {
+        it("[5, 0] -> [6, 1] -> [7, 2]: Test for king", function () {
           var match = {};
           match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-          match.turnIndexAfterMove = WHITE_TURN_INDEX;
+          testState.board[5][0] = CONSTANT.BLACK_KING;
           match.stateBeforeMove = testState;
+
           match.move = [];
-
-          match.stateBeforeMove['24'] = "BCRO";
           match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
-          match.move.push({set: {key: 24, value: "EMPTY"}});
-          match.move.push({set: {key: 29, value: "BCRO"}});
-
+          match.move.push({set: {key: 'board', value: [
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'WM', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'BK', '--', 'DS', '--', 'DS', '--']
+          ]}});
+          match.move.push({set: {key: 'fromDelta', value: {row: 5, col: 0}}});
+          match.move.push({set: {key: 'toDelta', value: {row: 7, col: 2}}});
           expect(checkersLogicService.isMoveOk(match)).toEqual(true);
         });
-
-        it("24 -> 29*: Test for CRO, Illegal because once the piece enters" +
-            "the kings row, the turn is terminated", function () {
-            var match = {};
-            match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-            match.turnIndexAfterMove = WHITE_TURN_INDEX;
-            match.stateBeforeMove = testState;
-            match.move = [];
-
-            match.stateBeforeMove['24'] = "BCRO";
-            match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-            match.move.push({set: {key: 24, value: "EMPTY"}});
-            match.move.push({set: {key: 29, value: "BCRO"}});
-
-            expectIllegalOperation(checkersLogicService, match,
-                ILLEGAL_CODE.ILLEGAL_SET_TURN);
-          });
       });
 
       /*
        * TERMINATE TURN WHEN MOVES TO KINGS ROW - WHITE
        *
-       *      0    1    2    3    4    5    6    7
-       * 0 | ** |  0 | ** |  1 | ** |  2 | ** |  3 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 1 |  4 | ** |  5 | ** |  6 | ** |  7 | ** |
-       *   | -- | -- |WM/B| -- | BM | -- | -- | -- |
-       * 2 | ** |  8 | ** |  9 | ** | 10 | ** | 11 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 3 | 12 | ** | 13 | ** | 14 | ** | 15 | ** |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 4 | ** | 16 | ** | 17 | ** | 18 | ** | 19 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 5 | 20 | ** | 21 | ** | 22 | ** | 23 | ** |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 6 | ** | 24 | ** | 25 | ** | 26 | ** | 27 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 7 | 28 | ** | 29 | ** | 30 | ** | 31 | ** |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
+       *             0     1     2     3     4     5     6     7
+       * 0:even  [['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+       * 1:odd    ['DS', '--', 'BM', '--', 'BM', '--', 'DS', '--'],
+       * 2:even   ['--','WM/K','--', 'DS', '--', 'DS', '--', 'DS'],
+       * 3:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+       * 4:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+       * 5:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+       * 6:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+       * 7:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']]
        *
-       *   Note: WM/C means it will be assigned to WMAN or WCRO according to the
-       *         specific test.
+       * Note: WM/K means it will be assigned to WM or WK according to the
+       *       specific test.
        */
-      describe('TERMINATE TURN WHEN MOVES TO KINGS ROW FOR BLACK', function () {
+      describe('TERMINATE TURN WHEN MOVES TO KINGS ROW FOR WHITE', function () {
         var testState;
         beforeEach(function setTestState() {
-          testState = emptyState;
-          testState['6'] = "BMAN";
+          testState = {
+            board: emptyBoard,
+            deltaFrom: {row: 5, col: 4},
+            deltaTo: {row: 4, col: 3}
+          };
+          testState.board[1][2] = CONSTANT.BLACK_MAN;
+          testState.board[1][4] = CONSTANT.BLACK_MAN;
         });
 
-        it("24 -> 29*: Test for MAN", function () {
+        it("[2, 1] -> [1, 2] -> [0, 3]*: Test for MAN", function () {
           var match = {};
           match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-          match.turnIndexAfterMove = BLACK_TURN_INDEX;
+          testState.board[2][1] = CONSTANT.WHITE_MAN;
           match.stateBeforeMove = testState;
-          match.move = [];
 
-          match.stateBeforeMove['5'] = "WMAN";
+          match.move = [];
           match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-          match.move.push({set: {key: 5, value: "EMPTY"}});
-          match.move.push({set: {key: 1, value: "WCRO"}});
+          match.move.push({set: {key: 'board', value: [
+            ['--', 'DS', '--', 'WK', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'BM', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+          ]}});
+          match.move.push({set: {key: 'fromDelta', value: {row: 2, col: 1}}});
+          match.move.push({set: {key: 'toDelta', value: {row: 0, col: 3}}});
 
           expect(checkersLogicService.isMoveOk(match)).toEqual(true);
         });
 
-        it("24 -> 29*: Test for MAN, Illegal because once the piece enters" +
-            "the kings row, the turn is terminated", function () {
-            var match = {};
-            match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-            match.turnIndexAfterMove = BLACK_TURN_INDEX;
-            match.stateBeforeMove = testState;
-            match.move = [];
-
-            match.stateBeforeMove['5'] = "WMAN";
-            match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
-            match.move.push({set: {key: 5, value: "EMPTY"}});
-            match.move.push({set: {key: 1, value: "WCRO"}});
-
-            expectIllegalOperation(checkersLogicService, match,
-                ILLEGAL_CODE.ILLEGAL_SET_TURN);
-          });
-
-        it("24 -> 29*: Test for CRO", function () {
+        it("[2, 1] -> [1, 2] -> [0, 3]: Test for king", function () {
           var match = {};
           match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-          match.turnIndexAfterMove = BLACK_TURN_INDEX;
+          testState.board[2][1] = CONSTANT.WHITE_MAN;
           match.stateBeforeMove = testState;
-          match.move = [];
 
-          match.stateBeforeMove['5'] = "WCRO";
+          match.move = [];
           match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-          match.move.push({set: {key: 5, value: "EMPTY"}});
-          match.move.push({set: {key: 1, value: "WCRO"}});
+          match.move.push({set: {key: 'board', value: [
+            ['--', 'DS', '--', 'WK', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'BM', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+          ]}});
+          match.move.push({set: {key: 'fromDelta', value: {row: 2, col: 1}}});
+          match.move.push({set: {key: 'toDelta', value: {row: 0, col: 3}}});
 
           expect(checkersLogicService.isMoveOk(match)).toEqual(true);
         });
-
-        it("24 -> 29*: Test for CRO, Illegal because once the piece enters" +
-            "the kings row, the turn is terminated", function () {
-            var match = {};
-            match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-            match.turnIndexAfterMove = BLACK_TURN_INDEX;
-            match.stateBeforeMove = testState;
-            match.move = [];
-
-            match.stateBeforeMove['5'] = "WCRO";
-            match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
-            match.move.push({set: {key: 5, value: "EMPTY"}});
-            match.move.push({set: {key: 1, value: "WCRO"}});
-
-            expectIllegalOperation(checkersLogicService, match,
-                ILLEGAL_CODE.ILLEGAL_SET_TURN);
-          });
       });
 
       describe("ENDGAME SCENARIO - BLACK", function () {
         /*
          * END GAME SCENARIO - BLACK
          *
-         *      0    1    2    3    4    5    6    7
-         * 0 | ** |  0 | ** |  1 | ** |  2 | ** |  3 |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 1 |  4 | ** |  5 | ** |  6 | ** |  7 | ** |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 2 | ** |  8 | ** |  9 | ** | 10 | ** | 11 |
-         *   | -- | -- | -- | BM | -- | -- | -- | -- |
-         * 3 | 12 | ** | 13 | ** | 14 | ** | 15 | ** |
-         *   | -- | -- | WM | -- | -- | -- | -- | -- |
-         * 4 | ** | 16 | ** | 17 | ** | 18 | ** | 19 |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 5 | 20 | ** | 21 | ** | 22 | ** | 23 | ** |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 6 | ** | 24 | ** | 25 | ** | 26 | ** | 27 |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 7 | 28 | ** | 29 | ** | 30 | ** | 31 | ** |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
+         *             0     1     2     3     4     5     6     7
+         * 0:even  [['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 1:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 2:even   ['--', 'DS', '--', 'BM', '--', 'DS', '--', 'DS'],
+         * 3:odd    ['DS', '--', 'WM', '--', 'DS', '--', 'DS', '--'],
+         * 4:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 5:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 6:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 7:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']]
          */
-        it("9 -> 13 - > 16", function () {
+        it("[2, 3] -> [3, 2], [4, 1]", function () {
           var match = {};
           match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-          match.turnIndexAfterMove = WHITE_TURN_INDEX;
-          match.stateBeforeMove = emptyState;
-          match.move = [];
+          match.stateBeforeMove = {
+            board: emptyBoard,
+            deltaFrom: {row: 5, col: 4},
+            deltaTo: {row: 4, col: 3}
+          };
 
-          match.stateBeforeMove['9'] = "BMAN";
-          match.stateBeforeMove['13'] = "WMAN";
-          match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
-          match.move.push({set: {key: 9, value: "EMPTY"}});
-          match.move.push({set: {key: 13, value: "EMPTY"}});
-          match.move.push({set: {key: 16, value: "BMAN"}});
+          match.stateBeforeMove.board[2][3] = CONSTANT.BLACK_MAN;
+          match.stateBeforeMove.board[3][2] = CONSTANT.WHITE_MAN;
+
+          match.move = [];
           match.move.push({endMatch: {endMatchScores: [1, 0]}});
+          match.move.push({set: {key: 'board', value: [
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'BM', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+          ]}});
+          match.move.push({set: {key: 'fromDelta', value: {row: 2, col: 3}}});
+          match.move.push({set: {key: 'toDelta', value: {row: 4, col: 1}}});
 
           expect(checkersLogicService.isMoveOk(match)).toEqual(true);
         });
@@ -1063,38 +1483,43 @@
         /*
          * END GAME SCENARIO - BLACK
          *
-         *      0    1    2    3    4    5    6    7
-         * 0 | ** |  0 | ** |  1 | ** |  2 | ** |  3 |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 1 |  4 | ** |  5 | ** |  6 | ** |  7 | ** |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 2 | ** |  8 | ** |  9 | ** | 10 | ** | 11 |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 3 | 12 | ** | 13 | ** | 14 | ** | 15 | ** |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 4 | ** | 16 | ** | 17 | ** | 18 | ** | 19 |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 5 | 20 | ** | 21 | ** | 22 | ** | 23 | ** |
-         *   | BM | -- | BM | -- | -- | -- | -- | -- |
-         * 6 | ** | 24 | ** | 25 | ** | 26 | ** | 27 |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 7 | 28 | ** | 29 | ** | 30 | ** | 31 | ** |
-         *   | WM | -- | -- | -- | -- | -- | -- | -- |
+         *             0     1     2     3     4     5     6     7
+         * 0:even  [['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 1:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 2:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 3:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 4:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 5:odd    ['BM', '--', 'BM', '--', 'DS', '--', 'DS', '--'],
+         * 6:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 7:odd    ['WM', '--', 'DS', '--', 'DS', '--', 'DS', '--']]
          */
-        it("20 -> 24: Legal because 28 has no moves", function () {
+        it("[5, 0] -> [6, 1]: Legal because [7, 0] has no moves", function () {
           var match = {};
           match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-          match.turnIndexAfterMove = WHITE_TURN_INDEX;
-          match.stateBeforeMove = emptyState;
-          match.move = [];
+          match.stateBeforeMove = {
+            board: emptyBoard,
+            deltaFrom: {row: 5, col: 0},
+            deltaTo: {row: 6, col: 1}
+          };
 
-          match.stateBeforeMove['20'] = "BMAN";
-          match.stateBeforeMove['21'] = "BMAN";
-          match.stateBeforeMove['28'] = "WMAN";
-          match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
-          match.move.push({set: {key: 20, value: "EMPTY"}});
-          match.move.push({set: {key: 24, value: "BMAN"}});
+          match.stateBeforeMove.board[5][0] = CONSTANT.BLACK_MAN;
+          match.stateBeforeMove.board[5][2] = CONSTANT.BLACK_MAN;
+          match.stateBeforeMove.board[7][0] = CONSTANT.WHITE_MAN;
+
+          match.move = [];
           match.move.push({endMatch: {endMatchScores: [1, 0]}});
+          match.move.push({set: {key: 'board', value: [
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'BM', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'BM', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['WM', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+          ]}});
+          match.move.push({set: {key: 'fromDelta', value: {row: 5, col: 0}}});
+          match.move.push({set: {key: 'toDelta', value: {row: 6, col: 1}}});
 
           expect(checkersLogicService.isMoveOk(match)).toEqual(true);
         });
@@ -1102,118 +1527,132 @@
         /**
          * END GAME SCENARIO - BLACK (ILLEGAL)
          *
-         *      0    1    2    3    4    5    6    7
-         * 0 | ** |  0 | ** |  1 | ** |  2 | ** |  3 |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 1 |  4 | ** |  5 | ** |  6 | ** |  7 | ** |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 2 | ** |  8 | ** |  9 | ** | 10 | ** | 11 |
-         *   | -- | -- | -- | BM | -- | -- | -- | -- |
-         * 3 | 12 | ** | 13 | ** | 14 | ** | 15 | ** |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 4 | ** | 16 | ** | 17 | ** | 18 | ** | 19 |
-         *   | -- | WM | -- | -- | -- | -- | -- | -- |
-         * 5 | 20 | ** | 21 | ** | 22 | ** | 23 | ** |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 6 | ** | 24 | ** | 25 | ** | 26 | ** | 27 |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 7 | 28 | ** | 29 | ** | 30 | ** | 31 | ** |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
+         *             0     1     2     3     4     5     6     7
+         * 0:even  [['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 1:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 2:even   ['--', 'DS', '--', 'BM', '--', 'DS', '--', 'DS'],
+         * 3:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 4:even   ['--', 'WM', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 5:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 6:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 7:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']]
          */
-        it("9 -> 13: Illegal because the game is not ended.", function () {
-          var match = {};
-          match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-          match.turnIndexAfterMove = WHITE_TURN_INDEX;
-          match.stateBeforeMove = emptyState;
-          match.move = [];
+        it("[2, 3] -> [3, 2]: Illegal because the game is not ended.",
+              function () {
+            var match = {};
+            match.turnIndexBeforeMove = BLACK_TURN_INDEX;
+            match.stateBeforeMove = {
+              board: emptyBoard,
+              deltaFrom: {row: 5, col: 0},
+              deltaTo: {row: 6, col: 1}
+            };
 
-          match.stateBeforeMove['16'] = "WMAN";
-          match.stateBeforeMove['9'] = "BMAN";
-          match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
-          match.move.push({set: {key: 9, value: "EMPTY"}});
-          match.move.push({set: {key: 13, value: "BMAN"}});
-          match.move.push({endMatch: {endMatchScores: [1, 0]}});
+            match.stateBeforeMove.board[2][3] = CONSTANT.BLACK_MAN;
+            match.stateBeforeMove.board[4][1] = CONSTANT.WHITE_MAN;
 
-          expectIllegalOperation(checkersLogicService, match,
-              ILLEGAL_CODE.ILLEGAL_END_MATCH_SCORE);
-        });
+            match.move = [];
+            match.move.push({endMatch: {endMatchScores: [1, 0]}});
+            match.move.push({set: {key: 'board', value: [
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'BM', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'BM', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['WM', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+            ]}});
+            match.move.push({set: {key: 'fromDelta', value: {row: 2, col: 3}}});
+            match.move.push({set: {key: 'toDelta', value: {row: 3, col: 2}}});
+
+            expectIllegalOperation(checkersLogicService, match,
+                ILLEGAL_CODE.ILLEGAL_MOVE);
+          });
       });
 
       describe("ENDGAME SCENARIO - WHITE: ", function () {
         /*
          * END GAME SCENARIO - WHITE
          *
-         *      0    1    2    3    4    5    6    7
-         * 0 | ** |  0 | ** |  1 | ** |  2 | ** |  3 |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 1 |  4 | ** |  5 | ** |  6 | ** |  7 | ** |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 2 | ** |  8 | ** |  9 | ** | 10 | ** | 11 |
-         *   | -- | -- | -- | BM | -- | -- | -- | -- |
-         * 3 | 12 | ** | 13 | ** | 14 | ** | 15 | ** |
-         *   | -- | -- | WM | -- | -- | -- | -- | -- |
-         * 4 | ** | 16 | ** | 17 | ** | 18 | ** | 19 |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 5 | 20 | ** | 21 | ** | 22 | ** | 23 | ** |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 6 | ** | 24 | ** | 25 | ** | 26 | ** | 27 |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 7 | 28 | ** | 29 | ** | 30 | ** | 31 | ** |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
+         *             0     1     2     3     4     5     6     7
+         * 0:even  [['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 1:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 2:even   ['--', 'DS', '--', 'BM', '--', 'DS', '--', 'DS'],
+         * 3:odd    ['DS', '--', 'WM', '--', 'DS', '--', 'DS', '--'],
+         * 4:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 5:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 6:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 7:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']]
          */
-        it("13 -> 9 -> 6", function () {
+        it("[3, 2] -> [2, 3] -> [1, 4]", function () {
           var match = {};
           match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-          match.turnIndexAfterMove = BLACK_TURN_INDEX;
-          match.stateBeforeMove = emptyState;
+          match.stateBeforeMove = {
+            board: emptyBoard,
+            deltaFrom: {row: 5, col: 4},
+            deltaTo: {row: 4, col: 3}
+          };
+
+          match.stateBeforeMove.board[2][3] = CONSTANT.BLACK_MAN;
+          match.stateBeforeMove.board[3][2] = CONSTANT.WHITE_MAN;
+
           match.move = [];
-
-          match.stateBeforeMove['13'] = "WMAN";
-          match.stateBeforeMove['9'] = "BMAN";
-          match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-          match.move.push({set: {key: 13, value: "EMPTY"}});
-          match.move.push({set: {key: 9, value: "EMPTY"}});
-          match.move.push({set: {key: 6, value: "WMAN"}});
           match.move.push({endMatch: {endMatchScores: [0, 1]}});
-
+          match.move.push({set: {key: 'board', value: [
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'WM', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+          ]}});
+          match.move.push({set: {key: 'fromDelta', value: {row: 3, col: 2}}});
+          match.move.push({set: {key: 'toDelta', value: {row: 1, col: 4}}});
           expect(checkersLogicService.isMoveOk(match)).toEqual(true);
         });
 
         /*
          * END GAME SCENARIO - WHITE
          *
-         *      0    1    2    3    4    5    6    7
-         * 0 | ** |  0 | ** |  1 | ** |  2 | ** |  3 |
-         *   | -- | -- | -- | -- | -- | -- | -- | BM |
-         * 1 |  4 | ** |  5 | ** |  6 | ** |  7 | ** |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 2 | ** |  8 | ** |  9 | ** | 10 | ** | 11 |
-         *   | -- | -- | -- | -- | -- | WM | -- | WM |
-         * 3 | 12 | ** | 13 | ** | 14 | ** | 15 | ** |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 4 | ** | 16 | ** | 17 | ** | 18 | ** | 19 |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 5 | 20 | ** | 21 | ** | 22 | ** | 23 | ** |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 6 | ** | 24 | ** | 25 | ** | 26 | ** | 27 |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 7 | 28 | ** | 29 | ** | 30 | ** | 31 | ** |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
+         *             0     1     2     3     4     5     6     7
+         * 0:even  [['--', 'DS', '--', 'DS', '--', 'DS', '--', 'BM'],
+         * 1:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 2:even   ['--', 'DS', '--', 'DS', '--', 'WM', '--', 'WM'],
+         * 3:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 4:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 5:odd    ['DS', '--', 'BM', '--', 'DS', '--', 'DS', '--'],
+         * 6:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 7:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']]
          */
-        it("11 -> 7: Legal because 3 has no moves", function () {
+        it("[2, 7] -> [1, 6]: Legal because 3 has no moves", function () {
           var match = {};
           match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-          match.turnIndexAfterMove = BLACK_TURN_INDEX;
-          match.stateBeforeMove = emptyState;
-          match.move = [];
+          match.stateBeforeMove = {
+            board: emptyBoard,
+            deltaFrom: {row: 5, col: 0},
+            deltaTo: {row: 6, col: 1}
+          };
 
-          match.stateBeforeMove['3'] = "BMAN";
-          match.stateBeforeMove['10'] = "WMAN";
-          match.stateBeforeMove['11'] = "WMAN";
-          match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-          match.move.push({set: {key: 11, value: "EMPTY"}});
-          match.move.push({set: {key: 7, value: "WMAN"}});
+          match.stateBeforeMove.board[0][7] = CONSTANT.BLACK_MAN;
+          match.stateBeforeMove.board[2][5] = CONSTANT.WHITE_MAN;
+          match.stateBeforeMove.board[2][7] = CONSTANT.WHITE_MAN;
+
+          match.move = [];
           match.move.push({endMatch: {endMatchScores: [0, 1]}});
+          match.move.push({set: {key: 'board', value: [
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'BM'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'WM', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'WM', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+          ]}});
+          match.move.push({set: {key: 'fromDelta', value: {row: 2, col: 7}}});
+          match.move.push({set: {key: 'toDelta', value: {row: 1, col: 6}}});
 
           expect(checkersLogicService.isMoveOk(match)).toEqual(true);
         });
@@ -1221,550 +1660,47 @@
         /**
          * END GAME SCENARIO - WHITE (ILLEGAL)
          *
-         *      0    1    2    3    4    5    6    7
-         * 0 | ** |  0 | ** |  1 | ** |  2 | ** |  3 |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 1 |  4 | ** |  5 | ** |  6 | ** |  7 | ** |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 2 | ** |  8 | ** |  9 | ** | 10 | ** | 11 |
-         *   | -- | -- | -- | BM | -- | -- | -- | -- |
-         * 3 | 12 | ** | 13 | ** | 14 | ** | 15 | ** |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 4 | ** | 16 | ** | 17 | ** | 18 | ** | 19 |
-         *   | -- | WM | -- | -- | -- | -- | -- | -- |
-         * 5 | 20 | ** | 21 | ** | 22 | ** | 23 | ** |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 6 | ** | 24 | ** | 25 | ** | 26 | ** | 27 |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
-         * 7 | 28 | ** | 29 | ** | 30 | ** | 31 | ** |
-         *   | -- | -- | -- | -- | -- | -- | -- | -- |
+         *             0     1     2     3     4     5     6     7
+         * 0:even  [['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 1:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 2:even   ['--', 'DS', '--', 'BM', '--', 'DS', '--', 'DS'],
+         * 3:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 4:even   ['--', 'WM', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 5:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+         * 6:even   ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+         * 7:odd    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--']]
          */
-        it("16 -> 13: Illegal because the game is not ended.", function () {
-          var match = {};
-          match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-          match.turnIndexAfterMove = BLACK_TURN_INDEX;
-          match.stateBeforeMove = emptyState;
-          match.move = [];
+        it("[4, 1] -> [3, 2]: Illegal because the game is not ended.",
+              function () {
+            var match = {};
+            match.turnIndexBeforeMove = WHITE_TURN_INDEX;
+            match.stateBeforeMove = {
+              board: emptyBoard,
+              deltaFrom: {row: 5, col: 0},
+              deltaTo: {row: 6, col: 1}
+            };
 
-          match.stateBeforeMove['9'] = "BMAN";
-          match.stateBeforeMove['16'] = "WMAN";
-          match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-          match.move.push({set: {key: 16, value: "EMPTY"}});
-          match.move.push({set: {key: 13, value: "WMAN"}});
-          match.move.push({endMatch: {endMatchScores: [0, 1]}});
+            match.stateBeforeMove.board[2][3] = CONSTANT.BLACK_MAN;
+            match.stateBeforeMove.board[4][1] = CONSTANT.WHITE_MAN;
 
-          expectIllegalOperation(checkersLogicService, match,
-              ILLEGAL_CODE.ILLEGAL_END_MATCH_SCORE);
-        });
-      });
-    });
+            match.move = [];
+            match.move.push({endMatch: {endMatchScores: [0, 1]}});
+            match.move.push({set: {key: 'board', value: [
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['DS', '--', 'BM', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'BM', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['WM', '--', 'DS', '--', 'DS', '--', 'DS', '--']
+            ]}});
+            match.move.push({set: {key: 'fromDelta', value: {row: 4, col: 1}}});
+            match.move.push({set: {key: 'toDelta', value: {row: 3, col: 2}}});
 
-    describe('Test getExpectedOperations:', function () {
-      var setBlackTurn = {setTurn: {turnIndex: 0}},
-        setWhiteTurn = {setTurn: {turnIndex: 1}},
-        setBlackWin = {endMatch: {endMatchScores: [1, 0]}},
-        setWhiteWin = {endMatch: {endMatchScores: [0, 1]}};
-
-      /*
-       * SIMPLE MOVE SCENARIO
-       *
-       *      0    1    2    3    4    5    6    7
-       * 0 | ** |  0 | ** |  1 | ** |  2 | ** |  3 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 1 |  4 | ** |  5 | ** |  6 | ** |  7 | ** |
-       *   | -- | -- | BC | -- | -- | -- | BM | -- |
-       * 2 | ** |  8 | ** |  9 | ** | 10 | ** | 11 |
-       *   | -- | -- | -- | BM | -- | -- | -- | -- |
-       * 3 | 12 | ** | 13 | ** | 14 | ** | 15 | ** |
-       *   | -- | -- | WM | -- | -- | -- | -- | -- |
-       * 4 | ** | 16 | ** | 17 | ** | 18 | ** | 19 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 5 | 20 | ** | 21 | ** | 22 | ** | 23 | ** |
-       *   | -- | -- | WC | -- | -- | -- | WM | -- |
-       * 6 | ** | 24 | ** | 25 | ** | 26 | ** | 27 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 7 | 28 | ** | 29 | ** | 30 | ** | 31 | ** |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       */
-      describe('SIMPLE MOVE SCENARIO:', function () {
-        var state;
-        beforeEach(function () {
-          state = emptyState;
-          state[5] = 'BCRO';
-          state[7] = 'BMAN';
-          state[21] = 'WCRO';
-          state[23] = 'WMAN';
-        });
-
-        /***********************************************************************
-         * BLACK
-         **********************************************************************/
-
-        it("Black player try to move white player's piece", function () {
-          expect(function () {
-            checkersLogicService.getExpectedOperations(state, 23, 18, 0);
-          }).toThrow();
-        });
-
-        it('Black move up left', function () {
-          var expectedOperations =
-              checkersLogicService.getExpectedOperations(state, 5, 0, 0);
-
-          expect(expectedOperations.length).toEqual(3);
-          expect(expectedOperations[0])
-              .toEqual({set: {key: 5, value: "EMPTY"}});
-          expect(expectedOperations[1])
-              .toEqual({set: {key: 0, value: "BCRO"}});
-          expect(expectedOperations[2]).toEqual(setWhiteTurn);
-        });
-
-        it('Black move up right', function () {
-          var expectedOperations =
-              checkersLogicService.getExpectedOperations(state, 5, 1, 0);
-          expect(expectedOperations.length).toEqual(3);
-          expect(expectedOperations[0])
-              .toEqual({set: {key: 5, value: "EMPTY"}});
-          expect(expectedOperations[1])
-              .toEqual({set: {key: 1, value: "BCRO"}});
-          expect(expectedOperations[2]).toEqual(setWhiteTurn);
-        });
-
-        it('Black move down left', function () {
-          var expectedOperations =
-              checkersLogicService.getExpectedOperations(state, 7, 10, 0);
-          expect(expectedOperations.length).toEqual(3);
-          expect(expectedOperations[0])
-              .toEqual({set: {key: 7, value: "EMPTY"}});
-          expect(expectedOperations[1])
-              .toEqual({set: {key: 10, value: "BMAN"}});
-          expect(expectedOperations[2]).toEqual(setWhiteTurn);
-        });
-
-        it('Black move down right', function () {
-          var expectedOperations =
-              checkersLogicService.getExpectedOperations(state, 7, 11, 0);
-          expect(expectedOperations.length).toEqual(3);
-          expect(expectedOperations[0])
-              .toEqual({set: {key: 7, value: "EMPTY"}});
-          expect(expectedOperations[1])
-              .toEqual({set: {key: 11, value: "BMAN"}});
-          expect(expectedOperations[2]).toEqual(setWhiteTurn);
-        });
-
-        /***********************************************************************
-         * WHITE
-         **********************************************************************/
-
-        it("White player try to move black player's piece", function () {
-          expect(function () {
-            checkersLogicService.getExpectedOperations(state, 5, 0, 1);
-          }).toThrow();
-        });
-
-        it('White move up left', function () {
-          var expectedOperations =
-              checkersLogicService.getExpectedOperations(state, 23, 18, 1);
-          expect(expectedOperations.length).toEqual(3);
-          expect(expectedOperations[0])
-              .toEqual({set: {key: 23, value: "EMPTY"}});
-          expect(expectedOperations[1])
-              .toEqual({set: {key: 18, value: "WMAN"}});
-          expect(expectedOperations[2]).toEqual(setBlackTurn);
-        });
-
-        it('White move up right', function () {
-          var expectedOperations =
-              checkersLogicService.getExpectedOperations(state, 23, 19, 1);
-          expect(expectedOperations.length).toEqual(3);
-          expect(expectedOperations[0])
-              .toEqual({set: {key: 23, value: "EMPTY"}});
-          expect(expectedOperations[1])
-              .toEqual({set: {key: 19, value: "WMAN"}});
-          expect(expectedOperations[2]).toEqual(setBlackTurn);
-        });
-
-        it('White move down left', function () {
-          var expectedOperations =
-              checkersLogicService.getExpectedOperations(state, 21, 24, 1);
-          expect(expectedOperations.length).toEqual(3);
-          expect(expectedOperations[0])
-              .toEqual({set: {key: 21, value: "EMPTY"}});
-          expect(expectedOperations[1])
-              .toEqual({set: {key: 24, value: "WCRO"}});
-          expect(expectedOperations[2]).toEqual(setBlackTurn);
-        });
-
-        it('White move down right', function () {
-          var expectedOperations =
-              checkersLogicService.getExpectedOperations(state, 21, 25, 1);
-          expect(expectedOperations.length).toEqual(3);
-          expect(expectedOperations[0])
-              .toEqual({set: {key: 21, value: "EMPTY"}});
-          expect(expectedOperations[1])
-              .toEqual({set: {key: 25, value: "WCRO"}});
-          expect(expectedOperations[2]).toEqual(setBlackTurn);
-        });
-      });
-
-      /**
-       * JUMP MOVE SCENARIO
-       *
-       *      0    1    2    3    4    5    6    7
-       * 0 | ** |  0 | ** |  1 | ** |  2 | ** |  3 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 1 |  4 | ** |  5 | ** |  6 | ** |  7 | ** |
-       *   | -- | -- | WM | -- | WM | -- | -- | -- |
-       * 2 | ** |  8 | ** |  9 | ** | 10 | ** | 11 |
-       *   | -- | -- | -- | BC | -- | -- | -- | -- |
-       * 3 | 12 | ** | 13 | ** | 14 | ** | 15 | ** |
-       *   | -- | -- | WM?| -- | WM | -- | -- | -- |
-       * 4 | ** | 16 | ** | 17 | ** | 18 | ** | 19 |
-       *   | -- | -- | -- | BM | -- | BM?| -- | -- |
-       * 5 | 20 | ** | 21 | ** | 22 | ** | 23 | ** |
-       *   | -- | -- | -- | -- | WC | -- | -- | -- |
-       * 6 | ** | 24 | ** | 25 | ** | 26 | ** | 27 |
-       *   | -- | -- | -- | BM | -- | BM | -- | -- |
-       * 7 | 28 | ** | 29 | ** | 30 | ** | 31 | ** |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       *
-       *   Note: piece with '?' mean the piece exist for certain test case in
-       *         order to prevent the influence of mandatory jump.
-       */
-      describe('Test jump move', function () {
-        var state;
-        beforeEach(function () {
-          state = emptyState;
-          state[5] = 'WMAN';
-          state[6] = 'WMAN';
-          state[9] = 'BCRO';
-//        state[13] = 'WMAN';
-          state[14] = 'WMAN';
-          state[17] = 'BMAN';
-//        state[18] = 'BMAN';
-          state[22] = 'WCRO';
-          state[25] = 'BMAN';
-          state[26] = 'BMAN';
-        });
-
-        /***********************************************************************
-         * BLACK
-         **********************************************************************/
-        it('Black jump up left', function () {
-          var expectedOperations =
-              checkersLogicService.getExpectedOperations(state, 9, 0, 0);
-          expect(expectedOperations.length).toEqual(4);
-          expect(expectedOperations[0])
-              .toEqual({set: {key: 9, value: "EMPTY"}});
-          expect(expectedOperations[1])
-              .toEqual({set: {key: 5, value: "EMPTY"}});
-          expect(expectedOperations[2])
-              .toEqual({set: {key: 0, value: "BCRO"}});
-          expect(expectedOperations[3]).toEqual(setWhiteTurn);
-        });
-
-        it('Black jump up right', function () {
-          var expectedOperations =
-              checkersLogicService.getExpectedOperations(state, 9, 2, 0);
-          expect(expectedOperations.length).toEqual(4);
-          expect(expectedOperations[0])
-              .toEqual({set: {key: 9, value: "EMPTY"}});
-          expect(expectedOperations[1])
-              .toEqual({set: {key: 6, value: "EMPTY"}});
-          expect(expectedOperations[2])
-              .toEqual({set: {key: 2, value: "BCRO"}});
-          expect(expectedOperations[3]).toEqual(setWhiteTurn);
-        });
-
-        it('Black jump down left', function () {
-          state[13] = "WMAN";
-          var expectedOperations =
-              checkersLogicService.getExpectedOperations(state, 9, 16, 0);
-          expect(expectedOperations.length).toEqual(4);
-          expect(expectedOperations[0])
-              .toEqual({set: {key: 9, value: "EMPTY"}});
-          expect(expectedOperations[1])
-              .toEqual({set: {key: 13, value: "EMPTY"}});
-          expect(expectedOperations[2])
-              .toEqual({set: {key: 16, value: "BCRO"}});
-          expect(expectedOperations[3]).toEqual(setWhiteTurn);
-        });
-
-        it('Black jump down right', function () {
-          var expectedOperations =
-              checkersLogicService.getExpectedOperations(state, 9, 18, 0);
-          expect(expectedOperations.length).toEqual(4);
-          expect(expectedOperations[0])
-              .toEqual({set: {key: 9, value: "EMPTY"}});
-          expect(expectedOperations[1])
-              .toEqual({set: {key: 14, value: "EMPTY"}});
-          expect(expectedOperations[2])
-              .toEqual({set: {key: 18, value: "BCRO"}});
-          expect(expectedOperations[3]).toEqual(setWhiteTurn);
-        });
-
-        /***********************************************************************
-         * WHITE
-         **********************************************************************/
-        it('White jump up left', function () {
-          var expectedOperations =
-              checkersLogicService.getExpectedOperations(state, 22, 13, 1);
-          expect(expectedOperations.length).toEqual(4);
-          expect(expectedOperations[0])
-              .toEqual({set: {key: 22, value: "EMPTY"}});
-          expect(expectedOperations[1])
-              .toEqual({set: {key: 17, value: "EMPTY"}});
-          expect(expectedOperations[2])
-              .toEqual({set: {key: 13, value: "WCRO"}});
-          expect(expectedOperations[3])
-              .toEqual(setBlackTurn);
-        });
-
-        it('White jump up right', function () {
-          state[18] = "BMAN";
-          var expectedOperations =
-              checkersLogicService.getExpectedOperations(state, 22, 15, 1);
-          expect(expectedOperations.length).toEqual(4);
-          expect(expectedOperations[0])
-              .toEqual({set: {key: 22, value: "EMPTY"}});
-          expect(expectedOperations[1])
-              .toEqual({set: {key: 18, value: "EMPTY"}});
-          expect(expectedOperations[2])
-              .toEqual({set: {key: 15, value: "WCRO"}});
-          expect(expectedOperations[3]).toEqual(setBlackTurn);
-        });
-
-        it('White jump down left', function () {
-          var expectedOperations =
-              checkersLogicService.getExpectedOperations(state, 22, 29, 1);
-          expect(expectedOperations.length).toEqual(4);
-          expect(expectedOperations[0])
-              .toEqual({set: {key: 22, value: "EMPTY"}});
-          expect(expectedOperations[1])
-              .toEqual({set: {key: 25, value: "EMPTY"}});
-          expect(expectedOperations[2])
-              .toEqual({set: {key: 29, value: "WCRO"}});
-          expect(expectedOperations[3]).toEqual(setBlackTurn);
-        });
-
-        it('White jump down right', function () {
-          var expectedOperations =
-              checkersLogicService.getExpectedOperations(state, 22, 31, 1);
-          expect(expectedOperations.length).toEqual(4);
-          expect(expectedOperations[0])
-              .toEqual({set: {key: 22, value: "EMPTY"}});
-          expect(expectedOperations[1])
-              .toEqual({set: {key: 26, value: "EMPTY"}});
-          expect(expectedOperations[2])
-              .toEqual({set: {key: 31, value: "WCRO"}});
-          expect(expectedOperations[3]).toEqual(setBlackTurn);
-        });
-      });
-
-      /**
-       * CONSECUTIVE JUMPS SCENARIO
-       *
-       *      0    1    2    3    4    5    6    7
-       * 0 | ** |  0 | ** |  1 | ** |  2 | ** |  3 |
-       *   | -- | -- | -- | -- | -- | BM | -- | -- |
-       * 1 |  4 | ** |  5 | ** |  6 | ** |  7 | ** |
-       *   | -- | -- | -- | -- | WM | -- | -- | -- |
-       * 2 | ** |  8 | ** |  9 | ** | 10 | ** | 11 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 3 | 12 | ** | 13 | ** | 14 | ** | 15 | ** |
-       *   | -- | -- | WM | -- | -- | -- | -- | -- |
-       * 4 | ** | 16 | ** | 17 | ** | 18 | ** | 19 |
-       *   | -- | -- | -- | -- | -- | BM | -- | -- |
-       * 5 | 20 | ** | 21 | ** | 22 | ** | 23 | ** |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 6 | ** | 24 | ** | 25 | ** | 26 | ** | 27 |
-       *   | -- | -- | -- | BM | -- | -- | -- | -- |
-       * 7 | 28 | ** | 29 | ** | 30 | ** | 31 | ** |
-       *   | -- | -- | WM | -- | -- | -- | -- | -- |
-       */
-      describe('Test setTurn in consecutive scenario', function () {
-        var state;
-        beforeEach(function () {
-          state = emptyState;
-          state[2] = 'BMAN';
-          state[6] = 'WMAN';
-          state[13] = 'WMAN';
-
-          state[18] = 'BMAN';
-          state[25] = 'BMAN';
-          state[29] = 'WMAN';
-        });
-
-        it('2 -> 6 -> 9: Black has one more jump 9 -> 13 -> 16', function () {
-          var expectedOperations =
-              checkersLogicService.getExpectedOperations(state, 2, 9, 0);
-          expect(expectedOperations.length).toEqual(4);
-          expect(expectedOperations[0])
-              .toEqual({set: {key: 2, value: "EMPTY"}});
-          expect(expectedOperations[1])
-              .toEqual({set: {key: 6, value: "EMPTY"}});
-          expect(expectedOperations[2])
-              .toEqual({set: {key: 9, value: "BMAN"}});
-          expect(expectedOperations[3]).toEqual(setBlackTurn);
-        });
-
-        it('29 -> 25 -> 22: White has one more jump 22 -> 18 -> 15',
-            function () {
-            var expectedOperations =
-                checkersLogicService.getExpectedOperations(state, 29, 22, 1);
-            expect(expectedOperations.length).toEqual(4);
-            expect(expectedOperations[0])
-                .toEqual({set: {key: 29, value: "EMPTY"}});
-            expect(expectedOperations[1])
-                .toEqual({set: {key: 25, value: "EMPTY"}});
-            expect(expectedOperations[2])
-                .toEqual({set: {key: 22, value: "WMAN"}});
-            expect(expectedOperations[3]).toEqual(setWhiteTurn);
+            expectIllegalOperation(checkersLogicService, match,
+                ILLEGAL_CODE.ILLEGAL_MOVE);
           });
-      });
-
-      /**
-       * CROWN SCENARIO
-       *
-       *      0    1    2    3    4    5    6    7
-       * 0 | ** |  0 | ** |  1 | ** |  2 | ** |  3 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 1 |  4 | ** |  5 | ** |  6 | ** |  7 | ** |
-       *   | -- | -- | WM | -- | BM | -- | -- | -- |
-       * 2 | ** |  8 | ** |  9 | ** | 10 | ** | 11 |
-       *   | -- | -- | -- | WM | -- | -- | -- | -- |
-       * 3 | 12 | ** | 13 | ** | 14 | ** | 15 | ** |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 4 | ** | 16 | ** | 17 | ** | 18 | ** | 19 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 5 | 20 | ** | 21 | ** | 22 | ** | 23 | ** |
-       *   | -- | -- | -- | -- | BM | -- | -- | -- |
-       * 6 | ** | 24 | ** | 25 | ** | 26 | ** | 27 |
-       *   | -- | -- | -- | BM | -- | WM | -- | -- |
-       * 7 | 28 | ** | 29 | ** | 30 | ** | 31 | ** |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       *
-       */
-      describe('Test crown', function () {
-        var state;
-        beforeEach(function () {
-          state = emptyState;
-          state[5] = 'WMAN';
-          state[6] = 'BMAN';
-          state[9] = 'WMAN';
-
-          state[22] = 'BMAN';
-          state[25] = 'BMAN';
-          state[26] = 'WMAN';
-        });
-
-        it('25 -> 29: Black is crowned through simple move', function () {
-          var expectedOperations =
-              checkersLogicService.getExpectedOperations(state, 25, 29, 0);
-          expect(expectedOperations.length).toEqual(3);
-          expect(expectedOperations[0])
-              .toEqual({set: {key: 25, value: "EMPTY"}});
-          expect(expectedOperations[1])
-              .toEqual({set: {key: 29, value: "BCRO"}});
-          expect(expectedOperations[2]).toEqual(setWhiteTurn);
-        });
-
-        it('22 -> 26 -> 31: Black is crowned through jump move', function () {
-          var expectedOperations =
-              checkersLogicService.getExpectedOperations(state, 22, 31, 0);
-          expect(expectedOperations.length).toEqual(4);
-          expect(expectedOperations[0])
-              .toEqual({set: {key: 22, value: "EMPTY"}});
-          expect(expectedOperations[1])
-              .toEqual({set: {key: 26, value: "EMPTY"}});
-          expect(expectedOperations[2])
-              .toEqual({set: {key: 31, value: "BCRO"}});
-          expect(expectedOperations[3]).toEqual(setWhiteTurn);
-        });
-
-        it('5 -> 0: White is crowned through simple move', function () {
-          var expectedOperations =
-              checkersLogicService.getExpectedOperations(state, 5, 0, 1);
-          expect(expectedOperations.length).toEqual(3);
-          expect(expectedOperations[0])
-              .toEqual({set: {key: 5, value: "EMPTY"}});
-          expect(expectedOperations[1])
-              .toEqual({set: {key: 0, value: "WCRO"}});
-          expect(expectedOperations[2]).toEqual(setBlackTurn);
-        });
-
-        it('9 -> 6 -> 2: White is crowned through jump move', function () {
-          var expectedOperations =
-              checkersLogicService.getExpectedOperations(state, 9, 2, 1);
-          expect(expectedOperations.length).toEqual(4);
-          expect(expectedOperations[0])
-              .toEqual({set: {key: 9, value: "EMPTY"}});
-          expect(expectedOperations[1])
-              .toEqual({set: {key: 6, value: "EMPTY"}});
-          expect(expectedOperations[2])
-              .toEqual({set: {key: 2, value: "WCRO"}});
-          expect(expectedOperations[3]).toEqual(setBlackTurn);
-        });
-      });
-
-      /**
-       * END GAME SCENARIO
-       *
-       *      0    1    2    3    4    5    6    7
-       * 0 | ** |  0 | ** |  1 | ** |  2 | ** |  3 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 1 |  4 | ** |  5 | ** |  6 | ** |  7 | ** |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 2 | ** |  8 | ** |  9 | ** | 10 | ** | 11 |
-       *   | -- | -- | -- | BM | -- | -- | -- | -- |
-       * 3 | 12 | ** | 13 | ** | 14 | ** | 15 | ** |
-       *   | -- | -- | WM | -- | -- | -- | -- | -- |
-       * 4 | ** | 16 | ** | 17 | ** | 18 | ** | 19 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 5 | 20 | ** | 21 | ** | 22 | ** | 23 | ** |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 6 | ** | 24 | ** | 25 | ** | 26 | ** | 27 |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       * 7 | 28 | ** | 29 | ** | 30 | ** | 31 | ** |
-       *   | -- | -- | -- | -- | -- | -- | -- | -- |
-       */
-      describe('Test crown', function () {
-        var state;
-        beforeEach(function () {
-          state = emptyState;
-          state[9] = 'BMAN';
-          state[13] = 'WMAN';
-        });
-
-        it('Black won', function () {
-          var expectedOperations =
-              checkersLogicService.getExpectedOperations(state, 9, 16, 0);
-          expect(expectedOperations.length).toEqual(5);
-          expect(expectedOperations[0])
-              .toEqual({set: {key: 9, value: "EMPTY"}});
-          expect(expectedOperations[1])
-              .toEqual({set: {key: 13, value: "EMPTY"}});
-          expect(expectedOperations[2])
-              .toEqual({set: {key: 16, value: "BMAN"}});
-          expect(expectedOperations[3]).toEqual(setWhiteTurn);
-          expect(expectedOperations[4])
-              .toEqual(setBlackWin);
-        });
-
-        it('White won', function () {
-          var expectedOperations =
-              checkersLogicService.getExpectedOperations(state, 13, 6, 1);
-          expect(expectedOperations.length).toEqual(5);
-          expect(expectedOperations[0])
-              .toEqual({set: {key: 13, value: "EMPTY"}});
-          expect(expectedOperations[1])
-              .toEqual({set: {key: 9, value: "EMPTY"}});
-          expect(expectedOperations[2])
-              .toEqual({set: {key: 6, value: "WMAN"}});
-          expect(expectedOperations[3]).toEqual(setBlackTurn);
-          expect(expectedOperations[4])
-              .toEqual(setWhiteWin);
-        });
-
       });
     });
   });

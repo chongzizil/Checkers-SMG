@@ -821,10 +821,14 @@
           // computer, then "rotate" the board for the player. Therefore the
           // board will always look from the point of view of the player in
           // single player mode...
-          if (params.playMode === "passAndPlay" || params.playMode === "playAgainstTheComputer") {
-            $scope.needRotate = false;
-          } else {
+          if (params.playMode === "playAgainstTheComputer"
+              || (params.playMode !== "passAndPlay" && params.playMode !== "playAgainstTheComputer" &&
+              params.yourPlayerIndex === 0)) {
+            // Since the first player will be the black player, so in ai mode
+            // and multi-window for black player, the board will rotate...
             $scope.needRotate = true;
+          } else {
+            $scope.needRotate = false;
           }
 
           var turnIndexBeforeMove = params.turnIndexBeforeMove;

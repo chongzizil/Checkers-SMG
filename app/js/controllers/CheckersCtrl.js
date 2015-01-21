@@ -112,6 +112,12 @@
          * @returns square object of the ui state
          */
         $scope.getSquare = function(row, col) {
+          // If the board need to rotate 180 degrees, simply change the row and
+          // column for the UI... ($scope.uiState remains intact)
+          if ($scope.needRotate) {
+            row = 7 - row;
+            col = 7 - col;
+          }
           var index = $scope.convertDeltaToUiIndex(row, col);
           return $scope.uiState[index];
         };
@@ -165,39 +171,71 @@
           switch (toUiIndex - fromUiIndex) {
           case -column - 1:
             // Simple move up left
-            $animate.addClass(('#' + fromUiIndex), 'move_up_left', callback);
+            if ($scope.needRotate) {
+              $animate.addClass(('#' + fromUiIndex), 'move_down_right', callback);
+            } else {
+              $animate.addClass(('#' + fromUiIndex), 'move_up_left', callback);
+            }
             break;
           case -column + 1:
             // Simple move up right
-            $animate.addClass(('#' + fromUiIndex), 'move_up_right', callback);
+            if ($scope.needRotate) {
+              $animate.addClass(('#' + fromUiIndex), 'move_down_left', callback);
+            } else {
+              $animate.addClass(('#' + fromUiIndex), 'move_up_right', callback);
+            }
             break;
           case column - 1:
             // Simple move down left
-            $animate.addClass(('#' + fromUiIndex), 'move_down_left', callback);
+            if ($scope.needRotate) {
+              $animate.addClass(('#' + fromUiIndex), 'move_up_right', callback);
+            } else {
+              $animate.addClass(('#' + fromUiIndex), 'move_down_left', callback);
+            }
             break;
           case column + 1:
             // Simple move down right
-            $animate.addClass(('#' + fromUiIndex), 'move_down_right', callback);
+            if ($scope.needRotate) {
+              $animate.addClass(('#' + fromUiIndex), 'move_up_left', callback);
+            } else {
+              $animate.addClass(('#' + fromUiIndex), 'move_down_right', callback);
+            }
             break;
           case -(2 * column) - 2:
             // Jump move up left
             $animate.addClass(('#' + jumpedUiIndex), 'jumped');
-            $animate.addClass(('#' + fromUiIndex), 'jump_up_left', callback);
+            if ($scope.needRotate) {
+              $animate.addClass(('#' + fromUiIndex), 'jump_down_right', callback);
+            } else {
+              $animate.addClass(('#' + fromUiIndex), 'jump_up_left', callback);
+            }
             break;
           case -(2 * column) + 2:
             // Jump move up right
             $animate.addClass(('#' + jumpedUiIndex), 'jumped');
-            $animate.addClass(('#' + fromUiIndex), 'jump_up_right', callback);
+            if ($scope.needRotate) {
+              $animate.addClass(('#' + fromUiIndex), 'jump_down_left', callback);
+            } else {
+              $animate.addClass(('#' + fromUiIndex), 'jump_up_right', callback);
+            }
             break;
           case (2 * column) - 2:
             // Jump move down left
             $animate.addClass(('#' + jumpedUiIndex), 'jumped');
-            $animate.addClass(('#' + fromUiIndex), 'jump_down_left', callback);
+            if ($scope.needRotate) {
+              $animate.addClass(('#' + fromUiIndex), 'jump_up_right', callback);
+            } else {
+              $animate.addClass(('#' + fromUiIndex), 'jump_down_left', callback);
+            }
             break;
           case (2 * column) + 2:
             // Jump move down right
             $animate.addClass(('#' + jumpedUiIndex), 'jumped');
-            $animate.addClass(('#' + fromUiIndex), 'jump_down_right', callback);
+            if ($scope.needRotate) {
+              $animate.addClass(('#' + fromUiIndex), 'jump_up_left', callback);
+            } else {
+              $animate.addClass(('#' + fromUiIndex), 'jump_down_right', callback);
+            }
             break;
           }
         }
@@ -216,39 +254,71 @@
           switch (toUiIndex - fromUiIndex) {
           case -column - 1:
             // Simple move up left
-            $animate.removeClass(('#' + fromUiIndex), 'move_up_left');
+            if ($scope.needRotate) {
+              $animate.removeClass(('#' + fromUiIndex), 'move_down_right');
+            } else {
+              $animate.removeClass(('#' + fromUiIndex), 'move_up_left');
+            }
             break;
           case -column + 1:
             // Simple move up right
-            $animate.removeClass(('#' + fromUiIndex), 'move_up_right');
+            if ($scope.needRotate) {
+              $animate.removeClass(('#' + fromUiIndex), 'move_down_left');
+            } else {
+              $animate.removeClass(('#' + fromUiIndex), 'move_up_right');
+            }
             break;
           case column - 1:
             // Simple move down left
-            $animate.removeClass(('#' + fromUiIndex), 'move_down_left');
+            if ($scope.needRotate) {
+              $animate.removeClass(('#' + fromUiIndex), 'move_up_right');
+            } else {
+              $animate.removeClass(('#' + fromUiIndex), 'move_down_left');
+            }
             break;
           case column + 1:
             // Simple move down right
-            $animate.removeClass(('#' + fromUiIndex), 'move_down_right');
+            if ($scope.needRotate) {
+              $animate.removeClass(('#' + fromUiIndex), 'move_up_left');
+            } else {
+              $animate.removeClass(('#' + fromUiIndex), 'move_down_right');
+            }
             break;
           case -(2 * column) - 2:
             // Jump move up left
             $animate.removeClass(('#' + jumpedUiIndex), 'jumped');
-            $animate.removeClass(('#' + fromUiIndex), 'jump_up_left');
+            if ($scope.needRotate) {
+              $animate.removeClass(('#' + fromUiIndex), 'jump_down_right');
+            } else {
+              $animate.removeClass(('#' + fromUiIndex), 'jump_up_left');
+            }
             break;
           case -(2 * column) + 2:
             // Jump move up right
             $animate.removeClass(('#' + jumpedUiIndex), 'jumped');
-            $animate.removeClass(('#' + fromUiIndex), 'jump_up_right');
+            if ($scope.needRotate) {
+              $animate.removeClass(('#' + fromUiIndex), 'jump_down_left');
+            } else {
+              $animate.removeClass(('#' + fromUiIndex), 'jump_up_right');
+            }
             break;
           case (2 * column) - 2:
             // Jump move down left
             $animate.removeClass(('#' + jumpedUiIndex), 'jumped');
-            $animate.removeClass(('#' + fromUiIndex), 'jump_down_left');
+            if ($scope.needRotate) {
+              $animate.removeClass(('#' + fromUiIndex), 'jump_up_right');
+            } else {
+              $animate.removeClass(('#' + fromUiIndex), 'jump_down_left');
+            }
             break;
           case (2 * column) + 2:
             // Jump move down right
             $animate.removeClass(('#' + jumpedUiIndex), 'jumped');
-            $animate.removeClass(('#' + fromUiIndex), 'jump_down_right');
+            if ($scope.needRotate) {
+              $animate.removeClass(('#' + fromUiIndex), 'jump_up_left');
+            } else {
+              $animate.removeClass(('#' + fromUiIndex), 'jump_down_right');
+            }
             break;
           }
           // Initialize the selectedSquares after the animation class is removed
@@ -627,8 +697,14 @@
          * @param index the piece selected.
          * @param isDnD is drag and drop or is not
          */
-        $scope.cellClicked = function (index, isDnD) {
-          var square = $scope.uiState[index],
+        $scope.cellClicked = function (row, col, isDnD) {
+          if ($scope.needRotate) {
+            row = 7 - row;
+            col = 7 - col;
+          }
+
+          var index = row * CONSTANT.ROW + col,
+            square = $scope.uiState[index],
             currSelectedDelta = convertUiIndexToDelta(index),
             prevSelectedDelta;
 
@@ -741,6 +817,16 @@
          * @param params
          */
         function updateUI(params) {
+          // If the play mode is neither pass and play nor play against the
+          // computer, then "rotate" the board for the player. Therefore the
+          // board will always look from the point of view of the player in
+          // single player mode...
+          if (params.playMode === "passAndPlay" || params.playMode === "playAgainstTheComputer") {
+            $scope.needRotate = false;
+          } else {
+            $scope.needRotate = true;
+          }
+
           var turnIndexBeforeMove = params.turnIndexBeforeMove;
           // Get the new state
           board = params.stateAfterMove.board;
@@ -778,7 +864,7 @@
         }
 
         // Before getting any updateUI, we show an empty board to a viewer (so you can't perform moves).
-        updateUI({stateAfterMove: {}, turnIndexAfterMove: 0, yourPlayerIndex: -2});
+        updateUI({playMode: "passAndPlay", stateAfterMove: {}, turnIndexAfterMove: 0, yourPlayerIndex: -2});
 
         /**
          * Set the game!

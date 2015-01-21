@@ -13,7 +13,6 @@
   <link rel="stylesheet"
         href="bower_components/bootstrap/dist/css/bootstrap.min.css">
   <!--<link href='http://fonts.googleapis.com/css?family=Cinzel:400,700|Raleway' rel='stylesheet' type='text/css'>-->
-  <link rel="stylesheet" href="css/app.css"/>
   <link rel="stylesheet" href="css/checkers.css"/>
   <link rel="stylesheet" href="css/responsive.css"/>
   <link rel="stylesheet"
@@ -52,41 +51,30 @@
   <script src="http://yoav-zibin.github.io/emulator/stateService.js"></script>
 </head>
 <body ng-cloak ng-controller="CheckersCtrl">
-
-<h1 id="title" class="text-center">Checkers</h1>
-
-<div id="checkers_game">
-  <section id="info">
-    <h4 id="current_player_id" class="text-center">Current Player:
-      {{playersInfo[yourPlayerIndex].playerId}} - <span
-          ng-show="yourPlayerIndex === 0">BLACK</span><span
-          ng-show="yourPlayerIndex === 1">WHITE</span></h4>
-  </section>
-  <section id="board">
-    <div ng-repeat="row in [0, 1, 2, 3, 4, 5, 6, 7]">
-      <div ng-repeat="col in [0, 1, 2, 3, 4, 5, 6, 7]" class="square"
-           ng-click="cellClicked(convertDeltaToUiIndex(row, col), false)">
-        <div
-            ng-class="{content: true, isDarkSquare: getSquare(row, col).isDark, isLightSquare: getSquare(row, col).isLight}">
-          <img ng-src="{{getSquare(row, col).bgSrc}}" class="background_image">
-          <!--The image of the piece, if it's in a light square, then the src of the image will be empty-->
-          <img ng-show="getSquare(row, col).isDark"
-               ng-src="{{getSquare(row, col).pieceSrc === '' ? '' : (getSquare(row, col).pieceSrc + (!getSquare(row, col).isSelected ? '':'_selected') + '.png')}}"
-               alt=""
-               id="{{convertDeltaToUiIndex(row, col)}}"
-               dd-draggable={{getSquare(row, col).canSelect}}
-               dd-drop-target={{getSquare(row, col).canSelect}}
-               ng-class="{
+<section id="board">
+  <div ng-repeat="row in [0, 1, 2, 3, 4, 5, 6, 7]">
+    <div ng-repeat="col in [0, 1, 2, 3, 4, 5, 6, 7]" class="square"
+         ng-click="cellClicked(row, col, false)">
+      <div
+          ng-class="{content: true, isDarkSquare: getSquare(row, col).isDark, isLightSquare: getSquare(row, col).isLight}">
+        <img ng-src="{{getSquare(row, col).bgSrc}}" class="background_image">
+        <!--The image of the piece, if it's in a light square, then the src of the image will be empty-->
+        <img ng-show="getSquare(row, col).isDark"
+             ng-src="{{getSquare(row, col).pieceSrc === '' ? '' : (getSquare(row, col).pieceSrc + (!getSquare(row, col).isSelected ? '':'_selected') + '.png')}}"
+             alt=""
+             id="{{convertDeltaToUiIndex(7 - row, 7 - col)}}"
+             dd-draggable={{getSquare(row, col).canSelect}}
+             dd-drop-target={{getSquare(row, col).canSelect}}
+             ng-class="{
              canSelect: getSquare(row, col).canSelect,
              isBlackMan: getSquare(row, col).isBlackMan,
              isBlackCro: getSquare(row, col).isBlackCro,
              isWhiteMan: getSquare(row, col).isWhiteMan,
              isWhiteCro: getSquare(row, col).isWhiteCro,
              isEmpty: getSquare(row, col).isEmpty}">
-        </div>
       </div>
     </div>
-  </section>
-</div>
+  </div>
+</section>
 </body>
 </html>

@@ -13,14 +13,6 @@ body {
   height: 100%;
 }
 
-#title {
-  font-family: 'Cinzel', serif;
-}
-
-#button_panel, #current_player_id {
-  font-family: 'Raleway', sans-serif;
-}
-
 #board .square {
   position: relative;
   width: 12.5%;
@@ -44,7 +36,12 @@ body {
   -webkit-filter: brightness(100%);
 }
 
-.canSelect:hover {
+.isBlackMan.canSelect, .isBlackCro.canSelect {
+  filter: brightness(140%);
+  -webkit-filter: brightness(140%);
+}
+
+.isWhiteMan.canSelect, .isWhiteCro.canSelect {
   filter: brightness(125%);
   -webkit-filter: brightness(125%);
 }

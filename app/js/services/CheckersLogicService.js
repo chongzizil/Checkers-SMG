@@ -1086,9 +1086,6 @@
          * @returns return true if the move is ok, otherwise false.
          */
         function isMoveOk(params) {
-
-          console.log(params);
-
           var stateBeforeMove = params.stateBeforeMove,
             turnIndexBeforeMove = params.turnIndexBeforeMove,
             move = params.move,
@@ -1181,56 +1178,19 @@
           return true;
         }
 
-          function getInitialBoard() {
-            return [['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
-              ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
-              ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
-              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
-              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
-              ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
-              ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
-              ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']];
-          }
-
-          function exampleGame() {
-            return (exampleMoves(0,
-                {board:[['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
-                  ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
-                  ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
-                  ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
-                  ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
-                  ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
-                  ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
-                  ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']],
-                  delta: {row: 2, col: 0}},
-                [{row: 0, col: 6, comment: "Black plays on square (0,6)"}
-                  ,
-                  {row: 0, col: 1, comment: "White plays on square (0,1)"}
-                  ,
-                  {row: 7, col: 1, comment: "Black plays row 7, col 1"},
-                  {row: 6, col: 6, comment: "Uh oh, white plays in x-Square"},
-                  {row: 7, col: 7, comment: "Black captures bottom-left corner!"},
-                  {row: 6, col: 7, comment: "White plays (6,7)"}
-                ]));
-          }
-
-          function riddles() {
-            return([
-              exampleMoves(1,
-                  {board:[['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
-                    ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
-                    ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
-                    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
-                    ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
-                    ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
-                    ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
-                    ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']],
-                    delta: {row: 2, col: 0}},
-                  [{row: 0, col: 0, comment: "Where should White play to get an advantage on his next turn?"},
-                    {row: 6, col: 6, comment: "Black plays row 6, col 6"},
-                    {row: 7, col: 7, comment: "White captures diagonal!"}])]
-            );
-          }
+        /**
+         * Return the initial board
+         */
+        function getInitialBoard() {
+          return [['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+            ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+            ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+            ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+            ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+            ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+            ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+            ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']];
+        }
 
         return {
           isMoveOk: isMoveOk,

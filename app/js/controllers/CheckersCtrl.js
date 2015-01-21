@@ -55,10 +55,6 @@
           moveAudio = new Audio('audio/move.wav');
           moveAudio.load();
 
-          $scope.printState = function() {
-            console.log($scope.uiState);
-          }
-
         /**
          * Check if the square of the delta is dark square
          * @param row
@@ -111,6 +107,10 @@
           }
         }
 
+        /**
+         * return the square object of the ui state.
+         * @returns square object of the ui state
+         */
         $scope.getSquare = function(row, col) {
           var index = $scope.convertDeltaToUiIndex(row, col);
           return $scope.uiState[index];
@@ -625,6 +625,7 @@
          * send the move if the move is complete and valid.
          *
          * @param index the piece selected.
+         * @param isDnD is drag and drop or is not
          */
         $scope.cellClicked = function (index, isDnD) {
           var square = $scope.uiState[index],
@@ -737,7 +738,7 @@
 
         /**
          * This method update the game's UI.
-         * @param match
+         * @param params
          */
         function updateUI(params) {
           var turnIndexBeforeMove = params.turnIndexBeforeMove;

@@ -62,7 +62,7 @@
         <img ng-show="getSquare(row, col).isDark"
              ng-src="{{getSquare(row, col).pieceSrc === '' ? '' : (getSquare(row, col).pieceSrc + (!getSquare(row, col).isSelected ? '':'_selected') + '.png')}}"
              alt=""
-             id="{{convertDeltaToUiIndex(7 - row, 7 - col)}}"
+             id="{{getId(row, col)}}"
              dd-draggable={{getSquare(row, col).canSelect}}
              dd-drop-target={{getSquare(row, col).canSelect}}
              ng-class="{

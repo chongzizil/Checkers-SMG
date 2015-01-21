@@ -82,6 +82,21 @@
         };
 
         /**
+         * Return the id of a square. Basically it's the same as
+         * $scope.convertDeltaToUiIndex... Just adds process of rotate...
+         * @param row
+         * @param col
+         * @returns {*}
+         */
+        $scope.getId = function(row, col) {
+          if ($scope.needRotate) {
+            row = 7 - row;
+            col = 7 - col;
+          }
+          return row * CONSTANT.COLUMN + col;
+        };
+
+        /**
          * Convert the UI state index to delta object
          * @param uiIndex
          * @returns {{row: number, col: number}}
@@ -763,7 +778,16 @@
           var square = $scope.uiState[index],
             isDnD = true;
           if (square.isDark && square.canSelect) {
-            $scope.cellClicked(index, isDnD);
+            var delta = convertUiIndexToDelta(index);
+            // Since the index/id passed in maybe changed if the board is
+            // rotated... so I have to change them back because cellClicked will
+            // process them one more time... This is unnecessary and will be
+            // refactored in the future... (I guess)
+            if ($scope.needRotate) {
+              delta.row = 7 - delta.row;
+              delta.col = 7 - delta.col;
+            }
+            $scope.cellClicked(delta.row, delta.col, isDnD);
           }
         };
 
@@ -777,7 +801,16 @@
           var square = $scope.uiState[index],
             isDnD = true;
           if (square.isDark && square.canSelect) {
-            $scope.cellClicked(index, isDnD);
+            var delta = convertUiIndexToDelta(index);
+            // Since the index/id passed in maybe changed if the board is
+            // rotated... so I have to change them back because cellClicked will
+            // process them one more time... This is unnecessary and will be
+            // refactored in the future... (I guess)
+            if ($scope.needRotate) {
+              delta.row = 7 - delta.row;
+              delta.col = 7 - delta.col;
+            }
+            $scope.cellClicked(delta.row, delta.col, isDnD);
           }
           // The target is not droppable, nothing will happen.
         };

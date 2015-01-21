@@ -12,7 +12,6 @@
           revert: true,
           start: function () {
             var id = element[0].id;
-
             // Handle the drag start event only if the square is selectable
             if (scope.uiState[id].canSelect) {
               scope.handleDragStart(id);

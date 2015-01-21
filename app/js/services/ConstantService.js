@@ -5,7 +5,7 @@
   /**
    * Constants
    */
-  angular.module('checkers').factory('constantService', function () {
+  angular.module('myApp').factory('constantService', function () {
     return {
       ROW: 8,
       // Since only the dark square may contain pieces, for both the

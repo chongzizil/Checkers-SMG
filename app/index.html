@@ -1,13 +1,10 @@
-<!DOCTYPE html manifest="checkers.appcache">
-<!--[if lt IE 7]>      <html lang="en" ng-app="checkers" class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
-<!--[if IE 7]>         <html lang="en" ng-app="checkers" class="no-js lt-ie9 lt-ie8"> <![endif]-->
-<!--[if IE 8]>         <html lang="en" ng-app="checkers" class="no-js lt-ie9"> <![endif]-->
-<!--[if gt IE 8]><!--> <html lang="en" ng-app="checkers" class="no-js"> <!--<![endif]-->
+<!DOCTYPE html>
+<html lang="en" ng-app="myApp">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>Checkers</title>
-  <meta name="description" content="">
+  <meta name="description" content="Checkers">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <link rel="stylesheet" href="bower_components/html5-boilerplate/css/normalize.css">
   <link rel="stylesheet" href="bower_components/html5-boilerplate/css/main.css">
@@ -17,30 +14,20 @@
   <link rel="stylesheet" href="css/checkers.css"/>
   <link rel="stylesheet" href="css/responsive.css"/>
   <link rel="stylesheet" href="vendor/font-awesome-4.2.0/css/font-awesome.min.css"/>
-  <script type="text/javascript" src="js/api_v2.js"></script>
   <script src="bower_components/html5-boilerplate/js/vendor/modernizr-2.6.2.min.js"></script>
-</head>
-<body>
-  <!--[if lt IE 7]>
-      <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
-  <![endif]-->
 
-  <h1 id="title" class="text-center">Checkers</h1>
-
-  <div ng-view></div>
-
-  <!--<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>-->
-  <script src="bower_components/jquery/dist/jquery.min.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
   <script src="vendor/jquery-ui-1.11.1.custom/jquery-ui.min.js"></script>
   <!--Enable the drag and drop in mobile device-->
   <script src="vendor/jquery-ui-touch-punch-0.2.3/jquery.ui.touch-punch.min.js"></script>
-  <!--<script src="//ajax.googleapis.com/ajax/libs/angularjs/1.2.23/angular.min.js"></script>-->
-  <script src="bower_components/angular/angular.min.js"></script>
-  <!--<script src="bower_components/lodash/dist/lodash.min.js"></script>-->
-  <script src="bower_components/angular-route/angular-route.min.js"></script>
-  <script src="bower_components/angular-animate/angular-animate.min.js"></script>
   <script src="bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
-  <script src="js/app.js"></script>
+  <!--<script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.2.26/angular.min.js"></script>-->
+  <script src="bower_components/angular/angular.js"></script>
+  <!--<script src="bower_components/lodash/dist/lodash.min.js"></script>-->
+  <script src="bower_components/angular-animate/angular-animate.min.js"></script>
+  <script>
+    angular.module('myApp', ['ngAnimate']);
+  </script>
   <script src="js/services/CheckersLogicService.js"></script>
   <script src="js/services/ConstantService.js"></script>
   <script src="js/services/EnumService.js"></script>
@@ -48,5 +35,46 @@
   <script src="js/controllers/CheckersCtrl.js"></script>
   <script src="js/directives/DraggableDirective.js"></script>
   <script src="js/directives/DropTargetDirective.js"></script>
+  <script src="http://yoav-zibin.github.io/emulator/gameService.js"></script>
+  <script src="http://yoav-zibin.github.io/emulator/messageService.js"></script>
+  <script src="http://yoav-zibin.github.io/emulator/stateService.js"></script>
+</head>
+<body ng-cloak ng-controller="CheckersCtrl">
+
+  <h1 id="title" class="text-center">Checkers</h1>
+
+  <section>
+    <!--<section id="button_panel" class="text-center">-->
+      <!--<a id="pass_and_play_btn" class="btn btn-sm btn-default" href="#/PassAndPlay"><i class="fa fa-user"></i> Human</a>-->
+      <!--<button id="new_game_btn" class="btn btn-sm btn-default" ng-click="newGame()"><i class="fa fa-refresh"></i> New game</button>-->
+      <!--<a id="ai_btn" class="btn btn-sm btn-default" href="#/PlayAgainstTheComputer"><i class="fa fa-desktop"></i> AI</a>-->
+    <!--</section>-->
+
+    <div id="checkers_game">
+      <section id="info">
+        <h4 id="current_player_id" class="text-center">Current Player: {{playersInfo[yourPlayerIndex].playerId}} - <span ng-show="yourPlayerIndex === 0">Black</span><span ng-show="yourPlayerIndex === 1">White</span></h4>
+        <button ng-click="printState()">YO</button>
+      </section>
+      <section id="board">
+        <div ng-repeat="row in [0, 1, 2, 3, 4, 5, 6, 7]">
+          <div ng-repeat="col in [0, 1, 2, 3, 4, 5, 6, 7]" class="square" ng-click="cellClicked(convertDeltaToUiIndex(row, col), false)">
+            <div ng-class="{content: true, isDarkSquare: getSquare(row, col).isDark, isLightSquare: getSquare(row, col).isLight}">
+              <img ng-src="{{getSquare(row, col).bgSrc}}" class="background_image">
+              <!--The image of the piece, if it's in a light square, then the src of the image will be empty-->
+              <img ng-show="getSquare(row, col).isDark" ng-src="{{getSquare(row, col).pieceSrc === '' ? '' : (getSquare(row, col).pieceSrc + (!getSquare(row, col).isSelected ? '':'_selected') + '.png')}}" alt=""
+                   id="{{convertDeltaToUiIndex(row, col)}}" dd-draggable = {{getSquare(row, col).canSelect}} dd-drop-target = {{getSquare(row, col).canSelect}}
+                   ng-class="{
+             canSelect: getSquare(row, col).canSelect,
+             isBlackMan: uiState[convertDeltaToUiIndex(row, col)].isBlackMan,
+             isBlackCro: uiState[convertDeltaToUiIndex(row, col)].isBlackCro,
+             isWhiteMan: uiState[convertDeltaToUiIndex(row, col)].isWhiteMan,
+             isWhiteCro: uiState[convertDeltaToUiIndex(row, col)].isWhiteCro,
+             isEmpty: uiState[convertDeltaToUiIndex(row, col)].isEmpty}">
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </section>
 </body>
 </html>

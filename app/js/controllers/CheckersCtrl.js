@@ -42,18 +42,22 @@
    * 6:even   ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
    * 7:odd    ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']]
    */
-  angular.module('checkers').controller('CheckersCtrl',
+  angular.module('myApp').controller('CheckersCtrl',
       ['$scope', '$animate', '$timeout', '$location', '$q',
-        'checkersLogicService', 'checkersAiService', 'constantService',
+        'checkersLogicService', 'checkersAiService', 'constantService', 'gameService',
         function ($scope, $animate, $timeout, $location, $q,
-                  checkersLogicService, checkersAiService, constantService) {
+                  checkersLogicService, checkersAiService, constantService, gameService) {
         var CONSTANT = constantService,
           moveAudio,
-          game,
-          makeMoveCallback,
           board,
           selectedSquares = [];
 
+          moveAudio = new Audio('audio/move.wav');
+          moveAudio.load();
+
+          $scope.printState = function() {
+            console.log($scope.uiState);
+          }
 
         /**
          * Check if the square of the delta is dark square
@@ -77,16 +81,16 @@
          * @param col
          * @returns {*}
          */
-        function convertDeltaToUiIndex(row, col) {
+        $scope.convertDeltaToUiIndex = function(row, col) {
           return row * CONSTANT.COLUMN + col;
-        }
+        };
 
         /**
          * Convert the UI state index to delta object
          * @param uiIndex
          * @returns {{row: number, col: number}}
          */
-        function converUiIndexToDelta(uiIndex) {
+        function convertUiIndexToDelta(uiIndex) {
           var delta = {row: -1, col: -1};
 
           delta.row = Math.floor(uiIndex / CONSTANT.ROW);
@@ -107,6 +111,11 @@
           }
         }
 
+        $scope.getSquare = function(row, col) {
+          var index = $scope.convertDeltaToUiIndex(row, col);
+          return $scope.uiState[index];
+        };
+
         /**
          * Get the indexes necessary for the animation.
          *
@@ -121,15 +130,15 @@
           var fromUiIndex = selectedSquares[0],
             toUiIndex = selectedSquares[1],
             jumpedUiIndex = -1,
-            fromDelta = converUiIndexToDelta(fromUiIndex),
-            toDelta = converUiIndexToDelta(toUiIndex),
+            fromDelta = convertUiIndexToDelta(fromUiIndex),
+            toDelta = convertUiIndexToDelta(toUiIndex),
             jumpDelta = checkersLogicService.getJumpedDelta(
               fromDelta,
               toDelta
             );
 
           jumpedUiIndex =
-              convertDeltaToUiIndex(jumpDelta.row, jumpDelta.col);
+              $scope.convertDeltaToUiIndex(jumpDelta.row, jumpDelta.col);
 
           return {
             fromUiIndex: fromUiIndex,
@@ -267,7 +276,7 @@
             for (col = 0; col < CONSTANT.COLUMN; col += 1) {
               // Check all dark squares
               if (isDarkSquare(row, col)) {
-                uiIndex = convertDeltaToUiIndex(row, col);
+                uiIndex = $scope.convertDeltaToUiIndex(row, col);
                 darkUiSquare = $scope.uiState[uiIndex];
                 delta = {row: row, col: col};
                 // If there exists a piece within the darkUiSquare and is the
@@ -316,7 +325,7 @@
             uiIndex,
             possibleMoves;
 
-          fromDelta = converUiIndexToDelta(squareUiIndex);
+          fromDelta = convertUiIndexToDelta(squareUiIndex);
           possibleMoves =
               checkersLogicService.getAllPossibleMoves(board, fromDelta,
                     $scope.yourPlayerIndex);
@@ -327,7 +336,7 @@
             for (i = 0; i < possibleMoves.length; i += 1) {
               row = possibleMoves[i].row;
               col = possibleMoves[i].col;
-              uiIndex = convertDeltaToUiIndex(row, col);
+              uiIndex = $scope.convertDeltaToUiIndex(row, col);
               $scope.uiState[uiIndex].canSelect = true;
             }
           }
@@ -426,7 +435,7 @@
                 darkUiSquare.isDark = true;
                 darkUiSquare.bgSrc = 'img/dark_square.png';
 
-                uiSquareIndex = convertDeltaToUiIndex(row, col);
+                uiSquareIndex = $scope.convertDeltaToUiIndex(row, col);
                 $scope.uiState[uiSquareIndex] = darkUiSquare;
               } else {
                 // Light square
@@ -439,7 +448,7 @@
                 lightUiSquare.isEmpty = false;
                 lightUiSquare.pieceSrc = '';
 
-                uiSquareIndex = convertDeltaToUiIndex(row, col);
+                uiSquareIndex = $scope.convertDeltaToUiIndex(row, col);
                 $scope.uiState[uiSquareIndex] = lightUiSquare;
               }
             }
@@ -465,14 +474,13 @@
 
           if (selectedSquares.length === 0) {
             // If the selectedSquares is empty, then the last move should be the
-            // first move maded by the black player in order to initialize th
+            // first move made by the black player in order to initialize th
             // game. So update each dark squares.
-
             for (row = 0; row < CONSTANT.ROW; row += 1) {
               for (col = 0; col < CONSTANT.COLUMN; col += 1) {
                 gameApiSquare = board[row][col];
                 if (isDarkSquare(row, col)) {
-                  darkUiSquareIndex = convertDeltaToUiIndex(row, col);
+                  darkUiSquareIndex = $scope.convertDeltaToUiIndex(row, col);
                   darkUiSquare = $scope.uiState[darkUiSquareIndex];
                   updateUiSquare(gameApiSquare, darkUiSquare);
                 }
@@ -488,8 +496,8 @@
             jumpedUiIndex = -1;
 
             // Game API state index
-            fromDelta = converUiIndexToDelta(fromUiIndex);
-            toDelta = converUiIndexToDelta(toUiIndex);
+            fromDelta = convertUiIndexToDelta(fromUiIndex);
+            toDelta = convertUiIndexToDelta(toUiIndex);
 
             // Get the jumped square's index. If it's a simple move, then this
             // index is illegal, yet will not be used.
@@ -502,7 +510,7 @@
             updateUiSquare(board[toDelta.row][toDelta.col],
                 $scope.uiState[toUiIndex]);
             if (jumpedDelta.row !== -1) {
-              jumpedUiIndex = convertDeltaToUiIndex(jumpedDelta.row,
+              jumpedUiIndex = $scope.convertDeltaToUiIndex(jumpedDelta.row,
                   jumpedDelta.col);
 
               updateUiSquare(board[jumpedDelta.row][jumpedDelta.col],
@@ -545,7 +553,7 @@
                 // It's ai's turn, the player can not select any squares
                 setAllSquareUnselectable();
               } else {
-                // It's not in ai's mode or ai's turn, so set selectable
+                // It's not in ai's mode nor ai's turn, so set selectable
                 // squares according to the player index.
                 setInitialSelectableSquares($scope.yourPlayerIndex);
               }
@@ -593,8 +601,8 @@
           playAnimation(isDnD, function () {
             // Callback function. It's called when the animation is completed.
             var operations,
-              fromDelta = converUiIndexToDelta(selectedSquares[0]),
-              toDelta = converUiIndexToDelta(selectedSquares[1]);
+              fromDelta = convertUiIndexToDelta(selectedSquares[0]),
+              toDelta = convertUiIndexToDelta(selectedSquares[1]);
 
 //            console.log('Move delta: '
 //                + ($scope.yourPlayerIndex === 0 ? 'Black' : 'White')
@@ -608,7 +616,7 @@
 
             // Now play the audio.
             moveAudio.play();
-            makeMoveCallback(operations);
+            gameService.makeMove(operations);
           });
         }
 
@@ -618,10 +626,12 @@
          *
          * @param index the piece selected.
          */
-        $scope.pieceSelected = function (index, isDnD) {
+        $scope.cellClicked = function (index, isDnD) {
           var square = $scope.uiState[index],
-            currSelectedDelta = converUiIndexToDelta(index),
+            currSelectedDelta = convertUiIndexToDelta(index),
             prevSelectedDelta;
+
+          $scope.isYourTurn = false; // to prevent making another move
 
           // Proceed only if it's dark square and it's selectable.
           if (square.isDark && square.canSelect) {
@@ -633,7 +643,7 @@
               setSelectableSquares(index);
             } else if (selectedSquares.length === 1) {
               // One square is already selected
-              prevSelectedDelta = converUiIndexToDelta(selectedSquares[0]);
+              prevSelectedDelta = convertUiIndexToDelta(selectedSquares[0]);
               if (checkersLogicService
                   .getColor(board[currSelectedDelta.row][currSelectedDelta.col])
                   === checkersLogicService.getColor(
@@ -676,7 +686,7 @@
           var square = $scope.uiState[index],
             isDnD = true;
           if (square.isDark && square.canSelect) {
-            $scope.pieceSelected(index, isDnD);
+            $scope.cellClicked(index, isDnD);
           }
         };
 
@@ -690,7 +700,7 @@
           var square = $scope.uiState[index],
             isDnD = true;
           if (square.isDark && square.canSelect) {
-            $scope.pieceSelected(index, isDnD);
+            $scope.cellClicked(index, isDnD);
           }
           // The target is not droppable, nothing will happen.
         };
@@ -718,76 +728,68 @@
               bestMove = data;
               // Set the selected squares according to the best move.
               selectedSquares = [
-                convertDeltaToUiIndex(bestMove[0].row, bestMove[0].col),
-                convertDeltaToUiIndex(bestMove[1].row, bestMove[1].col)
+                $scope.convertDeltaToUiIndex(bestMove[0].row, bestMove[0].col),
+                $scope.convertDeltaToUiIndex(bestMove[1].row, bestMove[1].col)
               ];
               makeMove(isDnD);
             });
         }
 
-        game = (function () {
-          function getGameDeveloperEmail() {
-            return "yl1949@nyu.edu";
+        /**
+         * This method update the game's UI.
+         * @param match
+         */
+        function updateUI(params) {
+          var turnIndexBeforeMove = params.turnIndexBeforeMove;
+          // Get the new state
+          board = params.stateAfterMove.board;
+          $scope.yourPlayerIndex = params.yourPlayerIndex;
+          $scope.playersInfo = params.playersInfo;
+
+          if (board === undefined) {
+            // Initialize the board...
+            //gameService.makeMove(checkersLogicService.getFirstMove());
+            board = checkersLogicService.getInitialBoard();
+            initializeUiState();
+            updateUiState();
+            setInitialSelectableSquares();
+            $scope.yourPlayerIndex = 0;
+          } else {
+            $scope.isYourTurn = params.turnIndexAfterMove >= 0 && // game is ongoing
+            params.yourPlayerIndex === params.turnIndexAfterMove; // it's my turn
+
+            $scope.isAiMode = $scope.isYourTurn
+            && params.playersInfo[params.yourPlayerIndex].playerId === '';
+
+            // The game is properly initialized, let's make a move :)
+            // But first update the graphics (isAiMode: true)
+            updateCheckersGraphics($scope.isAiMode, function () {
+              // If it's the AI mode and it's the AI turn, then let the AI
+              // makes the move.
+
+              if ($scope.isAiMode) {
+                $scope.isYourTurn = false;
+                // Wait 500 milliseconds until animation ends.
+                $timeout(aiMakeMove, 500);
+              }
+            });
           }
+        }
 
-          /**
-           * This method update the game's UI.
-           * @param match
-           */
-          function updateUI(match) {
-            var isAiMode = $location.url() === '/PlayAgainstTheComputer',
-              turnIndexBeforeMove = match.turnIndexBeforeMove;
-            // Get the new state
-            board = angular.copy(match.stateAfterMove.board);
-            makeMoveCallback = match.makeMoveCallback;
-            $scope.yourPlayerIndex = match.yourPlayerIndex;
-            $scope.playersInfo = match.playersInfo;
-
-            if (checkersLogicService.isEmptyObj(board)
-                && turnIndexBeforeMove === 0) {
-              // If the state is empty and the player is black, the first player
-              // with turn index 0 will make the first move to initialize the
-              // game.
-              // Make the first move
-              makeMoveCallback(checkersLogicService.getFirstMove());
-            } else {
-              // The game is properly initialized, let's make a move :)
-              // But first update the graphics
-              updateCheckersGraphics(isAiMode, function () {
-                // If it's the AI mode and it's the AI turn, then let the AI
-                // makes the move.
-                if (isAiMode && $scope.yourPlayerIndex === 1) {
-                  // Since the events of the Audio API are not well supported,
-                  // for ai, there'll be a delay for the audio to end. Otherwise
-                  // once the ai starts to compute the best move, things weird
-                  // may happen...
-                  $timeout(aiMakeMove, 250);
-                }
-              });
-            }
-          }
-
-          return {
-            getGameDeveloperEmail: getGameDeveloperEmail,
-            isMoveOk: checkersLogicService.isMoveOk,
-            updateUI: updateUI
-          };
-        }());
+        // Before getting any updateUI, we show an empty board to a viewer (so you can't perform moves).
+        updateUI({stateAfterMove: {}, turnIndexAfterMove: 0, yourPlayerIndex: -2});
 
         /**
-         * A function to start a new game.
+         * Set the game!
          */
-        $scope.newGame = function () {
-          // Load the necessary audio.
-          moveAudio = new Audio('audio/move.wav');
-          moveAudio.load();
-
-          // Initialize the empty game board first
-          initializeUiState();
-
-          // Set the game
-          platform.setGame(game);
-          platform.showUI({minNumberOfPlayers: 2, maxNumberOfPlayers: 2});
-        };
+        gameService.setGame({
+          gameDeveloperEmail: "yl1949@nyu.edu",
+          minNumberOfPlayers: 2,
+          maxNumberOfPlayers: 2,
+          //exampleGame: checkersLogicService.getExampleGame(),
+          //riddles: checkersLogicService.getRiddles(),
+          isMoveOk: checkersLogicService.isMoveOk,
+          updateUI: updateUI
+        });
       }]);
 }());

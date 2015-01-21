@@ -4,7 +4,7 @@
 
   // Copied from:
   // http://coderdiaries.com/2014/03/09/drag-and-drop-with-angularjs/
-  angular.module('checkers').directive('ddDropTarget', [function () {
+  angular.module('myApp').directive('ddDropTarget', [function () {
     return {
       restrict: "A",
       link: function (scope, element) {

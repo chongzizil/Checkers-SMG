@@ -4,7 +4,7 @@
 
   // Copied from:
   // http://coderdiaries.com/2014/03/09/drag-and-drop-with-angularjs/
-  angular.module('checkers').directive('ddDraggable', [function () {
+  angular.module('myApp').directive('ddDraggable', [function () {
     return {
       restrict: "A",
       link: function (scope, element) {
@@ -14,6 +14,7 @@
             var id = element[0].id;
 
             // Handle the drag start event only if the square is selectable
+            console.log(id);
             if (scope.uiState[id].canSelect) {
               scope.handleDragStart(id);
             }

@@ -5,7 +5,7 @@
   /**
    * Enums
    */
-  angular.module('checkers').factory('enumService', function () {
+  angular.module('myApp').factory('enumService', function () {
     var ILLEGAL_CODE,
       DIRECTION,
       MOVE_TYPE;

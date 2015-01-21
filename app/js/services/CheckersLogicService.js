@@ -61,7 +61,7 @@
    *       {set: {key: 'toDelta', value: {row: 3, col: 0}}}
    *      ]
    */
-  angular.module('checkers').factory('checkersLogicService',
+  angular.module('myApp').factory('checkersLogicService',
       ['constantService', 'enumService',
         function (constantService, enumService) {
 
@@ -1086,6 +1086,9 @@
          * @returns return true if the move is ok, otherwise false.
          */
         function isMoveOk(params) {
+
+          console.log(params);
+
           var stateBeforeMove = params.stateBeforeMove,
             turnIndexBeforeMove = params.turnIndexBeforeMove,
             move = params.move,
@@ -1095,21 +1098,14 @@
             expectedMove;
 
           /*********************************************************************
-           * 1. If the state is empty, then the move should be the first move.
-           * If the state is not empty, then the move operations array should
-           * have a length of 4.
+           * 1. If the stateBeforeMove is empty, then it should be the first
+           *    move, set the board of stateBeforeMove to be the initial board.
+           *    If the stateBeforeMove is not empty, then the move operations
+           *    array should have a length of 4.
            ********************************************************************/
 
           if (isEmptyObj(stateBeforeMove)) {
-            if (move.length === 0) {
-              return true;
-            }
-
-            if (angular.equals(move, getFirstMove())) {
-              return true;
-            }
-
-            return getIllegalEmailObj(ILLEGAL_CODE.ILLEGAL_MOVE);
+            stateBeforeMove.board = getInitialBoard();
           }
 
           // If the move's length is not 4, it's illegal
@@ -1185,6 +1181,57 @@
           return true;
         }
 
+          function getInitialBoard() {
+            return [['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+              ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+              ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+              ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+              ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+              ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+              ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']];
+          }
+
+          function exampleGame() {
+            return (exampleMoves(0,
+                {board:[['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+                  ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+                  ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+                  ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+                  ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+                  ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+                  ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+                  ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']],
+                  delta: {row: 2, col: 0}},
+                [{row: 0, col: 6, comment: "Black plays on square (0,6)"}
+                  ,
+                  {row: 0, col: 1, comment: "White plays on square (0,1)"}
+                  ,
+                  {row: 7, col: 1, comment: "Black plays row 7, col 1"},
+                  {row: 6, col: 6, comment: "Uh oh, white plays in x-Square"},
+                  {row: 7, col: 7, comment: "Black captures bottom-left corner!"},
+                  {row: 6, col: 7, comment: "White plays (6,7)"}
+                ]));
+          }
+
+          function riddles() {
+            return([
+              exampleMoves(1,
+                  {board:[['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+                    ['BM', '--', 'BM', '--', 'BM', '--', 'BM', '--'],
+                    ['--', 'BM', '--', 'BM', '--', 'BM', '--', 'BM'],
+                    ['DS', '--', 'DS', '--', 'DS', '--', 'DS', '--'],
+                    ['--', 'DS', '--', 'DS', '--', 'DS', '--', 'DS'],
+                    ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--'],
+                    ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
+                    ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']],
+                    delta: {row: 2, col: 0}},
+                  [{row: 0, col: 0, comment: "Where should White play to get an advantage on his next turn?"},
+                    {row: 6, col: 6, comment: "Black plays row 6, col 6"},
+                    {row: 7, col: 7, comment: "White captures diagonal!"}])]
+            );
+          }
+
         return {
           isMoveOk: isMoveOk,
           getFirstMove: getFirstMove,
@@ -1201,7 +1248,8 @@
           getKind: getKind,
           isEmptyObj: isEmptyObj,
           isSimpleMove: isSimpleMove,
-          isJumpMove: isJumpMove
+          isJumpMove: isJumpMove,
+          getInitialBoard: getInitialBoard
         };
       }]);
 }());

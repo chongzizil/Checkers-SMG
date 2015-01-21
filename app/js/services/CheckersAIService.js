@@ -7,7 +7,7 @@
    *
    * The evaluation function is copied from chinese website http://bit.ly/XTUy5g
    */
-  angular.module('checkers').factory('checkersAiService',
+  angular.module('myApp').factory('checkersAiService',
       ['checkersLogicService', '$q', 'constantService',
         function (checkersLogicService, $q, constantService) {
 

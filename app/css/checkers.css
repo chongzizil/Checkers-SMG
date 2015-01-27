@@ -32,18 +32,15 @@ body {
   max-width: 100%;
   position: absolute;
   z-index: 20;
-  filter: brightness(100%);
-  -webkit-filter: brightness(100%);
+  opacity: 1;
 }
 
 .isBlackMan.canSelect, .isBlackCro.canSelect {
-  filter: brightness(140%);
-  -webkit-filter: brightness(140%);
+  opacity: 0.8;
 }
 
 .isWhiteMan.canSelect, .isWhiteCro.canSelect {
-  filter: brightness(125%);
-  -webkit-filter: brightness(125%);
+  opacity: 0.8;
 }
 
 .jumped {

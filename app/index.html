@@ -59,19 +59,21 @@
           ng-class="{content: true, isDarkSquare: getSquare(row, col).isDark, isLightSquare: getSquare(row, col).isLight}">
         <img ng-src="{{getSquare(row, col).bgSrc}}" class="background_image">
         <!--The image of the piece, if it's in a light square, then the src of the image will be empty-->
-        <img ng-show="getSquare(row, col).isDark"
-             ng-src="{{getSquare(row, col).pieceSrc === '' ? '' : (getSquare(row, col).pieceSrc + (!getSquare(row, col).isSelected ? '':'_selected') + '.png')}}"
-             alt=""
-             id="{{getId(row, col)}}"
-             dd-draggable={{getSquare(row, col).canSelect}}
-             dd-drop-target={{getSquare(row, col).canSelect}}
-             ng-class="{
+        <div class="img-wrap">
+          <img ng-show="getSquare(row, col).isDark"
+               ng-src="{{getSquare(row, col).pieceSrc === '' ? '' : (getSquare(row, col).pieceSrc + (!getSquare(row, col).isSelected ? '':'_selected') + '.png')}}"
+               alt=""
+               id="{{getId(row, col)}}"
+               dd-draggable={{getSquare(row, col).canSelect}}
+               dd-drop-target={{getSquare(row, col).canSelect}}
+               ng-class="{
              canSelect: getSquare(row, col).canSelect,
              isBlackMan: getSquare(row, col).isBlackMan,
              isBlackCro: getSquare(row, col).isBlackCro,
              isWhiteMan: getSquare(row, col).isWhiteMan,
              isWhiteCro: getSquare(row, col).isWhiteCro,
              isEmpty: getSquare(row, col).isEmpty}">
+        </div>
       </div>
     </div>
   </div>

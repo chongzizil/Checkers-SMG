@@ -44,9 +44,9 @@
    */
   angular.module('myApp').controller('CheckersCtrl',
       ['$scope', '$animate', '$timeout', '$location', '$q',
-        'checkersLogicService', 'checkersAiService', 'constantService', 'gameService',
+        'checkersLogicService', 'checkersAiService', 'constantService', 'gameService', 'resizeGameAreaService',
         function ($scope, $animate, $timeout, $location, $q,
-                  checkersLogicService, checkersAiService, constantService, gameService) {
+                  checkersLogicService, checkersAiService, constantService, gameService, resizeGameAreaService) {
         var CONSTANT = constantService,
           moveAudio,
           board,
@@ -902,6 +902,8 @@
 
         // Before getting any updateUI, we show an empty board to a viewer (so you can't perform moves).
         updateUI({playMode: "passAndPlay", stateAfterMove: {}, turnIndexAfterMove: 0, yourPlayerIndex: -2});
+
+        resizeGameAreaService.setWidthToHeight(1);
 
         /**
          * Set the game!

@@ -18,7 +18,7 @@
       i;
 
     // Set up the module
-    beforeEach(module('checkers'));
+    beforeEach(module('myApp'));
 
     // Set up the service
     beforeEach(inject(function (_checkersLogicService_) {
@@ -61,80 +61,7 @@
       ];
     });
 
-    it('Should have those functions.', function () {
-      expect(angular.isFunction(checkersLogicService.isMoveOk))
-          .toBe(true);
-      expect(angular.isFunction(checkersLogicService.getFirstMove))
-          .toBe(true);
-      expect(angular.isFunction(checkersLogicService.createMove)).
-          toBe(true);
-      expect(angular.isFunction(checkersLogicService.getJumpMoves))
-          .toBe(true);
-      expect(angular.isFunction(checkersLogicService.getSimpleMoves))
-          .toBe(true);
-      expect(angular.isFunction(checkersLogicService.getAllPossibleMoves))
-          .toBe(true);
-      expect(angular.isFunction(checkersLogicService.hasMandatoryJumps))
-          .toBe(true);
-      expect(angular.isFunction(checkersLogicService.getJumpedDelta))
-          .toBe(true);
-      expect(angular.isFunction(checkersLogicService.isOwnColor))
-          .toBe(true);
-      expect(angular.isFunction(checkersLogicService.getIllegalEmailObj))
-          .toBe(true);
-      expect(angular.isFunction(checkersLogicService.getWinner))
-          .toBe(true);
-      expect(angular.isFunction(checkersLogicService.getColor))
-          .toBe(true);
-      expect(angular.isFunction(checkersLogicService.getKind))
-          .toBe(true);
-      expect(angular.isFunction(checkersLogicService.isEmptyObj))
-          .toBe(true);
-    });
-
     describe('isMoveOk:', function () {
-      describe("INITIALIZE - BLACK:", function () {
-        it("Black legally makes the initialize move", function () {
-          var match = {};
-          match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-          match.stateBeforeMove = {};
-
-          match.move = [];
-          match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-          match.move.push({set: {key: 'board', value: initialBoard}});
-
-          expect(checkersLogicService.isMoveOk(match)).toBe(true);
-        });
-
-        it("Black illegally makes the initialize move at the middle of the" +
-                "game", function () {
-            var match = {};
-            match.turnIndexBeforeMove = BLACK_TURN_INDEX;
-            match.stateBeforeMove = initialBoard;
-
-            match.move = [];
-            match.move.push({setTurn: {turnIndex: BLACK_TURN_INDEX}});
-            match.move.push({set: {key: 'board', value: initialBoard}});
-
-            expectIllegalOperation(checkersLogicService, match,
-                ILLEGAL_CODE.ILLEGAL_MOVE);
-          });
-
-        it("White illegally makes the initialize move", function () {
-          var match = {};
-          match.turnIndexBeforeMove = WHITE_TURN_INDEX;
-          match.stateBeforeMove = {};
-          match.move = [];
-
-          match.move.push({setTurn: {turnIndex: WHITE_TURN_INDEX}});
-          match.move.push({set: {key: 'board', value: initialBoard}});
-
-          expectIllegalOperation(checkersLogicService, match,
-              ILLEGAL_CODE.ILLEGAL_MOVE);
-        });
-      });
-
-
       /*
        * INITIAL STATE SCENARIO - BLACK
        *

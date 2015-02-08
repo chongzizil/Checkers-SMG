@@ -56,8 +56,8 @@
    *          ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
    *          ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']
    *         ]
-   *       }}
-   *       {set: {key: 'fromDelta', value: {row: 2, col: 1}}}
+   *       }},
+   *       {set: {key: 'fromDelta', value: {row: 2, col: 1}}},
    *       {set: {key: 'toDelta', value: {row: 3, col: 0}}}
    *      ]
    */
@@ -1085,7 +1085,7 @@
          *              move.
          * @returns return true if the move is ok, otherwise false.
          */
-        function isMoveOk(params) {
+        function isMoveOk(params, debug) {
           var stateBeforeMove = params.stateBeforeMove,
             turnIndexBeforeMove = params.turnIndexBeforeMove,
             move = params.move,
@@ -1101,11 +1101,12 @@
            *    array should have a length of 4.
            ********************************************************************/
 
+
           if (isEmptyObj(stateBeforeMove)) {
             stateBeforeMove.board = getInitialBoard();
           }
 
-          // If the move's length is not 4, it's illegal
+          // If the move length is not 4, it's illegal
           if (move.length !== 4) {
             return getIllegalEmailObj(ILLEGAL_CODE.ILLEGAL_MOVE);
           }
@@ -1113,7 +1114,6 @@
           /*********************************************************************
            * 2. Compare the expected move and the player's move.
            ********************************************************************/
-
           try {
             /*
              * Example move:
@@ -1133,15 +1133,19 @@
              *   {set: {key: 'toDelta', value: {row: 3, col: 0}}}
              * ]
              */
+
             board = stateBeforeMove.board;
             fromDelta = move[2].set.value;
             toDelta = move[3].set.value;
-
             expectedMove =
                 createMove(board, fromDelta, toDelta, turnIndexBeforeMove);
-//            console.log(JSON.stringify(move));
-//            console.log(JSON.stringify(expectedMove));
-//            console.log(angular.equals(move, expectedMove));
+            if (debug) {
+              console.log("Debug");
+              console.log(JSON.stringify(move));
+              console.log(JSON.stringify(expectedMove));
+              console.log(angular.equals(move, expectedMove));
+            }
+
             if (!angular.equals(move, expectedMove)) {
               return getIllegalEmailObj(ILLEGAL_CODE.ILLEGAL_MOVE);
             }

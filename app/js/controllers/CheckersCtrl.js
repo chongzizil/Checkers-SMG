@@ -42,11 +42,13 @@
    * 6:even   ['--', 'WM', '--', 'WM', '--', 'WM', '--', 'WM'],
    * 7:odd    ['WM', '--', 'WM', '--', 'WM', '--', 'WM', '--']]
    */
+  //For unit tests
+  //angular.module('myApp', []).controller('CheckersCtrl',
   angular.module('myApp').controller('CheckersCtrl',
       ['$scope', '$animate', '$timeout', '$location', '$q',
-        'checkersLogicService', 'checkersAiService', 'constantService', 'gameService', 'resizeGameAreaService',
+        'checkersLogicService', 'checkersAiService', 'checkersNewAiService', 'constantService', 'gameService', 'resizeGameAreaService',
         function ($scope, $animate, $timeout, $location, $q,
-                  checkersLogicService, checkersAiService, constantService, gameService, resizeGameAreaService) {
+                  checkersLogicService, checkersAiService, checkersNewAiService, constantService, gameService, resizeGameAreaService) {
         var CONSTANT = constantService,
           moveAudio,
           board,
@@ -823,26 +825,43 @@
         function aiMakeMove() {
           var isDnD = false,
             bestMove,
-            depth = 10,
-            timeLimit = 800,
-            timer = {
-              startTime: Date.now(),
-              timeLimit: timeLimit
-            };
+            maxDepth = 10,
+            timeLimit = 1000;
 
-          // Move on only after the best move is calculated.
-          checkersAiService.
-              findBestMove(angular.copy(board),
-              $scope.yourPlayerIndex, depth, timer)
-              .then(function (data) {
-              bestMove = data;
-              // Set the selected squares according to the best move.
-              selectedSquares = [
-                $scope.convertDeltaToUiIndex(bestMove[0].row, bestMove[0].col),
-                $scope.convertDeltaToUiIndex(bestMove[1].row, bestMove[1].col)
-              ];
-              makeMove(isDnD);
-            });
+          bestMove = checkersNewAiService.
+              createComputerMove(board, $scope.yourPlayerIndex,
+              // 1 seconds for the AI to choose a move
+              {millisecondsLimit: timeLimit});
+
+          // Instead of making the move directly, use makeMove function instead.
+          var from = bestMove[bestMove.length - 2];
+          var to = bestMove[bestMove.length - 1];
+          selectedSquares = [
+              $scope.convertDeltaToUiIndex(from.set.value.row, from.set.value.col),
+              $scope.convertDeltaToUiIndex(to.set.value.row, to.set.value.col)
+            ];
+          makeMove(isDnD);
+
+
+
+          //  var timer = {
+          //    startTime: Date.now(),
+          //    timeLimit: timeLimit
+          //  };
+          //
+          //// Move on only after the best move is calculated.
+          //checkersAiService.
+          //    findBestMove(angular.copy(board),
+          //    $scope.yourPlayerIndex, maxDepth, timer)
+          //    .then(function (data) {
+          //    bestMove = data;
+          //    // Set the selected squares according to the best move.
+          //    selectedSquares = [
+          //      $scope.convertDeltaToUiIndex(bestMove[0].row, bestMove[0].col),
+          //      $scope.convertDeltaToUiIndex(bestMove[1].row, bestMove[1].col)
+          //    ];
+          //    makeMove(isDnD);
+          //  });
         }
 
         /**

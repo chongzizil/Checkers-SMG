@@ -8,17 +8,23 @@
     return {
       restrict: "A",
       link: function (scope, element) {
-        element.draggable({
-          revert: true,
-          start: function () {
-            var id = element[0].id;
-            // Handle the drag start event only if the square is selectable
-            if (scope.uiState[id].canSelect) {
-              scope.handleDragStart(id);
+        scope.$watch(
+            function () { return element.attr('selectable'); },
+            function (newVal) {
+              if(eval(newVal)) {
+                element.draggable({
+                  revert: true,
+                  start: function () {
+                    var id = element[0].id;
+                    // Handle the drag start event only if the square is selectable
+                    if (scope.uiState[id].canSelect) {
+                      scope.handleDragStart(id);
+                    }
+                  }
+                });
+              }
             }
-          }
-        });
-
+        );
         // It seems the jQuery UI changed the css property of the element
         // and will cause the problem for animation, so here change it back.
         element[0].style.position = 'absolute';

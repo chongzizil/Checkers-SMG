@@ -50,12 +50,8 @@
         function ($scope, $animate, $timeout, $location, $q,
                   checkersLogicService, checkersAiService, checkersNewAiService, constantService, gameService, resizeGameAreaService) {
         var CONSTANT = constantService,
-          moveAudio,
           board,
           selectedSquares = [];
-
-          moveAudio = new Audio('audio/move.wav');
-          moveAudio.load();
 
         /**
          * Check if the square of the delta is dark square
@@ -701,8 +697,6 @@
                 .createMove(angular.copy(board),
                 fromDelta, toDelta, $scope.yourPlayerIndex);
 
-            // Now play the audio.
-            moveAudio.play();
             gameService.makeMove(operations);
           });
         }

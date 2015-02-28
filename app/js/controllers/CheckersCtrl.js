@@ -871,6 +871,10 @@
           if (params.stateAfterMove.board === undefined) {
             console.log("initializing...");
 
+            if (selectedSquares.length !== 0) {
+              removeAnimationClass();
+            }
+
             // Initialize the board...
             board = checkersLogicService.getInitialBoard();
             initializeUiState();

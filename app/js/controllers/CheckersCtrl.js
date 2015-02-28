@@ -75,19 +75,19 @@
          * @param col
          * @returns {*}
          */
-        $scope.convertDeltaToUiIndex = function(row, col) {
+        $scope.convertDeltaToUIIndex = function(row, col) {
           return row * CONSTANT.COLUMN + col;
         };
 
         /**
          * Return the id of a square. Basically it's the same as
-         * $scope.convertDeltaToUiIndex... Just adds process of rotate...
+         * $scope.convertDeltaToUIIndex... Just adds process of rotate...
          * @param row
          * @param col
          * @returns {*}
          */
         $scope.getId = function(row, col) {
-          if ($scope.needRotate) {
+          if ($scope.rotate) {
             row = 7 - row;
             col = 7 - col;
           }
@@ -99,7 +99,7 @@
          * @param uiIndex
          * @returns {{row: number, col: number}}
          */
-        function convertUiIndexToDelta(uiIndex) {
+        function convertUIIndexToDelta(uiIndex) {
           var delta = {row: -1, col: -1};
 
           delta.row = Math.floor(uiIndex / CONSTANT.ROW);
@@ -127,11 +127,11 @@
         $scope.getSquare = function(row, col) {
           // If the board need to rotate 180 degrees, simply change the row and
           // column for the UI... ($scope.uiState remains intact)
-          if ($scope.needRotate) {
+          if ($scope.rotate) {
             row = 7 - row;
             col = 7 - col;
           }
-          var index = $scope.convertDeltaToUiIndex(row, col);
+          var index = $scope.convertDeltaToUIIndex(row, col);
           return $scope.uiState[index];
         };
 
@@ -149,15 +149,15 @@
           var fromUiIndex = selectedSquares[0],
             toUiIndex = selectedSquares[1],
             jumpedUiIndex = -1,
-            fromDelta = convertUiIndexToDelta(fromUiIndex),
-            toDelta = convertUiIndexToDelta(toUiIndex),
+            fromDelta = convertUIIndexToDelta(fromUiIndex),
+            toDelta = convertUIIndexToDelta(toUiIndex),
             jumpDelta = checkersLogicService.getJumpedDelta(
               fromDelta,
               toDelta
             );
 
           jumpedUiIndex =
-              $scope.convertDeltaToUiIndex(jumpDelta.row, jumpDelta.col);
+              $scope.convertDeltaToUIIndex(jumpDelta.row, jumpDelta.col);
 
           return {
             fromUiIndex: fromUiIndex,
@@ -176,78 +176,78 @@
         function addAnimationClass(callback) {
           var animationIndexes = getAnimationIndexes(),
             column = animationIndexes.column,
-            fromUiIndex = animationIndexes.fromUiIndex,
-            toUiIndex = animationIndexes.toUiIndex,
-            jumpedUiIndex = animationIndexes.jumpedUiIndex;
+            UIFromIndex = animationIndexes.fromUiIndex,
+            UIToIndex = animationIndexes.toUiIndex,
+            UIJumpedIndex = animationIndexes.jumpedUiIndex;
 
           // Add the corresponding animation class
-          switch (toUiIndex - fromUiIndex) {
+          switch (UIToIndex - UIFromIndex) {
           case -column - 1:
             // Simple move up left
-            if ($scope.needRotate) {
-              $animate.addClass(('#' + fromUiIndex), 'move_down_right', callback);
+            if ($scope.rotate) {
+              $animate.addClass(('#' + UIFromIndex), 'move_down_right', callback);
             } else {
-              $animate.addClass(('#' + fromUiIndex), 'move_up_left', callback);
+              $animate.addClass(('#' + UIFromIndex), 'move_up_left', callback);
             }
             break;
           case -column + 1:
             // Simple move up right
-            if ($scope.needRotate) {
-              $animate.addClass(('#' + fromUiIndex), 'move_down_left', callback);
+            if ($scope.rotate) {
+              $animate.addClass(('#' + UIFromIndex), 'move_down_left', callback);
             } else {
-              $animate.addClass(('#' + fromUiIndex), 'move_up_right', callback);
+              $animate.addClass(('#' + UIFromIndex), 'move_up_right', callback);
             }
             break;
           case column - 1:
             // Simple move down left
-            if ($scope.needRotate) {
-              $animate.addClass(('#' + fromUiIndex), 'move_up_right', callback);
+            if ($scope.rotate) {
+              $animate.addClass(('#' + UIFromIndex), 'move_up_right', callback);
             } else {
-              $animate.addClass(('#' + fromUiIndex), 'move_down_left', callback);
+              $animate.addClass(('#' + UIFromIndex), 'move_down_left', callback);
             }
             break;
           case column + 1:
             // Simple move down right
-            if ($scope.needRotate) {
-              $animate.addClass(('#' + fromUiIndex), 'move_up_left', callback);
+            if ($scope.rotate) {
+              $animate.addClass(('#' + UIFromIndex), 'move_up_left', callback);
             } else {
-              $animate.addClass(('#' + fromUiIndex), 'move_down_right', callback);
+              $animate.addClass(('#' + UIFromIndex), 'move_down_right', callback);
             }
             break;
           case -(2 * column) - 2:
             // Jump move up left
-            $animate.addClass(('#' + jumpedUiIndex), 'jumped');
-            if ($scope.needRotate) {
-              $animate.addClass(('#' + fromUiIndex), 'jump_down_right', callback);
+            $animate.addClass(('#' + UIJumpedIndex), 'jumped');
+            if ($scope.rotate) {
+              $animate.addClass(('#' + UIFromIndex), 'jump_down_right', callback);
             } else {
-              $animate.addClass(('#' + fromUiIndex), 'jump_up_left', callback);
+              $animate.addClass(('#' + UIFromIndex), 'jump_up_left', callback);
             }
             break;
           case -(2 * column) + 2:
             // Jump move up right
-            $animate.addClass(('#' + jumpedUiIndex), 'jumped');
-            if ($scope.needRotate) {
-              $animate.addClass(('#' + fromUiIndex), 'jump_down_left', callback);
+            $animate.addClass(('#' + UIJumpedIndex), 'jumped');
+            if ($scope.rotate) {
+              $animate.addClass(('#' + UIFromIndex), 'jump_down_left', callback);
             } else {
-              $animate.addClass(('#' + fromUiIndex), 'jump_up_right', callback);
+              $animate.addClass(('#' + UIFromIndex), 'jump_up_right', callback);
             }
             break;
           case (2 * column) - 2:
             // Jump move down left
-            $animate.addClass(('#' + jumpedUiIndex), 'jumped');
-            if ($scope.needRotate) {
-              $animate.addClass(('#' + fromUiIndex), 'jump_up_right', callback);
+            $animate.addClass(('#' + UIJumpedIndex), 'jumped');
+            if ($scope.rotate) {
+              $animate.addClass(('#' + UIFromIndex), 'jump_up_right', callback);
             } else {
-              $animate.addClass(('#' + fromUiIndex), 'jump_down_left', callback);
+              $animate.addClass(('#' + UIFromIndex), 'jump_down_left', callback);
             }
             break;
           case (2 * column) + 2:
             // Jump move down right
-            $animate.addClass(('#' + jumpedUiIndex), 'jumped');
-            if ($scope.needRotate) {
-              $animate.addClass(('#' + fromUiIndex), 'jump_up_left', callback);
+            $animate.addClass(('#' + UIJumpedIndex), 'jumped');
+            if ($scope.rotate) {
+              $animate.addClass(('#' + UIFromIndex), 'jump_up_left', callback);
             } else {
-              $animate.addClass(('#' + fromUiIndex), 'jump_down_right', callback);
+              $animate.addClass(('#' + UIFromIndex), 'jump_down_right', callback);
             }
             break;
           }
@@ -259,78 +259,78 @@
         function removeAnimationClass() {
           var animationIndexes = getAnimationIndexes(),
             column = animationIndexes.column,
-            fromUiIndex = animationIndexes.fromUiIndex,
-            toUiIndex = animationIndexes.toUiIndex,
-            jumpedUiIndex = animationIndexes.jumpedUiIndex;
+            UIFromIndex = animationIndexes.fromUiIndex,
+            UIToIndex = animationIndexes.toUiIndex,
+            UIJumpedIndex = animationIndexes.jumpedUiIndex;
 
           // remove the corresponding animation class
-          switch (toUiIndex - fromUiIndex) {
+          switch (UIToIndex - UIFromIndex) {
           case -column - 1:
             // Simple move up left
-            if ($scope.needRotate) {
-              $animate.removeClass(('#' + fromUiIndex), 'move_down_right');
+            if ($scope.rotate) {
+              $animate.removeClass(('#' + UIFromIndex), 'move_down_right');
             } else {
-              $animate.removeClass(('#' + fromUiIndex), 'move_up_left');
+              $animate.removeClass(('#' + UIFromIndex), 'move_up_left');
             }
             break;
           case -column + 1:
             // Simple move up right
-            if ($scope.needRotate) {
-              $animate.removeClass(('#' + fromUiIndex), 'move_down_left');
+            if ($scope.rotate) {
+              $animate.removeClass(('#' + UIFromIndex), 'move_down_left');
             } else {
-              $animate.removeClass(('#' + fromUiIndex), 'move_up_right');
+              $animate.removeClass(('#' + UIFromIndex), 'move_up_right');
             }
             break;
           case column - 1:
             // Simple move down left
-            if ($scope.needRotate) {
-              $animate.removeClass(('#' + fromUiIndex), 'move_up_right');
+            if ($scope.rotate) {
+              $animate.removeClass(('#' + UIFromIndex), 'move_up_right');
             } else {
-              $animate.removeClass(('#' + fromUiIndex), 'move_down_left');
+              $animate.removeClass(('#' + UIFromIndex), 'move_down_left');
             }
             break;
           case column + 1:
             // Simple move down right
-            if ($scope.needRotate) {
-              $animate.removeClass(('#' + fromUiIndex), 'move_up_left');
+            if ($scope.rotate) {
+              $animate.removeClass(('#' + UIFromIndex), 'move_up_left');
             } else {
-              $animate.removeClass(('#' + fromUiIndex), 'move_down_right');
+              $animate.removeClass(('#' + UIFromIndex), 'move_down_right');
             }
             break;
           case -(2 * column) - 2:
             // Jump move up left
-            $animate.removeClass(('#' + jumpedUiIndex), 'jumped');
-            if ($scope.needRotate) {
-              $animate.removeClass(('#' + fromUiIndex), 'jump_down_right');
+            $animate.removeClass(('#' + UIJumpedIndex), 'jumped');
+            if ($scope.rotate) {
+              $animate.removeClass(('#' + UIFromIndex), 'jump_down_right');
             } else {
-              $animate.removeClass(('#' + fromUiIndex), 'jump_up_left');
+              $animate.removeClass(('#' + UIFromIndex), 'jump_up_left');
             }
             break;
           case -(2 * column) + 2:
             // Jump move up right
-            $animate.removeClass(('#' + jumpedUiIndex), 'jumped');
-            if ($scope.needRotate) {
-              $animate.removeClass(('#' + fromUiIndex), 'jump_down_left');
+            $animate.removeClass(('#' + UIJumpedIndex), 'jumped');
+            if ($scope.rotate) {
+              $animate.removeClass(('#' + UIFromIndex), 'jump_down_left');
             } else {
-              $animate.removeClass(('#' + fromUiIndex), 'jump_up_right');
+              $animate.removeClass(('#' + UIFromIndex), 'jump_up_right');
             }
             break;
           case (2 * column) - 2:
             // Jump move down left
-            $animate.removeClass(('#' + jumpedUiIndex), 'jumped');
-            if ($scope.needRotate) {
-              $animate.removeClass(('#' + fromUiIndex), 'jump_up_right');
+            $animate.removeClass(('#' + UIJumpedIndex), 'jumped');
+            if ($scope.rotate) {
+              $animate.removeClass(('#' + UIFromIndex), 'jump_up_right');
             } else {
-              $animate.removeClass(('#' + fromUiIndex), 'jump_down_left');
+              $animate.removeClass(('#' + UIFromIndex), 'jump_down_left');
             }
             break;
           case (2 * column) + 2:
             // Jump move down right
-            $animate.removeClass(('#' + jumpedUiIndex), 'jumped');
-            if ($scope.needRotate) {
-              $animate.removeClass(('#' + fromUiIndex), 'jump_up_left');
+            $animate.removeClass(('#' + UIJumpedIndex), 'jumped');
+            if ($scope.rotate) {
+              $animate.removeClass(('#' + UIFromIndex), 'jump_up_left');
             } else {
-              $animate.removeClass(('#' + fromUiIndex), 'jump_down_right');
+              $animate.removeClass(('#' + UIFromIndex), 'jump_down_right');
             }
             break;
           }
@@ -343,10 +343,10 @@
          * makes a jump move or a simple move if there's no mandatory jumps.
          */
         function setInitialSelectableSquares() {
-          var uiIndex,
+          var UIIndex,
             row,
             col,
-            darkUiSquare,
+            UISquare,
             possibleMoves,
             delta,
             hasMandatoryJump = checkersLogicService
@@ -359,10 +359,10 @@
             for (col = 0; col < CONSTANT.COLUMN; col += 1) {
               // Check all dark squares
               if (isDarkSquare(row, col)) {
-                uiIndex = $scope.convertDeltaToUiIndex(row, col);
-                darkUiSquare = $scope.uiState[uiIndex];
+                UIIndex = $scope.convertDeltaToUIIndex(row, col);
+                UISquare = $scope.uiState[UIIndex];
                 delta = {row: row, col: col};
-                // If there exists a piece within the darkUiSquare and is the
+                // If there exists a piece within the UISquare and is the
                 // current player's color, then check if it can make a move,
                 // otherwise set it's 'canSelect' property to false.
                 if (checkersLogicService.isOwnColor($scope.yourPlayerIndex,
@@ -379,15 +379,12 @@
                   }
 
                   // If there's at least one possible move, then the
-                  // darkUiSquare can be select.
+                  // UISquare can be select.
                   if (possibleMoves.length > 0) {
-                    darkUiSquare.canSelect = true;
+                    UISquare.canSelect = true;
                   } else {
-                    darkUiSquare.canSelect = false;
+                    UISquare.canSelect = false;
                   }
-                } else {
-                  // It's not the player's piece, so can not be selected.
-                  darkUiSquare.canSelect = false;
                 }
               }
             }
@@ -398,17 +395,17 @@
          * Set the possible move destination squares' canSelect to true and
          * others remain the same.
          *
-         * @param squareUiIndex the square selected.
+         * @param UISquareIndex the square selected.
          */
-        function setSelectableSquares(squareUiIndex) {
+        function setSelectableSquares(UISquareIndex) {
           var i,
             fromDelta,
             row,
             col,
-            uiIndex,
+            UIIndex,
             possibleMoves;
 
-          fromDelta = convertUiIndexToDelta(squareUiIndex);
+          fromDelta = convertUIIndexToDelta(UISquareIndex);
           possibleMoves =
               checkersLogicService.getAllPossibleMoves(board, fromDelta,
                     $scope.yourPlayerIndex);
@@ -419,49 +416,53 @@
             for (i = 0; i < possibleMoves.length; i += 1) {
               row = possibleMoves[i].row;
               col = possibleMoves[i].col;
-              uiIndex = $scope.convertDeltaToUiIndex(row, col);
-              $scope.uiState[uiIndex].canSelect = true;
+              UIIndex = $scope.convertDeltaToUIIndex(row, col);
+              $scope.uiState[UIIndex].canSelect = true;
             }
           }
+        }
+
+        function initializeUISquare(UISquare) {
+          UISquare.isEmpty = false;
+          UISquare.isBlackMan = false;
+          UISquare.isBlackCro = false;
+          UISquare.isWhiteMan = false;
+          UISquare.isWhiteCro = false;
+          UISquare.canSelect = false;
+          UISquare.isSelected = false;
         }
 
         /**
          * Update the square of the UI state according to the new square of
          * the game API state in order to update the graphics.
          *
-         * @param gameApiSquare the square of the game API state.
-         * @param uiSquare the square of the UI state.
+         * @param APISquare the square of the game API state.
+         * @param UISquare the square of the UI state.
          */
-        function updateUiSquare(gameApiSquare, uiSquare) {
+        function updateUiSquare(APISquare, UISquare) {
           // Reset the information of the content within the square
-          uiSquare.isEmpty = false;
-          uiSquare.isBlackMan = false;
-          uiSquare.isBlackCro = false;
-          uiSquare.isWhiteMan = false;
-          uiSquare.isWhiteCro = false;
-          uiSquare.canSelect = false;
-          uiSquare.isSelected = false;
+          initializeUISquare(UISquare);
 
-          switch (gameApiSquare) {
-          case CONSTANT.WHITE_MAN:
-            uiSquare.isWhiteMan = true;
-            uiSquare.pieceSrc = 'img/white_man';
-            break;
-          case CONSTANT.WHITE_KING:
-            uiSquare.isWhiteCro = true;
-            uiSquare.pieceSrc = 'img/white_cro';
-            break;
-          case CONSTANT.BLACK_MAN:
-            uiSquare.isBlackMan = true;
-            uiSquare.pieceSrc = 'img/black_man';
-            break;
-          case CONSTANT.BLACK_KING:
-            uiSquare.isBlackCro = true;
-            uiSquare.pieceSrc = 'img/black_cro';
-            break;
-          default:
-            uiSquare.isEmpty = true;
-            uiSquare.pieceSrc = 'img/empty';
+          switch (APISquare) {
+            case CONSTANT.WHITE_MAN:
+              UISquare.isWhiteMan = true;
+              UISquare.pieceSrc = 'img/white_man';
+              break;
+            case CONSTANT.WHITE_KING:
+              UISquare.isWhiteCro = true;
+              UISquare.pieceSrc = 'img/white_cro';
+              break;
+            case CONSTANT.BLACK_MAN:
+              UISquare.isBlackMan = true;
+              UISquare.pieceSrc = 'img/black_man';
+              break;
+            case CONSTANT.BLACK_KING:
+              UISquare.isBlackCro = true;
+              UISquare.pieceSrc = 'img/black_cro';
+              break;
+            default:
+              UISquare.isEmpty = true;
+              UISquare.pieceSrc = 'img/empty';
           }
         }
 
@@ -489,9 +490,9 @@
           // Initialize the ui state as an array first
           $scope.uiState = [];
 
-          var lightUiSquare,
-            darkUiSquare,
-            defaultUiSquare = {
+          var lightUISquare,
+            darkUISquare,
+            defaultUISquare = {
               isBlackMan: false,
               isBlackCro: false,
               isWhiteMan: false,
@@ -513,42 +514,42 @@
             for (col = 0; col < CONSTANT.COLUMN; col += 1) {
               if (isDarkSquare(row, col)) {
                 // Dark square
-                darkUiSquare = angular.copy(defaultUiSquare);
+                darkUISquare = angular.copy(defaultUISquare);
 
-                darkUiSquare.isDark = true;
-                darkUiSquare.bgSrc = 'img/dark_square.png';
+                darkUISquare.isDark = true;
+                darkUISquare.bgSrc = 'img/dark_square.png';
 
-                uiSquareIndex = $scope.convertDeltaToUiIndex(row, col);
-                $scope.uiState[uiSquareIndex] = darkUiSquare;
+                uiSquareIndex = $scope.convertDeltaToUIIndex(row, col);
+                $scope.uiState[uiSquareIndex] = darkUISquare;
               } else {
                 // Light square
-                lightUiSquare = angular.copy(defaultUiSquare);
+                lightUISquare = angular.copy(defaultUISquare);
 
-                lightUiSquare.isLight = true;
-                lightUiSquare.bgSrc = 'img/light_square.png';
+                lightUISquare.isLight = true;
+                lightUISquare.bgSrc = 'img/light_square.png';
                 // Since light square will not be used and clicked, no piece
                 // image will be set for it.
-                lightUiSquare.isEmpty = false;
-                lightUiSquare.pieceSrc = '';
+                lightUISquare.isEmpty = false;
+                lightUISquare.pieceSrc = '';
 
-                uiSquareIndex = $scope.convertDeltaToUiIndex(row, col);
-                $scope.uiState[uiSquareIndex] = lightUiSquare;
+                uiSquareIndex = $scope.convertDeltaToUIIndex(row, col);
+                $scope.uiState[uiSquareIndex] = lightUISquare;
               }
             }
           }
         }
 
         /**
-         * Update the UI state after the last move.
+         * Update the UI state according to the new board state.
          */
-        function updateUiState() {
+        function updateUiState(callback) {
           var deferred = $q.defer(),
             gameApiSquare,
-            darkUiSquare,
-            darkUiSquareIndex,
-            fromUiIndex,
-            toUiIndex,
-            jumpedUiIndex,
+            UISquare,
+            UISquareIndex,
+            UIFromIndex,
+            UIToIndex,
+            UIJumpedIndex,
             fromDelta,
             toDelta,
             jumpedDelta,
@@ -556,31 +557,27 @@
             col;
 
           if (selectedSquares.length === 0) {
-            // If the selectedSquares is empty, then the last move should be the
-            // first move made by the black player in order to initialize th
-            // game. So update each dark squares.
-            for (row = 0; row < CONSTANT.ROW; row += 1) {
-              for (col = 0; col < CONSTANT.COLUMN; col += 1) {
-                gameApiSquare = board[row][col];
+            // No square/piece is selected
+            for (row = 0; row < CONSTANT.ROW; row++) {
+              for (col = 0; col < CONSTANT.COLUMN; col++) {
                 if (isDarkSquare(row, col)) {
-                  darkUiSquareIndex = $scope.convertDeltaToUiIndex(row, col);
-                  darkUiSquare = $scope.uiState[darkUiSquareIndex];
-                  updateUiSquare(gameApiSquare, darkUiSquare);
+                  gameApiSquare = board[row][col];
+                  UISquareIndex = $scope.convertDeltaToUIIndex(row, col);
+                  UISquare = $scope.uiState[UISquareIndex];
+                  updateUiSquare(gameApiSquare, UISquare);
                 }
               }
             }
           } else {
-            // It's not the first move, so check the selectedSquares for the
-            // squares need to be updated.
+            // Have one square/piece selected
 
-            // UI state index
-            fromUiIndex = selectedSquares[0];
-            toUiIndex = selectedSquares[1];
-            jumpedUiIndex = -1;
+            UIFromIndex = selectedSquares[0];
+            UIToIndex = selectedSquares[1];
+            UIJumpedIndex = -1;
 
             // Game API state index
-            fromDelta = convertUiIndexToDelta(fromUiIndex);
-            toDelta = convertUiIndexToDelta(toUiIndex);
+            fromDelta = convertUIIndexToDelta(UIFromIndex);
+            toDelta = convertUIIndexToDelta(UIToIndex);
 
             // Get the jumped square's index. If it's a simple move, then this
             // index is illegal, yet will not be used.
@@ -589,15 +586,17 @@
 
             // Update those squares
             updateUiSquare(board[fromDelta.row][fromDelta.col],
-                $scope.uiState[fromUiIndex]);
+                $scope.uiState[UIFromIndex]);
             updateUiSquare(board[toDelta.row][toDelta.col],
-                $scope.uiState[toUiIndex]);
+                $scope.uiState[UIToIndex]);
+
             if (jumpedDelta.row !== -1) {
-              jumpedUiIndex = $scope.convertDeltaToUiIndex(jumpedDelta.row,
+              // It's a jump move and a piece is jumped/captured
+              UIJumpedIndex = $scope.convertDeltaToUIIndex(jumpedDelta.row,
                   jumpedDelta.col);
 
               updateUiSquare(board[jumpedDelta.row][jumpedDelta.col],
-                  $scope.uiState[jumpedUiIndex]);
+                  $scope.uiState[UIJumpedIndex]);
             }
           }
 
@@ -606,21 +605,19 @@
             $scope.$apply();
           }
 
-          deferred.resolve('Success');
-
-          return deferred.promise;
+          callback();
         }
 
         /**
          * Update the graphics (UI state) according to the new game API state
          * and set initial selectable squares.
          *
-         * @param isAiMode true if it's in ai mode
+         * @param isAiMove true if it's in ai mode
          * @param callback callback function
          */
-        function updateCheckersGraphics(isAiMode, callback) {
-          // Update the board first, when the graphics is updated then move on
-          updateUiState().then(function () {
+        function updateCheckersGraphics(isAiMove, callback) {
+          // Update the UI first
+          updateUiState(function () {
             // Remove the animation classes, whether the animation class is
             // added or not (is Dnd or not) before is not important. Otherwise
             // the square image with the unmoved animation class will not be
@@ -629,20 +626,13 @@
               removeAnimationClass();
             }
 
-            // If the state is not empty, then set the the selectablility for
-            // each square.
-            if (!checkersLogicService.isEmptyObj(board)) {
-              if (isAiMode && $scope.yourPlayerIndex === 1) {
-                // It's ai's turn, the player can not select any squares
-                setAllSquareUnselectable();
-              } else {
-                // It's not in ai's mode nor ai's turn, so set selectable
-                // squares according to the player index.
-                setInitialSelectableSquares($scope.yourPlayerIndex);
-              }
+            if (isAiMove) {
+              // It's AI's turn, the player can not select any squares
+              setAllSquareUnselectable();
+              callback();
+            } else {
+              setInitialSelectableSquares();
             }
-            // Call the callback function
-            callback();
           });
         }
 
@@ -661,15 +651,14 @@
           // the move is done and the board is updated.
           setAllSquareUnselectable();
 
-          // If the move is made by drag and drop, just call the callback
-          // function
-          if (isDnD) {
-            callback();
-            return;
-          }
 
-          // Add the animation class in order to play the animation
-          addAnimationClass(callback);
+          if (isDnD) {
+            // If the move is made by drag and drop, just call the callback function
+            callback();
+          } else {
+            // Add the animation class in order to play the animation
+            addAnimationClass(callback);
+          }
         }
 
         /**
@@ -684,18 +673,21 @@
           playAnimation(isDnD, function () {
             // Callback function. It's called when the animation is completed.
             var operations,
-              fromDelta = convertUiIndexToDelta(selectedSquares[0]),
-              toDelta = convertUiIndexToDelta(selectedSquares[1]);
+              fromDelta = convertUIIndexToDelta(selectedSquares[0]),
+              toDelta = convertUIIndexToDelta(selectedSquares[1]);
 
 //            console.log('Move delta: '
 //                + ($scope.yourPlayerIndex === 0 ? 'Black' : 'White')
 //                + ' Move from [' + fromDelta.row + ', ' + fromDelta.col
 //                + '] to [' + toDelta.row + ', ' + toDelta.col + ']');
 
-            // Get the operations
-            operations = checkersLogicService
-                .createMove(angular.copy(board),
-                fromDelta, toDelta, $scope.yourPlayerIndex);
+            try {
+              operations = checkersLogicService
+                  .createMove(angular.copy(board),
+                  fromDelta, toDelta, $scope.yourPlayerIndex);
+            } catch (e) {
+              return;
+            }
 
             gameService.makeMove(operations);
           });
@@ -709,29 +701,29 @@
          * @param isDnD is drag and drop or is not
          */
         $scope.cellClicked = function (row, col, isDnD) {
-          if ($scope.needRotate) {
+          if ($scope.rotate) {
             row = 7 - row;
             col = 7 - col;
           }
 
-          var index = row * CONSTANT.ROW + col,
-            square = $scope.uiState[index],
-            currSelectedDelta = convertUiIndexToDelta(index),
+          var UISquareIndex = row * CONSTANT.ROW + col,
+            UISquare = $scope.uiState[UISquareIndex],
+            currSelectedDelta = convertUIIndexToDelta(UISquareIndex),
             prevSelectedDelta;
 
-          $scope.isYourTurn = false; // to prevent making another move
+          //$scope.isYourTurn = false; // to prevent making another move
 
           // Proceed only if it's dark square and it's selectable.
-          if (square.isDark && square.canSelect) {
-            if (selectedSquares.length === 0 && !square.isEmpty) {
+          if (UISquare.isDark && UISquare.canSelect) {
+            if (selectedSquares.length === 0 && !UISquare.isEmpty) {
               // If no piece is selected, select it
-              square.isSelected = true;
-              selectedSquares[0] = index;
+              UISquare.isSelected = true;
+              selectedSquares[0] = UISquareIndex;
 
-              setSelectableSquares(index);
+              setSelectableSquares(UISquareIndex);
             } else if (selectedSquares.length === 1) {
               // One square is already selected
-              prevSelectedDelta = convertUiIndexToDelta(selectedSquares[0]);
+              prevSelectedDelta = convertUIIndexToDelta(selectedSquares[0]);
               if (checkersLogicService
                   .getColor(board[currSelectedDelta.row][currSelectedDelta.col])
                   === checkersLogicService.getColor(
@@ -741,17 +733,15 @@
                 // it's the same one or a different one, just change the first
                 // selected square to the new one.
                 $scope.uiState[selectedSquares[0]].isSelected = false;
-                square.isSelected = true;
-                selectedSquares[0] = index;
+                UISquare.isSelected = true;
+                selectedSquares[0] = UISquareIndex;
 
-                // Reinitialize all the selectable squares
-                setInitialSelectableSquares();
                 // Set the new selectable squares according to the selected one
-                setSelectableSquares(index);
+                setSelectableSquares(UISquareIndex);
 
-              } else if (square.isEmpty) {
+              } else if (UISquare.isEmpty) {
                 // If the second selected is an empty square
-                selectedSquares[1] = index;
+                selectedSquares[1] = UISquareIndex;
               }
             }
 
@@ -774,12 +764,12 @@
           var square = $scope.uiState[index],
             isDnD = true;
           if (square.isDark && square.canSelect) {
-            var delta = convertUiIndexToDelta(index);
+            var delta = convertUIIndexToDelta(index);
             // Since the index/id passed in maybe changed if the board is
             // rotated... so I have to change them back because cellClicked will
             // process them one more time... This is unnecessary and will be
             // refactored in the future... (I guess)
-            if ($scope.needRotate) {
+            if ($scope.rotate) {
               delta.row = 7 - delta.row;
               delta.col = 7 - delta.col;
             }
@@ -797,12 +787,12 @@
           var square = $scope.uiState[index],
             isDnD = true;
           if (square.isDark && square.canSelect) {
-            var delta = convertUiIndexToDelta(index);
+            var delta = convertUIIndexToDelta(index);
             // Since the index/id passed in maybe changed if the board is
             // rotated... so I have to change them back because cellClicked will
             // process them one more time... This is unnecessary and will be
             // refactored in the future... (I guess)
-            if ($scope.needRotate) {
+            if ($scope.rotate) {
               delta.row = 7 - delta.row;
               delta.col = 7 - delta.col;
             }
@@ -819,7 +809,7 @@
         function aiMakeMove() {
           var isDnD = false,
             bestMove,
-            maxDepth = 10,
+            //maxDepth = 10,
             timeLimit = 1000;
 
           bestMove = checkersNewAiService.
@@ -831,12 +821,10 @@
           var from = bestMove[bestMove.length - 2];
           var to = bestMove[bestMove.length - 1];
           selectedSquares = [
-              $scope.convertDeltaToUiIndex(from.set.value.row, from.set.value.col),
-              $scope.convertDeltaToUiIndex(to.set.value.row, to.set.value.col)
+              $scope.convertDeltaToUIIndex(from.set.value.row, from.set.value.col),
+              $scope.convertDeltaToUIIndex(to.set.value.row, to.set.value.col)
             ];
           makeMove(isDnD);
-
-
 
           //  var timer = {
           //    startTime: Date.now(),
@@ -851,8 +839,8 @@
           //    bestMove = data;
           //    // Set the selected squares according to the best move.
           //    selectedSquares = [
-          //      $scope.convertDeltaToUiIndex(bestMove[0].row, bestMove[0].col),
-          //      $scope.convertDeltaToUiIndex(bestMove[1].row, bestMove[1].col)
+          //      $scope.convertDeltaToUIIndex(bestMove[0].row, bestMove[0].col),
+          //      $scope.convertDeltaToUIIndex(bestMove[1].row, bestMove[1].col)
           //    ];
           //    makeMove(isDnD);
           //  });
@@ -863,52 +851,50 @@
          * @param params
          */
         function updateUI(params) {
-          // If the play mode is neither pass and play nor play against the
-          // computer, then "rotate" the board for the player. Therefore the
-          // board will always look from the point of view of the player in
-          // single player mode...
+          // If the play mode is not pass and play then "rotate" the board
+          // for the player. Therefore the board will always look from the
+          // point of view of the player in single player mode...
           if (params.playMode === "playAgainstTheComputer"
-              || (params.playMode !== "passAndPlay" && params.playMode !== "playAgainstTheComputer" &&
-              params.yourPlayerIndex === 0)) {
-            // Since the first player will be the black player, so in ai mode
-            // and multi-window for black player, the board will rotate...
-            $scope.needRotate = true;
+              || params.playMode === "passAndPlay"
+              || params.playMode === "playBlack") {
+            $scope.rotate = true;
           } else {
-            $scope.needRotate = false;
+            $scope.rotate = false;
           }
 
-          var turnIndexBeforeMove = params.turnIndexBeforeMove;
           // Get the new state
-          board = params.stateAfterMove.board;
+          var turnIndexBeforeMove = params.turnIndexBeforeMove;
           $scope.yourPlayerIndex = params.yourPlayerIndex;
           $scope.playersInfo = params.playersInfo;
+          board = params.stateAfterMove.board;
 
-          if (board === undefined) {
+          if (params.stateAfterMove.board === undefined) {
+            console.log("initializing...");
+
             // Initialize the board...
-            //gameService.makeMove(checkersLogicService.getFirstMove());
             board = checkersLogicService.getInitialBoard();
             initializeUiState();
-            updateUiState();
-            setInitialSelectableSquares();
+            updateUiState(setInitialSelectableSquares);
             $scope.yourPlayerIndex = 0;
           } else {
-            $scope.isYourTurn = params.turnIndexAfterMove >= 0 && // game is ongoing
-            params.yourPlayerIndex === params.turnIndexAfterMove; // it's my turn
+            // It's your move. (For the current browser...)
+            $scope.isYourTurn = params.turnIndexAfterMove >= 0
+                && params.yourPlayerIndex === params.turnIndexAfterMove;
 
-            $scope.isAiMode = $scope.isYourTurn
-            && params.playersInfo[params.yourPlayerIndex].playerId === '';
+            // You're a human player
+            $scope.isPlayerMove = $scope.isYourTurn
+                && params.playersInfo[params.yourPlayerIndex].playerId !== '';
+
+            // You're an AI player
+            $scope.isAiMove = $scope.isYourTurn
+                && params.playersInfo[params.yourPlayerIndex].playerId === '';
 
             // The game is properly initialized, let's make a move :)
-            // But first update the graphics (isAiMode: true)
-            updateCheckersGraphics($scope.isAiMode, function () {
-              // If it's the AI mode and it's the AI turn, then let the AI
-              // makes the move.
-
-              if ($scope.isAiMode) {
-                $scope.isYourTurn = false;
-                // Wait 500 milliseconds until animation ends.
+            // But first update the graphics (isAiMove: true)
+            updateCheckersGraphics($scope.isAiMove, function () {
+              // If it's the AI mode and it's the AI turn, then wait 500
+              // milliseconds until animation ends.
                 $timeout(aiMakeMove, 500);
-              }
             });
           }
         }

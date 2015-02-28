@@ -824,7 +824,10 @@
               $scope.convertDeltaToUIIndex(from.set.value.row, from.set.value.col),
               $scope.convertDeltaToUIIndex(to.set.value.row, to.set.value.col)
             ];
-          makeMove(isDnD);
+
+          if ($scope.isAiMove) {
+            makeMove(isDnD);
+          }
 
           //  var timer = {
           //    startTime: Date.now(),

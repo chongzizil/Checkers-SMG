@@ -355,6 +355,15 @@
           // First reset all squares to unselectable.
           setAllSquareUnselectable();
 
+          console.log($scope.isYourTurn);
+          console.log($scope.isPlayerMove);
+          console.log($scope.isAiMove);
+          console.log("----");
+
+          if (!$scope.isYourTurn) {
+            return;
+          }
+
           for (row = 0; row < CONSTANT.ROW; row += 1) {
             for (col = 0; col < CONSTANT.COLUMN; col += 1) {
               // Check all dark squares
@@ -869,10 +878,11 @@
           var turnIndexBeforeMove = params.turnIndexBeforeMove;
           $scope.yourPlayerIndex = params.yourPlayerIndex;
           $scope.playersInfo = params.playersInfo;
+
           board = params.stateAfterMove.board;
 
           if (params.stateAfterMove.board === undefined) {
-            console.log("initializing...");
+            $scope.isYourTurn = $scope.yourPlayerIndex === 0;
 
             if (selectedSquares.length !== 0) {
               removeAnimationClass();
@@ -882,7 +892,6 @@
             board = checkersLogicService.getInitialBoard();
             initializeUiState();
             updateUiState(setInitialSelectableSquares);
-            $scope.yourPlayerIndex = 0;
           } else {
             // It's your move. (For the current browser...)
             $scope.isYourTurn = params.turnIndexAfterMove >= 0

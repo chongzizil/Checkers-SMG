@@ -355,11 +355,6 @@
           // First reset all squares to unselectable.
           setAllSquareUnselectable();
 
-          console.log($scope.isYourTurn);
-          console.log($scope.isPlayerMove);
-          console.log($scope.isAiMove);
-          console.log("----");
-
           if (!$scope.isYourTurn) {
             return;
           }

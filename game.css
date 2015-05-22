@@ -1,0 +1,363 @@
+body {
+  background: #FCFAF2;
+}
+
+#board {
+  width: 100%;
+  height: 100%;
+}
+
+.board_row {
+  position:absolute;
+  /*Top is define in html page...*/
+  left: 0;
+  width:100%;
+  height:12.5%;
+}
+
+.board_col {
+  position:absolute;
+  /*Left is define in html page...*/
+  width:12.5%;
+  height:100%;
+}
+
+.piece {
+  max-width: 100%;
+  position: absolute;
+  z-index: 10;
+  filter: brightness(100%);
+  -webkit-filter: brightness(100%);
+}
+
+/****************************************
+Animation
+****************************************/
+
+.move_up_left {
+  -webkit-animation: move_up_left 0.4s linear forwards;
+  animation: move_up_left 0.4s linear forwards;
+}
+
+.move_up_right {
+  -webkit-animation: move_up_right 0.4s linear forwards;
+  animation: move_up_right 0.4s linear forwards;
+}
+
+.move_down_left {
+  -webkit-animation: move_down_left 0.4s linear forwards;
+  animation: move_down_left 0.4s linear forwards;
+}
+
+.move_down_right {
+  -webkit-animation: move_down_right 0.4s linear forwards;
+  animation: move_down_right 0.4s linear forwards;
+}
+
+.jump_up_left {
+  -webkit-animation: jump_up_left 0.4s linear forwards;
+  animation: jump_up_left 0.4s linear forwards;
+}
+
+.jump_up_right {
+  -webkit-animation: jump_up_right 0.4s linear forwards;
+  animation: jump_up_right 0.4s linear forwards;
+}
+
+.jump_down_left {
+  -webkit-animation: jump_down_left 0.4s linear forwards;
+  animation: jump_down_left 0.4s linear forwards;
+}
+
+.jump_down_right {
+  -webkit-animation: jump_down_right 0.4s linear forwards;
+  animation: jump_down_right 0.4s linear forwards;
+}
+
+/****************************************
+Simple move key frames
+****************************************/
+
+/*move up left*/
+@-webkit-keyframes move_up_left {
+  0% {
+    top: 0;
+    left: 0;
+  }
+  50% {
+    max-width: 120%;
+    top: -50%;
+    left: -50%
+  }
+  100% {
+    max-width: 100%;
+    top: -100%;
+    left: -100%
+  }
+}
+/*move up left*/
+@keyframes move_up_left {
+  0% {
+    top: 0;
+    left: 0;
+  }
+  50% {
+    max-width: 120%;
+    top: -50%;
+    left: -50%
+  }
+  100% {
+    max-width: 100%;
+    top: -100%;
+    left: -100%
+  }
+}
+
+/*move up right*/
+@-webkit-keyframes move_up_right {
+  0% {
+    top: 0;
+    left: 0;
+  }
+  50% {
+    max-width: 120%;
+    top: -50%;
+    left: 50%
+  }
+  100% {
+    max-width: 100%;
+    top: -100%;
+    left: 100%
+  }
+}
+/*move up right*/
+@keyframes move_up_right {
+  0% {
+    top: 0;
+    left: 0;
+  }
+  50% {
+    max-width: 120%;
+    top: -50%;
+    left: 50%
+  }
+  100% {
+    max-width: 100%;
+    top: -100%;
+    left: 100%
+  }
+}
+
+/*move down left*/
+@-webkit-keyframes move_down_left {
+  0% {
+    top: 0;
+    left: 0;
+  }
+  50% {
+    max-width: 140%;
+    top: 50%;
+    left: -50%
+  }
+  100% {
+    max-width: 100%;
+    top: 100%;
+    left: -100%
+  }
+}
+/*move down left*/
+@keyframes move_down_left {
+  0% {
+    top: 0;
+    left: 0;
+  }
+  50% {
+    max-width: 140%;
+    top: 50%;
+    left: -50%
+  }
+  100% {
+    max-width: 100%;
+    top: 100%;
+    left: -100%
+  }
+}
+
+/*move down right*/
+@-webkit-keyframes move_down_right {
+  0% {
+    top: 0;
+    left: 0;
+  }
+  50% {
+    max-width: 140%;
+    top: 50%;
+    left: 50%
+  }
+  100% {
+    max-width: 100%;
+    top: 100%;
+    left: 100%
+  }
+}
+/*move down right*/
+@keyframes move_down_right {
+  0% {
+    top: 0;
+    left: 0;
+  }
+  50% {
+    max-width: 140%;
+    top: 50%;
+    left: 50%
+  }
+  100% {
+    max-width: 100%;
+    top: 100%;
+    left: 100%
+  }
+}
+
+/****************************************
+Jump move key frames
+****************************************/
+
+/*move up left*/
+@-webkit-keyframes jump_up_left {
+  0% {
+    top: 0;
+    left: 0;
+  }
+  50% {
+    max-width: 140%;
+    top: -100%;
+    left: -100%
+  }
+  100% {
+    max-width: 100%;
+    top: -200%;
+    left: -200%
+  }
+}
+/*move up left*/
+@keyframes jump_up_left {
+  0% {
+    top: 0;
+    left: 0;
+  }
+  50% {
+    max-width: 140%;
+    top: -100%;
+    left: -100%
+  }
+  100% {
+    max-width: 100%;
+    top: -200%;
+    left: -200%
+  }
+}
+
+/*move up right*/
+@-webkit-keyframes jump_up_right {
+  0% {
+    top: 0;
+    left: 0;
+  }
+  50% {
+    max-width: 140%;
+    top: -100%;
+    left: 100%
+  }
+  100% {
+    max-width: 100%;
+    top: -200%;
+    left: 200%
+  }
+}
+/*move up right*/
+@keyframes jump_up_right {
+  0% {
+    top: 0;
+    left: 0;
+  }
+  50% {
+    max-width: 140%;
+    top: -100%;
+    left: 100%
+  }
+  100% {
+    max-width: 100%;
+    top: -200%;
+    left: 200%
+  }
+}
+
+/*move down left*/
+@-webkit-keyframes jump_down_left {
+  0% {
+    top: 0;
+    left: 0;
+  }
+  50% {
+    max-width: 140%;
+    top: 100%;
+    left: -100%
+  }
+  100% {
+    max-width: 100%;
+    top: 200%;
+    left: -200%
+  }
+}
+/*move down left*/
+@keyframes jump_down_left {
+  0% {
+    top: 0;
+    left: 0;
+  }
+  50% {
+    max-width: 140%;
+    top: 100%;
+    left: -100%
+  }
+  100% {
+    max-width: 100%;
+    top: 200%;
+    left: -200%
+  }
+}
+
+/*move down right*/
+@-webkit-keyframes jump_down_right {
+  0% {
+    top: 0;
+    left: 0;
+  }
+  50% {
+    max-width: 140%;
+    top: 100%;
+    left: 100%
+  }
+  100% {
+    max-width: 100%;
+    top: 200%;
+    left: 200%
+  }
+}
+/*move down right*/
+@keyframes jump_down_right {
+  0% {
+    top: 0;
+    left: 0;
+  }
+  50% {
+    max-width: 140%;
+    top: 100%;
+    left: 100%
+  }
+  100% {
+    max-width: 100%;
+    top: 200%;
+    left: 200%
+  }
+}

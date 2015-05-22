@@ -1319,7 +1319,7 @@ angular.module('myApp')
         $scope.getPieceSrc = function (row, col) {
           var delta = {row: row, col: col};
           var rotatedDelta = rotate(delta);
-          var dir = 'images/';
+          var dir = 'imgs/';
           var ext = '.png';
 
           if ($scope.hasPiece(row, col)) {

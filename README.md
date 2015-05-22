@@ -7,4 +7,4 @@ The description and rules of this game can be found at [wikipedia] (http://en.wi
 
 ![ScreenShot](/sample.png)
 
-### [1.1.0] (http://chongzizil.github.io/Checkers-SMG/app/#/PassAndPlay)
+### [1.1.0] (http://chongzizil.github.io/Checkers-SMG/game.html)

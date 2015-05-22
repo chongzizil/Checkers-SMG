@@ -191,7 +191,9 @@ angular.module('myApp')
           var delta = {row: row, col: col};
           var rotatedDelta = rotate(delta);
 
-          if (!$scope.isDarkCell(row, col) || !checkersLogicService.isOwnColor($scope.yourPlayerIndex, $scope.board[rotatedDelta.row][rotatedDelta.col].substr(0, 1))) {
+          if (!$scope.hasPiece(row, col) ||
+              !isOwnColor(rotatedDelta) ||
+              $scope.isAiMove) {
             return false;
           }
 

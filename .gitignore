@@ -1,7 +1,4 @@
 .idea
 img_resources
-.idea/workspace.xml
-bower_components/angular-loader
-bower_components/angular-mocks
-bower_components/angular-route
 node_modules
+coverage
